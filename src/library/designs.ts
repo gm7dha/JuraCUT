@@ -15,6 +15,9 @@ import type { Item, Material } from "../model/types";
 import { font, fontChoice, loopOf, n, placed, str, take, type LibraryDesign, type MadeDesign, type Values } from "./kit";
 import { STAND_AND_STAMP } from "./stands";
 import { WORKSHOP_DESIGNS } from "./workshop";
+import { BOXES_3 } from "./boxes3";
+import { HOME_3 } from "./laserHome3";
+import { TOYS_3 } from "./toys3";
 import { planBridges } from "./bridges";
 import { boxProblems, fingerCounts, panelOutlines } from "./fingers";
 import { lit } from "./ex";
@@ -242,7 +245,7 @@ const stencil: LibraryDesign = {
   },
 };
 
-export const LIBRARY: LibraryDesign[] = [fingerBox, STAND_AND_STAMP[0], tag, stencil, STAND_AND_STAMP[1], coasters, ...WORKSHOP_DESIGNS];
+export const LIBRARY: LibraryDesign[] = [fingerBox, STAND_AND_STAMP[0], tag, stencil, STAND_AND_STAMP[1], coasters, ...WORKSHOP_DESIGNS, ...BOXES_3, ...HOME_3, ...TOYS_3];
 
 export type { DesignInput, InputKind, LibraryDesign, MadeDesign, Values } from "./kit";
 

@@ -55,11 +55,14 @@
   compare the two libraries and say if JuraCUT is behind.
 - Design library: `src/library/` (pure). `kit.ts` — what designs share (`LibraryDesign`: id, name, description,
   `group` heading, `icon` 48×48 SVG markup, `inputs(material)`, `problems`, `make(values, ids)` → ordinary Items (+
-  notes), placed 10 mm in from the bed's corner; helpers `n`, `str`, `font`, `fontChoice`, `take`, `loopOf`, `placed`).
+  notes), placed 10 mm in from the bed's corner; helpers `n`, `str`, `font`, `fontChoice`, `take`, `loopOf`, `placed`, `inRows` — pieces laid out flat in rows —
+  `wordsAt`, `mm`, `r6`).
   `designs.ts` — finger-joint box, name tag, coasters (round, square, six-sided), stencil, and `LIBRARY` (with
-  `stands.ts`: flat-pack phone stand, rubber stamp; `workshop.ts`: living hinge, gear, picture frame, ruler);
+  `stands.ts`: flat-pack phone stand, rubber stamp; `workshop.ts`: living hinge, gear, picture frame, ruler;
+  `boxes3.ts`: sliding-lid box, tray with dividers, bookend; `laserHome3.ts`: clock face, cord winders, tealight holder;
+  `toys3.ts`: jigsaw — `puzzle.ts` is JuraCAD's unchanged, cuts between pieces one open run each — and ornament);
   `cleanValues`, `makeDesign`. `browse.ts` — `groupDesigns` (headings in `GROUP_ORDER`: Boxes and stands, Signs and
-  stamps, Home, Workshop) and `searchDesigns` (as JuraCAD's). `fingers.ts` is JuraCAD's
+  stamps, Home, Workshop, Toys and gifts) and `searchDesigns` (as JuraCAD's). `fingers.ts` is JuraCAD's
   finger maths unchanged, over a numbers-only `ex.ts` (JuraCUT's boxes have no kerf allowance of their own — Export's
   kerf does it). `bridges.ts` is JuraCAD's stencil bridge planner unchanged; `stencilCut.ts` turns letters + bridges
   into cut lines (outlines minus what lies in a bridge, plus the bridges' long sides where they cross a stroke — the
