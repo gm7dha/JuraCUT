@@ -5,6 +5,7 @@ import { useStore } from "../model/store";
 import { BedView } from "./BedView";
 import { ExportDialog } from "./ExportDialog";
 import { HelpDialog } from "./HelpDialog";
+import { MaterialsDialog } from "./MaterialsDialog";
 import { Icons } from "./icons";
 import { openFile, saveToFile, openFromFile } from "./fileActions";
 import { inPopup, inTextBox } from "./popupGuard";
@@ -30,6 +31,7 @@ export function App() {
       <ToastView />
       {dialog === "export" && <ExportDialog />}
       {dialog === "help" && <HelpDialog />}
+      {dialog === "material" && <MaterialsDialog />}
       {dialog === "whatsNew" && <WhatsNewDialog />}
     </div>
   );

@@ -159,7 +159,31 @@ try {
   await chooser2.setFiles({ name: "Test.juracut", mimeType: "application/json", buffer: Buffer.from(savedText) });
   await page.waitForFunction(() => window.juracutStore.getState().history.present.items.length === 7);
 
+  step = "materials and kerf";
+  await page.click(".settings-button");
+  await page.click(".settings-menu button:has-text('Materials')");
+  await page.waitForSelector(".materials-table");
+  await page.click(".materials-table tr:nth-child(2) button:has-text('Use')");
+  const material = await store(() => window.juracutStore.getState().history.present.material);
+  expect(material.name === "6 mm plywood" && material.kerf === 0.2, "the design uses 6 mm plywood");
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.setMaterial({ name: "test", thickness: 3, kerf: 0.2 });
+    s.addItems([{ id: "k", name: "Square", op: "cut", kind: "rect", x: 10, y: 10, w: 40, h: 40, radius: 0, angle: 0 }]);
+  });
+  await page.click(".primary-button:has-text('Export for laser')");
+  await page.waitForSelector(".export-preview svg");
+  const [kerfed] = await Promise.all([page.waitForEvent("download"), page.click(".modal button:has-text('Save SVG')")]);
+  const kerfText = await readFile(await kerfed.path(), "utf8");
+  expect(kerfText.includes('width="40.2mm"'), "the square grew by the kerf");
+  await page.keyboard.press("Escape");
+
   step = "undo, dark mode, help";
+  await page.evaluate(() => { const s = window.juracutStore.getState(); s.undo(); s.undo(); s.undo(); });
+  // Back past the material change and the Open: the empty design New made.
+  await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+z");
   const after = await store(() => window.juracutStore.getState().history.present.items.length);
   expect(after === 0, "undo brought back the empty design");

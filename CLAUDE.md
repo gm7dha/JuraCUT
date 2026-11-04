@@ -29,8 +29,20 @@
   (so tests need no browser), path data (arcs → Béziers), transforms, units (viewBox + mm/in width; else 96 px/in),
   and reads colours as ops (green stroke = score, filled with no stroke = engrave, else cut). `dxfImport.ts` is
   JuraCAD's DXF reader plus `dxfOutlines` (layer names SCORE/ENGRAVE → ops; bulges → arcs; splines sampled).
+- Kerf: `src/geometry/offset.ts` (`offsetLoop`: a loop moved out or in — a circle stays a circle, otherwise the loop
+  is walked as straight pieces with exact round joins where corners open and intersections where they close; null when
+  it's moved in past its own middle; `nestingDepths`). `sheet.ts` `withKerf` moves outsides and islands (even depth)
+  out and holes (odd) in by kerf/2; the Export dialog's checkbox is on when the material's kerf is > 0.
+- Materials: `src/model/materials.ts` (pure: `DEFAULT_MATERIALS`, read/write of the list in localStorage
+  `juracut.materials.v1`, `freeName`, `findMaterial`), `src/app/materialsState.ts` (the list, shared with
+  useSyncExternalStore), `src/app/MaterialsDialog.tsx` (table: use, change, remove, add, starter list). The design
+  keeps a copy of its material (`doc.material`); Settings' drop-down picks from the list.
+- Snapping and rulers: `src/model/snap.ts` (pure: `snapLines` — other shapes' box edges and middles plus the bed;
+  `snapPoint` for drawing, `snapBoxMove` for moving the selection's box; `rulerStep`). BedView keeps the lines in
+  `linesRef` from pointer-down, draws `.snap-guide` lines while snapped, and `Rulers` along the top and left (`RULER`
+  px, screen coordinates, pointer marked); Fit leaves room for them. Shift = no snapping.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
-  `sortLoops`; `makeSheet` with `mirror` and `wholeBed`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
+  `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;
   `laserDxf` — R12 POLYLINEs with bulges).
 - State: `src/model/store.ts`. Every design change goes through `commit` (an undo step, up to 100); drags use
@@ -52,7 +64,7 @@
   (`BASE_PATH` in the workflow, read by vite.config.ts and the smoke test).
 - `npm run smoke` (`scripts/smoke-test.mjs`) drives the built app in headless Chromium (`?smoke` exposes
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
-  imports the SVG → saves and opens a .juracut → undo, dark mode, help. The browser's own file pickers are turned off
+  imports the SVG → saves and opens a .juracut → picks a material and exports with the kerf → undo, dark mode, help. The browser's own file pickers are turned off
   for it. `SMOKE_DIST` points it at a build somewhere else; `SMOKE_SCREENSHOT=1` saves smoke.png.
 - If the npm registry is unreachable from your environment: the pure code can be typechecked and tested with
   `tsc` and `tsx` and a tiny vitest/zustand stand-in, and the app bundled with esbuild (React from any local copy)

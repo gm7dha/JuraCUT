@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.1 — First preview: draw, import, lay out and export for the laser
+## v0.2 — Kerf, materials, rulers and snapping
+
+- **Kerf compensation:** Export for laser can move cut lines out by half the material's kerf (and holes in), so
+  pieces and holes come out the size you drew. Corners that open up get a round join; a circle stays a circle.
+- **Materials:** a list of what you cut (thickness, kerf, notes), kept on this computer, with a starter list for
+  plywood, MDF, acrylic, card and leather. Pick one in Settings, or open Materials… to add your own and keep notes
+  (the power and speed that worked, say). The kerf you measure with a test cut goes here.
+- **Rulers** in millimetres along the top and left of the bed, with the pointer marked.
+- **Snapping to other shapes:** while drawing or moving, edges and middles line up with the other shapes and the
+  bed when they come close — a guide line shows what you've lined up with. Hold Shift to move freely.
+
+## v0.1 — First preview: draw, import, lay out and export for the laser · commit `ce7edde`
 
 - **The bed:** the Bambu Lab R1's 600 × 300 mm work area to scale, with a millimetre grid. Zoom with the wheel or a
   pinch, pan with the middle button, right button, Space, or two fingers.

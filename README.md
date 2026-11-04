@@ -6,7 +6,7 @@
 
 JuraCUT runs entirely in your browser. Your designs never leave your computer, there's no account, and it's free.
 
-> **Status: v0.1 preview.** Draw shapes and words, bring in SVG or DXF drawings, say what the laser does with each
+> **Status: v0.2 preview.** Draw shapes and words, bring in SVG or DXF drawings, say what the laser does with each
 > (cut, score or engrave), lay everything out on the bed and export an SVG for Bambu Studio. See the
 > [roadmap](docs/DESIGN.md#roadmap).
 
@@ -23,7 +23,10 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 - **Move, turn, flip, copy, delete, hide** shapes; nudge with the arrow keys; **Arrange** lays every piece out on the
   bed (a hole stays with its plate).
 - **Export for laser**: an SVG (or DXF) at true size with each colour as a layer, the way Bambu Studio's laser mode
-  wants it — with a preview and a colour key. Mirror for engraving on the back.
+  wants it — with a preview and a colour key. Mirror for engraving on the back. **Kerf compensation** moves cut lines
+  out by half your material's kerf (holes in), so pieces come out the size you drew.
+- **Materials**: a list of what you cut, with thickness, kerf and your notes, kept on your computer.
+- **Rulers** and **snapping**: edges and middles line up with other shapes and the bed as you draw or move.
 - **Save** to a `.juracut` file and open it later (or drag it onto the window). Your latest work is also kept in the
   browser. **Install it as an app** (Chrome/Edge) so it opens in its own window and works offline. Light and dark.
 
