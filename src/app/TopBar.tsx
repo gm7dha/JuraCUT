@@ -97,7 +97,7 @@ export function TopBar() {
       <button className="text-button" onClick={() => void openFromFile()} title={`Open a .juracut design (${shortcut(platform, "O")}). You can also drag a file onto the window.`}>
         <Icons.Open size={18} /> <span className="button-label">Open</span>
       </button>
-      <button className="text-button" onClick={() => void openFromFile(true)} title="Bring an SVG or DXF drawing in as shapes on the bed (from JuraCAD, Inkscape, or anywhere else)">
+      <button className="text-button" onClick={() => void openFromFile(true)} title="Bring an SVG or DXF drawing in as shapes on the bed (from JuraCAD, Inkscape, or anywhere else), or a picture (PNG, JPG…) to trace into outlines">
         <Icons.Import size={18} /> <span className="button-label">Import</span>
       </button>
       <button

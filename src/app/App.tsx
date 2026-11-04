@@ -7,6 +7,7 @@ import { ExportDialog } from "./ExportDialog";
 import { HelpDialog } from "./HelpDialog";
 import { MaterialsDialog } from "./MaterialsDialog";
 import { LibraryDialog } from "./LibraryDialog";
+import { TraceDialog } from "./TraceDialog";
 import { Icons } from "./icons";
 import { openFile, saveToFile, openFromFile } from "./fileActions";
 import { inPopup, inTextBox } from "./popupGuard";
@@ -34,6 +35,7 @@ export function App() {
       {dialog === "help" && <HelpDialog />}
       {dialog === "material" && <MaterialsDialog />}
       {dialog === "library" && <LibraryDialog />}
+      {dialog === "trace" && <TraceDialog />}
       {dialog === "whatsNew" && <WhatsNewDialog />}
     </div>
   );

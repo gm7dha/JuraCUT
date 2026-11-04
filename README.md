@@ -6,7 +6,7 @@
 
 JuraCUT runs entirely in your browser. Your designs never leave your computer, there's no account, and it's free.
 
-> **Status: v0.3 preview.** Draw shapes and words, bring in SVG or DXF drawings, say what the laser does with each
+> **Status: v0.4 preview.** Draw shapes and words, bring in SVG or DXF drawings, say what the laser does with each
 > (cut, score or engrave), lay everything out on the bed and export an SVG for Bambu Studio. See the
 > [roadmap](docs/DESIGN.md#roadmap).
 
@@ -27,6 +27,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
   out by half your material's kerf (holes in), so pieces come out the size you drew.
 - **Design library**: a finger-jointed box, name tags, coasters and stencils (with bridges) — fill in the sizes and
   put them on the bed.
+- **Trace pictures** (PNG, JPG…) into outlines to engrave, cut or score.
+- **Pack tightly**: pieces fitted together by their real shapes to save material.
 - **Groups**, and **line up / space out** several shapes at once.
 - **Materials**: a list of what you cut, with thickness, kerf and your notes, kept on your computer.
 - **Rulers** and **snapping**: edges and middles line up with other shapes and the bed as you draw or move.
