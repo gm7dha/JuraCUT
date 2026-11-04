@@ -41,6 +41,20 @@
   `snapPoint` for drawing, `snapBoxMove` for moving the selection's box; `rulerStep`). BedView keeps the lines in
   `linesRef` from pointer-down, draws `.snap-guide` lines while snapped, and `Rulers` along the top and left (`RULER`
   px, screen coordinates, pointer marked); Fit leaves room for them. Shift = no snapping.
+- Groups, line up, space out: `src/model/arrange.ts` (pure). `Item.group` (an id; saved in files): `withGroups` widens
+  ids to whole groups (the store's `select` always does, so a click picks the group), `grouped`/`ungrouped`/`tidyGroups`
+  (a group of one isn't a group; delete tidies), `piecesOf` (a group is one piece), `aligned` (pieces line up with
+  their combined box; a single piece with the bed), `distributed` (equal gaps, outside two fixed — or a set gap),
+  `turnedPieces`/`mirroredPieces` (groups turn/flip about their middle). Arrange treats groups (and shapes inside a
+  grouped shape) as one piece. Duplicating a group makes a new group.
+- Design library: `src/library/` (pure). `designs.ts` — `LIBRARY` (finger-jointed box, name tag, coasters, stencil):
+  each `LibraryDesign` has `inputs(material)`, `problems`, `make(values, ids)` → ordinary Items (+ notes), placed 10 mm
+  in from the bed's corner; `cleanValues` keeps values in their limits; `makeDesign`. `fingers.ts` is JuraCAD's
+  finger maths unchanged, over a numbers-only `ex.ts` (JuraCUT's boxes have no kerf allowance of their own — Export's
+  kerf does it). `bridges.ts` is JuraCAD's stencil bridge planner unchanged; `stencilCut.ts` turns letters + bridges
+  into cut lines (outlines minus what lies in a bridge, plus the bridges' long sides where they cross a stroke — the
+  even–odd parity of the outlines), chained into loops. UI `src/app/LibraryDialog.tsx` (list, fields, preview, Put on
+  the bed; last design in localStorage `juracut.libraryDesign`).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;
@@ -50,7 +64,8 @@
   array/object each call (use a shared constant), or React loops. Keep pure logic out of React and covered by Vitest.
 - UI (`src/app/`): `TopBar.tsx` (name, save state, version badge, Install, New/Open/Import/Save, Export for laser,
   Settings — bed, material, appearance — Help), `Toolbar.tsx` (tools, undo/redo, Cut/Score/Engrave, turn/flip/copy/
-  delete, Arrange, Fit), `SidePanel.tsx` (shapes list with eye and order buttons; the selected shape's settings;
+  delete, Group/Ungroup, Library, Arrange, Fit), `SidePanel.tsx` (shapes list with eye and order buttons; the selected
+  shape's settings, or for several: op, position, line up and space out;
   `NumberBox` applies on blur/Enter), `BedView.tsx` (gestures: click/drag select and move, rubber band, drawing tools
   with 1 mm snapping — 0.5 mm zoomed in, Shift = no snap — wheel zoom to pointer, middle/right/Space pan, two-finger
   pan and pinch; `fitRequest` in the store asks it to zoom to fit), `ExportDialog.tsx` (preview, colour key, Save
@@ -64,7 +79,8 @@
   (`BASE_PATH` in the workflow, read by vite.config.ts and the smoke test).
 - `npm run smoke` (`scripts/smoke-test.mjs`) drives the built app in headless Chromium (`?smoke` exposes
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
-  imports the SVG → saves and opens a .juracut → picks a material and exports with the kerf → undo, dark mode, help. The browser's own file pickers are turned off
+  imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library → groups,
+  ungroups, lines up and spaces the panels → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
   for it. `SMOKE_DIST` points it at a build somewhere else; `SMOKE_SCREENSHOT=1` saves smoke.png.
 - If the npm registry is unreachable from your environment: the pure code can be typechecked and tested with
   `tsc` and `tsx` and a tiny vitest/zustand stand-in, and the app bundled with esbuild (React from any local copy)

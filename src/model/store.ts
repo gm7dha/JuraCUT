@@ -8,11 +8,12 @@ import { create } from "zustand";
 
 import { arrangeOnBed } from "../geometry/segments";
 import { newDocument, newId } from "./document";
-import { boxCentre, itemBox, mirroredItem, movedItem, pieceOf, rotatedItem, rotatedItemAbout } from "./shapes";
+import { aligned, distributed, grouped, mirroredPieces, newGroupId, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignTo } from "./arrange";
+import { boxCentre, itemBox, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
 
 export type Tool = "select" | "rect" | "circle" | "line" | "text";
-export type DialogName = "export" | "help" | "whatsNew" | "material" | null;
+export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | null;
 
 export interface Toast {
   id: number;
@@ -72,6 +73,10 @@ export interface State {
   rotateSelected(angle: number): void;
   mirrorSelected(): void;
   arrangeAll(gap?: number): void;
+  groupSelected(): void;
+  ungroupSelected(): void;
+  alignSelected(to: AlignTo): void;
+  distributeSelected(axis: "x" | "y", gap?: number): void;
   reorder(id: string, to: number): void;
 
   // Selection and tools.
@@ -191,7 +196,7 @@ export const useStore = create<State>((set, get) => ({
     const { history, selection } = get();
     if (!selection.length) return;
     const doc = history.present;
-    get().commit({ ...doc, items: doc.items.filter((it) => !selection.includes(it.id)) });
+    get().commit({ ...doc, items: tidyGroups(doc.items.filter((it) => !selection.includes(it.id))) });
     set({ selection: EMPTY, focusItem: null });
   },
   duplicateSelected() {
@@ -200,10 +205,23 @@ export const useStore = create<State>((set, get) => ({
     const picked = doc.items.filter((it) => selection.includes(it.id));
     if (!picked.length) return;
     const ids = new Set(doc.items.map((it) => it.id));
+    // Copies of a group make a new group of their own.
+    const newGroups = new Map<string, string>();
+    let taken = [...doc.items];
     const copies = picked.map((it) => {
       const id = newId(ids);
       ids.add(id);
-      return movedItem({ ...it, id, name: copyName(it.name) }, 10, -10);
+      let group = it.group;
+      if (group) {
+        if (!newGroups.has(group)) {
+          const g = newGroupId(taken);
+          newGroups.set(group, g);
+          taken = [...taken, { ...it, id: "_", group: g }];
+        }
+        group = newGroups.get(group);
+      }
+      const copy = movedItem({ ...it, id, name: copyName(it.name) }, 10, -10);
+      return group ? { ...copy, group } : copy;
     });
     get().commit({ ...doc, items: [...doc.items, ...copies] });
     set({ selection: copies.map((c) => c.id) });
@@ -212,10 +230,31 @@ export const useStore = create<State>((set, get) => ({
     get().updateSelected((it) => movedItem(it, dx, dy));
   },
   rotateSelected(angle) {
-    get().updateSelected((it) => rotatedItem(it, angle));
+    const { history, selection } = get();
+    if (selection.length) get().commit({ ...history.present, items: turnedPieces(history.present.items, selection, angle) });
   },
   mirrorSelected() {
-    get().updateSelected(mirroredItem);
+    const { history, selection } = get();
+    if (selection.length) get().commit({ ...history.present, items: mirroredPieces(history.present.items, selection) });
+  },
+  groupSelected() {
+    const { history, selection } = get();
+    if (selection.length < 2) return;
+    get().commit({ ...history.present, items: grouped(history.present.items, selection) });
+  },
+  ungroupSelected() {
+    const { history, selection } = get();
+    if (!selection.length) return;
+    get().commit({ ...history.present, items: ungrouped(history.present.items, selection) });
+  },
+  alignSelected(to) {
+    const { history, selection } = get();
+    if (!selection.length) return;
+    get().commit({ ...history.present, items: aligned(history.present.items, selection, to, history.present.bed) });
+  },
+  distributeSelected(axis, gap) {
+    const { history, selection } = get();
+    get().commit({ ...history.present, items: distributed(history.present.items, selection, axis, gap) });
   },
   arrangeAll(gap = 5) {
     const doc = get().history.present;
@@ -224,7 +263,9 @@ export const useStore = create<State>((set, get) => ({
     const shown = doc.items.filter((it) => !it.hidden && itemBox(it));
     const pieces = new Map<string, Item[]>();
     for (const it of shown) {
-      const root = parents.get(it.id) ?? it.id;
+      // A group is one piece; a shape inside another goes with that one (and with its group, if it has one).
+      const holder = doc.items.find((x) => x.id === (parents.get(it.id) ?? it.id)) ?? it;
+      const root = it.group ? `group:${it.group}` : holder.group ? `group:${holder.group}` : holder.id;
       pieces.set(root, [...(pieces.get(root) ?? []), it]);
     }
     if (!pieces.size) return;
@@ -269,17 +310,16 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...doc, items });
   },
 
-  select(ids, additive = false) {
-    const { selection } = get();
+  select(picked, additive = false) {
+    const { selection, history } = get();
+    // A shape in a group brings the rest of its group.
+    const ids = withGroups(history.present.items, picked);
     let next: string[];
     if (!additive) next = ids;
     else {
-      next = [...selection];
-      for (const id of ids) {
-        const k = next.indexOf(id);
-        if (k >= 0) next.splice(k, 1);
-        else next.push(id);
-      }
+      // Shift-click toggles the whole piece: off if it was all selected, else on.
+      const allIn = ids.every((id) => selection.includes(id));
+      next = allIn ? selection.filter((id) => !ids.includes(id)) : [...selection, ...ids.filter((id) => !selection.includes(id))];
     }
     if (!next.length) next = EMPTY;
     if (next.length !== selection.length || next.some((id, i) => id !== selection[i])) set({ selection: next });
