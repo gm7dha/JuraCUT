@@ -8,91 +8,26 @@
  *
  * Shared ideas (and the finger and bridge maths) come from JuraCAD's library.
  */
-import { chainEdges, pathPoints, type Pt, type Segment } from "../geometry/segments";
-import { FONTS, FONT_IDS, isFontId, textOutline, type FontId } from "../geometry/text";
-import { newId } from "../model/document";
+import { chainEdges, pathPoints, type Pt } from "../geometry/segments";
+import { FONTS, textOutline } from "../geometry/text";
 import { itemBox, makeCircle, makeRect, makeShape, makeText, movedItem } from "../model/shapes";
-import type { Item, Material, Outline } from "../model/types";
+import type { Item, Material } from "../model/types";
+import { font, fontChoice, loopOf, n, placed, str, take, type LibraryDesign, type MadeDesign, type Values } from "./kit";
+import { STAND_AND_STAMP } from "./stands";
+import { WORKSHOP_DESIGNS } from "./workshop";
 import { planBridges } from "./bridges";
 import { boxProblems, fingerCounts, panelOutlines } from "./fingers";
 import { lit } from "./ex";
 import { stencilCuts } from "./stencilCut";
-
-export type InputKind = "number" | "count" | "text" | "choice" | "toggle" | "font";
-
-export interface DesignInput {
-  key: string;
-  label: string;
-  kind: InputKind;
-  default: number | string | boolean;
-  min?: number;
-  max?: number;
-  /** "mm" for lengths. */
-  unit?: string;
-  choices?: { value: string; label: string }[];
-  /** Several lines allowed (text). */
-  multiline?: boolean;
-  help?: string;
-}
-
-export type Values = Record<string, number | string | boolean>;
-
-export interface MadeDesign {
-  items: Item[];
-  /** Things worth knowing about what was made. */
-  notes: string[];
-}
-
-export interface LibraryDesign {
-  id: string;
-  name: string;
-  description: string;
-  /** Inputs whose defaults come from the design's material (thickness). */
-  inputs: (material: Material) => DesignInput[];
-  problems: (v: Values) => string[];
-  make: (v: Values, ids: Set<string>) => MadeDesign;
-}
-
-const fontChoice = (def: FontId = "inter-bold"): DesignInput => ({
-  key: "font",
-  label: "Font",
-  kind: "font",
-  default: def,
-  choices: FONT_IDS.map((id) => ({ value: id, label: FONTS[id].label })),
-});
-
-const n = (v: Values, k: string) => Number(v[k]);
-const str = (v: Values, k: string) => String(v[k] ?? "");
-const font = (v: Values): FontId => (isFontId(v.font) ? v.font : "inter-regular");
-
-/** A new id, recorded as taken. */
-const take = (ids: Set<string>) => {
-  const id = newId(ids);
-  ids.add(id);
-  return id;
-};
-
-/** Straight lines through points (a closed loop). */
-function loopOf(pts: [number, number][]): Outline {
-  const segments: Segment[] = pts.map((p, i) => ({ kind: "line", from: p, to: pts[(i + 1) % pts.length] }));
-  return { segments, closed: true };
-}
-
-/** Where a group of shapes' bottom-left corner goes: 10 mm in from the bed's corner. */
-function placed(items: Item[], x = 10, y = 10): Item[] {
-  const boxes = items.map(itemBox).filter((b): b is [number, number, number, number] => !!b);
-  if (!boxes.length) return items;
-  const x0 = Math.min(...boxes.map((b) => b[0]));
-  const y0 = Math.min(...boxes.map((b) => b[1]));
-  return items.map((it) => movedItem(it, x - x0, y - y0));
-}
 
 // ---------------------------------------------------------------------------
 // Finger-jointed box.
 
 const fingerBox: LibraryDesign = {
   id: "finger-box",
-  name: "Finger-jointed box",
+  group: "Boxes and stands",
+  icon: '<path d="M8 18 24 10l16 8v18l-16 8-16-8z"/><path d="M8 18l16 8 16-8M24 26v18"/><path d="M12 20v3l3 1.5v-3M18 23v3l3 1.5v-3M27 25.5v3l3-1.5v-3M33 22.5v3l3-1.5v-3"/>',
+  name: "Finger-joint box",
   description: "Six panels (five without a lid) whose edges interlock. Glue or press them together.",
   inputs: (m) => [
     { key: "width", label: "Width", kind: "number", unit: "mm", default: 120, min: 20, max: 580, help: "Outside size." },
@@ -151,6 +86,8 @@ const fingerBox: LibraryDesign = {
 
 const tag: LibraryDesign = {
   id: "tag",
+  group: "Signs and stamps",
+  icon: '<rect x="4" y="16" width="40" height="16" rx="5"/><circle cx="11" cy="24" r="2.5"/><path d="M19 21v6M19 24h5M24 21v6M28 21h6M31 21v6M37 21v6h4" opacity=".7"/>',
   name: "Name or key tag",
   description: "A tag with rounded corners, a hole for a ring, and engraved words.",
   inputs: () => [
@@ -202,6 +139,8 @@ const tag: LibraryDesign = {
 
 const coasters: LibraryDesign = {
   id: "coasters",
+  group: "Home",
+  icon: '<circle cx="17" cy="24" r="12"/><circle cx="17" cy="24" r="8" opacity=".45"/><path d="M13 24h8" /><rect x="31" y="14" width="14" height="20" rx="3" opacity=".7"/>',
   name: "Coasters",
   description: "A set of round or square coasters, with engraved words and a scored ring if you like.",
   inputs: () => [
@@ -213,9 +152,11 @@ const coasters: LibraryDesign = {
       choices: [
         { value: "round", label: "Round" },
         { value: "square", label: "Square" },
+        { value: "hexagon", label: "Six-sided" },
       ],
     },
-    { key: "size", label: "Size", kind: "number", unit: "mm", default: 95, min: 30, max: 280, help: "Across." },
+    { key: "size", label: "Size", kind: "number", unit: "mm", default: 95, min: 30, max: 280, help: "Across (flat to flat for six-sided)." },
+    { key: "corner", label: "Corner rounding", kind: "number", unit: "mm", default: 8, min: 0, max: 50, help: "Square coasters only." },
     { key: "count", label: "How many", kind: "count", default: 4, min: 1, max: 12 },
     { key: "text", label: "Words", kind: "text", default: "", multiline: true, help: "Optional." },
     fontChoice("lora-regular"),
@@ -227,6 +168,11 @@ const coasters: LibraryDesign = {
     const S = n(v, "size");
     const count = Math.max(1, Math.min(12, Math.round(n(v, "count"))));
     const square = v.shape === "square";
+    const hexagon = v.shape === "hexagon";
+    const corner = Math.min(n(v, "corner"), S / 2);
+    /** A six-sided outline `across` flat to flat, centred on c (flat top and bottom). */
+    const hex = (c: [number, number], across: number): [number, number][] =>
+      Array.from({ length: 6 }, (_, k) => [c[0] + (across / Math.sqrt(3)) * Math.cos(((60 * k) * Math.PI) / 180), c[1] + (across / Math.sqrt(3)) * Math.sin(((60 * k) * Math.PI) / 180)]);
     const perRow = Math.max(1, Math.floor((580 + 5) / (S + 5)));
     const items: Item[] = [];
     const words = str(v, "text").trim();
@@ -236,15 +182,19 @@ const coasters: LibraryDesign = {
       const group = `coaster-${take(ids)}`;
       const c: [number, number] = [x + S / 2, y + S / 2];
       items.push(
-        square
-          ? { ...makeRect(take(ids), x, y, S, S), name: `Coaster ${k + 1}`, radius: 8, group }
-          : { ...makeCircle(take(ids), c[0], c[1], S / 2), name: `Coaster ${k + 1}`, group },
+        hexagon
+          ? { ...makeShape(take(ids), `Coaster ${k + 1}`, [loopOf(hex(c, S))]), group }
+          : square
+            ? { ...makeRect(take(ids), x, y, S, S), name: `Coaster ${k + 1}`, radius: corner, group }
+            : { ...makeCircle(take(ids), c[0], c[1], S / 2), name: `Coaster ${k + 1}`, group },
       );
       if (v.ring)
         items.push(
-          square
-            ? { ...makeRect(take(ids), x + 5, y + 5, S - 10, S - 10), name: `Coaster ${k + 1} ring`, radius: 4, op: "score", group }
-            : { ...makeCircle(take(ids), c[0], c[1], S / 2 - 5), name: `Coaster ${k + 1} ring`, op: "score", group },
+          hexagon
+            ? { ...makeShape(take(ids), `Coaster ${k + 1} ring`, [loopOf(hex(c, S - 10))]), op: "score" as const, group }
+            : square
+              ? { ...makeRect(take(ids), x + 5, y + 5, S - 10, S - 10), name: `Coaster ${k + 1} ring`, radius: Math.max(0, corner - 4), op: "score", group }
+              : { ...makeCircle(take(ids), c[0], c[1], S / 2 - 5), name: `Coaster ${k + 1} ring`, op: "score", group },
         );
       if (words) {
         const t = { ...makeText(take(ids), 0, 0, words, n(v, "height")), name: `Coaster ${k + 1} words`, font: font(v), align: "centre" as const, group };
@@ -262,6 +212,8 @@ const coasters: LibraryDesign = {
 
 const stencil: LibraryDesign = {
   id: "stencil",
+  group: "Signs and stamps",
+  icon: '<rect x="4" y="12" width="40" height="24" rx="1.5"/><path d="M10 30V18h5a3 3 0 0 1 0 6h-5M14 24l4 6"/><ellipse cx="27" cy="24" rx="4.5" ry="6"/><path d="M27 17.5v3M27 27.5v3" stroke-width="2.6" opacity=".6"/><path d="M34 18h6M37 18v12"/>',
   name: "Stencil",
   description: "Words cut out of a sheet, with bridges added so the middles of letters like O and A don't fall out.",
   inputs: () => [
@@ -290,7 +242,9 @@ const stencil: LibraryDesign = {
   },
 };
 
-export const LIBRARY: LibraryDesign[] = [fingerBox, tag, coasters, stencil];
+export const LIBRARY: LibraryDesign[] = [fingerBox, STAND_AND_STAMP[0], tag, stencil, STAND_AND_STAMP[1], coasters, ...WORKSHOP_DESIGNS];
+
+export type { DesignInput, InputKind, LibraryDesign, MadeDesign, Values } from "./kit";
 
 /** Every input at its default (the material's thickness where it applies). */
 export function defaultValues(design: LibraryDesign, material: Material): Values {

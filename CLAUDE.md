@@ -47,14 +47,25 @@
   their combined box; a single piece with the bed), `distributed` (equal gaps, outside two fixed — or a set gap),
   `turnedPieces`/`mirroredPieces` (groups turn/flip about their middle). Arrange treats groups (and shapes inside a
   grouped shape) as one piece. Duplicating a group makes a new group.
-- Design library: `src/library/` (pure). `designs.ts` — `LIBRARY` (finger-jointed box, name tag, coasters, stencil):
-  each `LibraryDesign` has `inputs(material)`, `problems`, `make(values, ids)` → ordinary Items (+ notes), placed 10 mm
-  in from the bed's corner; `cleanValues` keeps values in their limits; `makeDesign`. `fingers.ts` is JuraCAD's
+- **The laser library must stay in step with JuraCAD's** (the owner's standing wish): every laser design in JuraCAD
+  (`src/library/designs/` with `category: "laser"`, and its finger-joint box and flat-pack stand) has a JuraCUT twin
+  with the same id (`name-tag` is `tag`, `coaster` is `coasters`), name, heading, icon, inputs and maths. When JuraCAD
+  gains or changes a laser design, port it here in the same way (numbers instead of `Ex`, Items instead of sketches),
+  and add its id to the list in tests/library.test.ts ("has every laser design JuraCAD has"). At the start of a session,
+  compare the two libraries and say if JuraCUT is behind.
+- Design library: `src/library/` (pure). `kit.ts` — what designs share (`LibraryDesign`: id, name, description,
+  `group` heading, `icon` 48×48 SVG markup, `inputs(material)`, `problems`, `make(values, ids)` → ordinary Items (+
+  notes), placed 10 mm in from the bed's corner; helpers `n`, `str`, `font`, `fontChoice`, `take`, `loopOf`, `placed`).
+  `designs.ts` — finger-joint box, name tag, coasters (round, square, six-sided), stencil, and `LIBRARY` (with
+  `stands.ts`: flat-pack phone stand, rubber stamp; `workshop.ts`: living hinge, gear, picture frame, ruler);
+  `cleanValues`, `makeDesign`. `browse.ts` — `groupDesigns` (headings in `GROUP_ORDER`: Boxes and stands, Signs and
+  stamps, Home, Workshop) and `searchDesigns` (as JuraCAD's). `fingers.ts` is JuraCAD's
   finger maths unchanged, over a numbers-only `ex.ts` (JuraCUT's boxes have no kerf allowance of their own — Export's
   kerf does it). `bridges.ts` is JuraCAD's stencil bridge planner unchanged; `stencilCut.ts` turns letters + bridges
   into cut lines (outlines minus what lies in a bridge, plus the bridges' long sides where they cross a stroke — the
-  even–odd parity of the outlines), chained into loops. UI `src/app/LibraryDialog.tsx` (list, fields, preview, Put on
-  the bed; last design in localStorage `juracut.libraryDesign`).
+  even–odd parity of the outlines), chained into loops. UI `src/app/LibraryDialog.tsx`, laid out as JuraCAD's: search
+  + cards under headings, then a design's inputs beside a preview (Usual sizes, Back, Put on the bed); library styles
+  are JuraCAD's `.library-*` rules.
 - Tracing: `src/geometry/trace.ts` (pure, RGBA in): `greyscale` (see-through = white), `otsuThreshold`, `binarize`,
   `traceBitmap` (pixel-edge loops, dark on the right, turn right at saddles so corner-touching pixels stay apart),
   `simplifyLoop` (corners of the staircase, then Douglas–Peucker split at the first and furthest points),
@@ -62,6 +73,18 @@
   `src/app/TraceDialog.tsx`: pictures from Import/drop (`isPictureFile` in importFile.ts → `store.openTrace(name,
   dataURL)` → dialog "trace"), read into a canvas at ≤ 1000 px a side; threshold slider (Otsu by default), invert,
   detail (tolerance 0.4/0.8/1.6 px), smooth, width mm, specks in mm², op; one `shape` item placed 10 mm in.
+- Photos: `PictureItem` (kind "picture": `src` data URL — kept ≤ 1600 px as JPEG on white, `keepableSource` — centre
+  cx/cy, unturned size w × h mm, `turns` quarter turns anticlockwise then `flip` left-right outermost, `mode`
+  dots/black/greys, `brightness`, `contrast`, `invert`, `dpm` dots per mm; always engraved, `setOp` skips it). Its
+  outline is its frame (picking, boxes, Arrange, Pack); turning by other than quarter turns leaves it; `transformedItem`
+  maps its centre and works out turns/flip from the matrix. Pure processing `src/geometry/photo.ts`: `adjustGreys`,
+  `ditherFloydSteinberg`, `processPhoto`, `withPngDpi`/`pngDotsPerMm` (pHYs). Browser side `src/app/pictures.ts`:
+  `renderPicture(item, dpm, mirrored)` (canvas, turned/flipped, ≤ 6000 px a side, PNG with its dpm),
+  `usePicturePreview` (≈4 dots/mm, cached). BedView draws it (`PictureOnBed`, flipped back inside the y-up group).
+  `laserPaths` leaves pictures out; `makeSheet` returns `pictures` (box on the sheet, mirrored); `laserSvg({ images })`
+  writes them as `<image>` in an "Engrave (photos)" layer; Export also has Save photos as PNG. The Picture window
+  (`TraceDialog.tsx`) has two tabs, Trace into outlines / Engrave as a photo (`PhotoTab.tsx`; last tab in
+  localStorage `juracut.pictureHow`); SidePanel has `PictureFields`.
 - Tight packing: `src/geometry/pack.ts` (pure). Pieces drawn on a grid (1 mm cells; `rasterize`: cells the outlines
   pass through plus cells whose middle is inside, even–odd, so big holes stay free; grown by ceil(gap/2) cells),
   biggest first, each allowed quarter turn tried at every place, the one reaching least far back (then leftmost) wins.
@@ -89,12 +112,14 @@
 - Offline/installable: `public/manifest.webmanifest` + `public/sw.js` (registered in main.tsx, production only);
   bump `CACHE` in sw.js if its caching rules change.
 - Every change: `npm run typecheck && npm test && npm run build && npm run smoke`. CI runs the same and publishes
-  `main` to GitHub Pages at https://gm7dha.github.io/JuraCUT/. The base path comes from the repository's name
+  `main` to GitHub Pages at https://gm7dha.github.io/JuraCUT/ (deploy-pages has a 30-minute timeout: Pages has been
+  slow; if a publish still fails with "Timeout reached" or "Deployment cancelled", re-run the failed job). The base path comes from the repository's name
   (`BASE_PATH` in the workflow, read by vite.config.ts and the smoke test).
 - `npm run smoke` (`scripts/smoke-test.mjs`) drives the built app in headless Chromium (`?smoke` exposes
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
   imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library → groups,
-  ungroups, lines up and spaces the panels → traces a PNG it makes itself (a ring and a bar) → packs tightly → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
+  ungroups, lines up and spaces the panels → traces a PNG it makes itself (a ring and a bar) → engraves it as a photo (bed, SVG image, PNG with pHYs, style
+  changed in the panel) → packs tightly → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
   for it. `SMOKE_DIST` points it at a build somewhere else; `SMOKE_SCREENSHOT=1` saves smoke.png.
 - If the npm registry is unreachable from your environment: the pure code can be typechecked and tested with
   `tsc` and `tsx` and a tiny vitest/zustand stand-in, and the app bundled with esbuild (React from any local copy)

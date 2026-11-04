@@ -201,18 +201,26 @@ try {
   step = "design library: a stencil and a box";
   await page.evaluate(() => window.juracutStore.getState().newDocument());
   await page.click(".tool-button:has-text('Library')");
-  await page.waitForSelector(".library-item");
-  await page.click(".library-item:has-text('Stencil')");
+  await page.waitForSelector(".library-card");
+  await page.click(".library-card:has-text('Stencil')");
   await page.fill("#lib-text", "HELLO");
   await page.waitForSelector(".library-preview path");
   await page.click("button:has-text('Put on the bed')");
   list = await items();
   expect(list.length === 2 && list.some((i) => i.name === "Stencil letters"), "a stencil sheet and its letters");
   await page.click(".tool-button:has-text('Library')");
-  await page.click(".library-item:has-text('Finger-jointed box')");
+  // The search finds it too.
+  await page.fill(".library-search", "finger");
+  await page.click(".library-card:has-text('Finger-joint box')");
   await page.click("button:has-text('Put on the bed')");
   list = await items();
   expect(list.length === 8, "6 box panels added");
+  await page.click(".tool-button:has-text('Library')");
+  await page.click(".library-card:has-text('Gear')");
+  await page.waitForSelector(".library-preview path");
+  await page.click("button:has-text('Back')");
+  await page.waitForSelector(".library-card");
+  await page.keyboard.press("Escape");
 
   step = "group, line up and space out";
   await page.evaluate(() => {
@@ -242,6 +250,32 @@ try {
   await page.click(".modal button:has-text('Put on the bed')");
   const traced = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.name === "logo"));
   expect(traced && traced.kind === "shape" && traced.op === "engrave" && traced.outlines.length === 3, "the ring (outside and hole) and the bar traced");
+
+  step = "engrave a photo";
+  const [pic2] = await Promise.all([page.waitForEvent("filechooser"), page.click("button:has-text('Import')")]);
+  await pic2.setFiles({ name: "photo.png", mimeType: "image/png", buffer: testPng() });
+  await page.click(".library-tabs button:has-text('Engrave as a photo')");
+  await page.waitForSelector("img.photo-preview");
+  await page.click(".modal button:has-text('Put on the bed')");
+  await page.waitForFunction(() => window.juracutStore.getState().history.present.items.some((i) => i.kind === "picture"));
+  const photo = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "picture"));
+  expect(photo.op === "engrave" && photo.mode === "dots" && photo.src.startsWith("data:image/jpeg"), "a photo to engrave as dots");
+  await page.waitForSelector(".bed-svg .picture image");
+  await page.evaluate((id) => window.juracutStore.getState().select([id]), photo.id);
+  await page.click(".primary-button:has-text('Export for laser')");
+  await page.click(".segmented button:has-text('Selected')");
+  await page.waitForSelector(".export-preview svg image");
+  const [photoSvg] = await Promise.all([page.waitForEvent("download"), page.click(".modal button:has-text('Save SVG')")]);
+  const photoText = await readFile(await photoSvg.path(), "utf8");
+  expect(photoText.includes("<image ") && photoText.includes("data:image/png;base64,"), "the photo inside the SVG");
+  const [photoPng] = await Promise.all([page.waitForEvent("download"), page.click(".modal button:has-text('as PNG')")]);
+  const pngBytes = await readFile(await photoPng.path());
+  expect(pngBytes.subarray(1, 4).toString() === "PNG" && pngBytes.includes(Buffer.from("pHYs")), "a PNG with its size in dots per mm");
+  await page.keyboard.press("Escape");
+  // Its setting in the side panel: Black and white.
+  await page.evaluate((id) => window.juracutStore.getState().select([id]), photo.id);
+  await page.click(".properties .segmented button:has-text('Black & white')");
+  expect((await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "picture").mode)) === "black", "the photo's style changed");
 
   step = "pack tightly";
   await page.click(".arrange-button");

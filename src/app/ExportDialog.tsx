@@ -2,7 +2,7 @@
  * Export for laser: a preview of what the laser gets, the colour key, and
  * Save SVG / Save DXF — files Bambu Studio's laser mode opens at true size.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { layerCounts, LASER_LAYERS, LAYER_ORDER } from "../geometry/segments";
 import { colourKey, laserDxf, laserSvg } from "../laser/files";
@@ -11,6 +11,7 @@ import { useDocument, useSelection, useStore } from "../model/store";
 import { downloadFile, safeFileName } from "./download";
 import { Icons } from "./icons";
 import { Modal } from "./Modal";
+import { renderPicture, type RenderedPicture } from "./pictures";
 
 export function ExportDialog() {
   const doc = useDocument();
@@ -21,20 +22,51 @@ export function ExportDialog() {
   const [wholeBed, setWholeBed] = useState(false);
   const kerf = doc.material.kerf;
   const [useKerf, setUseKerf] = useState(kerf > 0);
-  const items = what === "selected" ? doc.items.filter((it) => selection.includes(it.id)) : doc.items;
+  // Kept the same between redraws, so the sheet (and the photos drawn from it) only change when something does.
+  const items = useMemo(() => (what === "selected" ? doc.items.filter((it) => selection.includes(it.id)) : doc.items), [what, doc.items, selection]);
   const sheet = useMemo(() => makeSheet(doc, { items, mirror, wholeBed, kerf: useKerf ? kerf : 0 }), [doc, items, mirror, wholeBed, useKerf, kerf]);
   const counts = layerCounts(sheet);
-  const preview = useMemo(() => laserSvg(sheet, { preview: true, title: doc.name }), [sheet, doc.name]);
+  // Photos: drawn small for the preview straight away, and at full detail for the files.
+  const [small, setSmall] = useState<(RenderedPicture | null)[]>([]);
+  const [full, setFull] = useState<(RenderedPicture | null)[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    setFull(null);
+    const pics = sheet.pictures;
+    void Promise.all(pics.map((p) => renderPicture(p.item, Math.min(4, p.item.dpm), p.mirrored).catch(() => null))).then((r) => live && setSmall(r));
+    void Promise.all(pics.map((p) => renderPicture(p.item, p.item.dpm, p.mirrored).catch(() => null))).then((r) => live && setFull(r));
+    return () => {
+      live = false;
+    };
+  }, [sheet]);
+  const imagesOf = (r: (RenderedPicture | null)[]) => sheet.pictures.flatMap((p, i) => (r[i] ? [{ box: p.box, href: r[i]!.url }] : []));
+  const preview = useMemo(() => laserSvg(sheet, { preview: true, title: doc.name, images: imagesOf(small) }), [sheet, doc.name, small]);
   const outside = offBed(doc).filter((it) => items.includes(it));
-  const empty = sheet.paths.length === 0;
+  const photos = sheet.pictures.length;
+  const photosReady = !photos || !!full;
+  const empty = sheet.paths.length === 0 && !photos;
   const n = (v: number) => Math.round(v * 10) / 10;
   const base = safeFileName(doc.name, "JuraCUT design");
 
   const save = (kind: "svg" | "dxf") => {
-    const text = kind === "svg" ? laserSvg(sheet, { title: doc.name }) : laserDxf(sheet);
+    const text = kind === "svg" ? laserSvg(sheet, { title: doc.name, images: imagesOf(full ?? []) }) : laserDxf(sheet);
     const name = `${base}${mirror ? " (mirrored)" : ""}.${kind}`;
     downloadFile(new Blob([text], { type: kind === "svg" ? "image/svg+xml" : "application/dxf" }), name);
-    useStore.getState().showToast(`Saved ${name}. In Bambu Studio's laser mode, open it and set each colour as in the key.`, "success");
+    const photoNote = photos ? (kind === "dxf" ? " DXF files can't hold photos: save them as PNG too." : " The photos are inside it as pictures.") : "";
+    useStore.getState().showToast(`Saved ${name}. In Bambu Studio's laser mode, open it and set each colour as in the key.${photoNote}`, "success");
+  };
+  const savePhotos = () => {
+    if (!full) return;
+    full.forEach((r, i) => {
+      if (!r) return;
+      const p = sheet.pictures[i];
+      const name = `${base} - ${safeFileName(p.item.name, "photo")}${mirror ? " (mirrored)" : ""}.png`;
+      downloadFile(new Blob([r.bytes as BlobPart], { type: "image/png" }), name);
+    });
+    useStore.getState().showToast(
+      `Saved ${photos === 1 ? "the photo" : `${photos} photos`} as PNG at true size (${full[0]?.dpm ?? 10} dots per mm). In Bambu Studio, import ${photos === 1 ? "it" : "them"} as an engraving and place ${photos === 1 ? "it" : "them"} over the cut lines.`,
+      "success",
+    );
   };
 
   return (
@@ -100,11 +132,22 @@ export function ExportDialog() {
         </ol>
         <p className="muted small">{colourKey().join(". ")}.</p>
       </details>
+      {photos > 0 && (
+        <p className="dialog-hint">
+          {photos === 1 ? "The photo is" : `${photos} photos are`} in the SVG as {photos === 1 ? "a picture" : "pictures"}, at true size. If Bambu Studio leaves {photos === 1 ? "it" : "them"} out, save {photos === 1 ? "it" : "them"} as PNG and import {photos === 1 ? "it" : "them"} as an engraving.
+          {!photosReady && " Getting the photos ready…"}
+        </p>
+      )}
       <div className="modal-actions">
+        {photos > 0 && (
+          <button type="button" className="text-button" onClick={savePhotos} disabled={!photosReady} style={{ marginRight: "auto" }} title="Each photo as a PNG at true size (it says its dots per mm), ready for the laser">
+            <Icons.Export size={18} /> Save {photos === 1 ? "photo" : "photos"} as PNG
+          </button>
+        )}
         <button type="button" className="text-button" onClick={() => save("dxf")} disabled={empty} title="DXF: for Bambu Studio and every other laser or CAD program; arcs stay exact">
           <Icons.Export size={18} /> Save DXF
         </button>
-        <button type="button" className="primary-button" onClick={() => save("svg")} disabled={empty} title="SVG: what Bambu Studio's laser mode opens, with each colour as a layer">
+        <button type="button" className="primary-button" onClick={() => save("svg")} disabled={empty || !photosReady} title="SVG: what Bambu Studio's laser mode opens, with each colour as a layer">
           <Icons.Export size={18} /> Save SVG
         </button>
       </div>

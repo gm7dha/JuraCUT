@@ -88,7 +88,29 @@ export interface ShapeItem extends ItemBase {
   outlines: Outline[];
 }
 
-export type Item = RectItem | CircleItem | LineItem | TextItem | ShapeItem;
+/**
+ * A photo to engrave. `src` is the picture (a data: URL, kept small); it's drawn `w` × `h` mm before turning, centred
+ * on (cx, cy), turned `turns` quarter turns anticlockwise, then flipped left to right if `flip`. The other settings say
+ * how it's made ready for the laser (geometry/photo.ts). Always engraved.
+ */
+export interface PictureItem extends ItemBase {
+  kind: "picture";
+  src: string;
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+  turns: number;
+  flip: boolean;
+  mode: "dots" | "black" | "greys";
+  brightness: number;
+  contrast: number;
+  invert: boolean;
+  /** Engraving resolution: dots (lines) per mm. */
+  dpm: number;
+}
+
+export type Item = RectItem | CircleItem | LineItem | TextItem | ShapeItem | PictureItem;
 export type ItemKind = Item["kind"];
 
 /** The material on the bed (saved with the design; sizes in mm). */

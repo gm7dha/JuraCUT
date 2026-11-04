@@ -90,3 +90,6 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # GitHub Pages is sometimes slow to finish; give it longer than the usual 10 minutes before giving up.
+          timeout: 1800000

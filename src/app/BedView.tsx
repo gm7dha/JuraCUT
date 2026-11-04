@@ -14,7 +14,8 @@ import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makeRe
 import { newId } from "../model/document";
 import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
-import { OP_INFO, type Item } from "../model/types";
+import { OP_INFO, type Item, type PictureItem } from "../model/types";
+import { usePicturePreview } from "./pictures";
 import type { Pt } from "../geometry/segments";
 
 interface View {
@@ -347,8 +348,16 @@ export function BedView() {
             </text>
           </g>
           {/* Shapes, with a halo under the selected ones. */}
-          {drawn.map(({ item, d }) => {
+          {drawn.map(({ item, d, box }) => {
             const selected = selection.includes(item.id);
+            if (item.kind === "picture")
+              return (
+                <g key={item.id} className={`shape picture${selected ? " selected" : ""}`}>
+                  {box && <PictureOnBed item={item} box={box} />}
+                  {selected && <path d={d} fill="none" stroke="var(--accent)" strokeOpacity={0.35} strokeWidth={7 * px} strokeLinejoin="round" />}
+                  <path d={d} fill="none" stroke="var(--ink-3)" strokeWidth={px} strokeDasharray={`${3 * px} ${3 * px}`} />
+                </g>
+              );
             const colour = opColour(item.op, dark);
             const engrave = item.op === "engrave";
             return (
@@ -384,6 +393,21 @@ export function BedView() {
         <span className="bed-zoom"> {Math.round(view.scale * 100) / 100 >= 1 ? `${(view.scale).toFixed(1)} px/mm` : `${(view.scale * 100).toFixed(0)}%`}</span>
       </div>
     </div>
+  );
+}
+
+/** A photo on the bed, as it'll engrave (the bed's group flips y, so the picture is flipped back inside it). */
+function PictureOnBed({ item, box }: { item: PictureItem; box: [number, number, number, number] }) {
+  const url = usePicturePreview(item);
+  const [x0, y0, x1, y1] = box;
+  return (
+    <g transform={`translate(${x0} ${y1}) scale(1 -1)`}>
+      {url ? (
+        <image href={url} x={0} y={0} width={x1 - x0} height={y1 - y0} preserveAspectRatio="none" style={{ imageRendering: "pixelated" }} />
+      ) : (
+        <rect x={0} y={0} width={x1 - x0} height={y1 - y0} fill="var(--line-2)" />
+      )}
+    </g>
   );
 }
 

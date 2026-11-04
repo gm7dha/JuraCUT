@@ -111,6 +111,8 @@ export interface LaserSvgOptions {
   title?: string;
   /** For showing on screen: lines a steady width however small the picture is drawn. */
   preview?: boolean;
+  /** Photos to engrave: each picture (a data: URL, already turned and ready for the laser) and its box on the sheet (mm, y up). */
+  images?: { box: [number, number, number, number]; href: string }[];
 }
 
 /** An SVG of the sheet: width and height in mm, a viewBox in mm, so it opens at true size. */
@@ -125,6 +127,14 @@ export function laserSvg(sheet: LaserSheet, opts: LaserSvgOptions = {}): string 
   ];
   if (opts.preview) lines.push(`<rect x="0" y="0" width="${n(W)}" height="${n(H)}" fill="#ffffff"/>`);
   const stroke = opts.preview ? `stroke-width="1.2" vector-effect="non-scaling-stroke"` : `stroke-width="${LASER_STROKE}"`;
+  if (opts.images?.length) {
+    lines.push(`<g id="engrave-photos" inkscape:groupmode="layer" inkscape:label="Engrave (photos)">`);
+    for (const im of opts.images) {
+      const [x0, y0, x1, y1] = im.box;
+      lines.push(`<image x="${n(x0)}" y="${n(H - y1)}" width="${n(x1 - x0)}" height="${n(y1 - y0)}" preserveAspectRatio="none" href="${xml(im.href)}"/>`);
+    }
+    lines.push(`</g>`);
+  }
   for (const layer of LAYER_ORDER) {
     const paths = sheet.paths.filter((p) => p.layer === layer);
     if (!paths.length) continue;

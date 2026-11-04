@@ -4,7 +4,7 @@
  */
 import { FONTS, textOutline } from "../geometry/text";
 import { movePaths, pathPoints, pathsBox, segmentPoints, type Affine, type LaserPath, type Pt, type Segment } from "../geometry/segments";
-import type { CircleItem, Item, LineItem, Outline, RectItem, ShapeItem, TextItem } from "./types";
+import type { CircleItem, Item, LineItem, Outline, PictureItem, RectItem, ShapeItem, TextItem } from "./types";
 
 const deg = (a: number) => (a * Math.PI) / 180;
 
@@ -78,7 +78,26 @@ export function itemOutlines(item: Item): Outline[] {
     }
     case "shape":
       return item.outlines;
+    case "picture": {
+      // Its frame (for picking, measuring and laying out); the picture itself is drawn and engraved as an image.
+      const [w, h] = pictureSize(item);
+      const x0 = item.cx - w / 2;
+      const y0 = item.cy - h / 2;
+      const a: Pt = [x0, y0], b: Pt = [x0 + w, y0], c: Pt = [x0 + w, y0 + h], d: Pt = [x0, y0 + h];
+      return [{ closed: true, segments: [{ kind: "line", from: a, to: b }, { kind: "line", from: b, to: c }, { kind: "line", from: c, to: d }, { kind: "line", from: d, to: a }] }];
+    }
   }
+}
+
+/** A picture's size on the bed (mm): across and up, after its quarter turns. */
+export function pictureSize(p: PictureItem): [number, number] {
+  return p.turns % 2 ? [p.h, p.w] : [p.w, p.h];
+}
+
+/** A picture turned a number of quarter turns anticlockwise about its middle (flipped pictures turn the other way inside). */
+function turnedPicture(p: PictureItem, quarters: number): PictureItem {
+  const q = ((Math.round(quarters) % 4) + 4) % 4;
+  return { ...p, turns: (((p.turns + (p.flip ? -q : q)) % 4) + 4) % 4 };
 }
 
 /** m2 after m1 (apply m1 first). */
@@ -121,6 +140,8 @@ export function movedItem(item: Item, dx: number, dy: number): Item {
       return { ...item, x: item.x + dx, y: item.y + dy };
     case "shape":
       return { ...item, outlines: moveOutlines(item.outlines, translation(dx, dy)) };
+    case "picture":
+      return { ...item, cx: item.cx + dx, cy: item.cy + dy };
   }
 }
 
@@ -136,6 +157,17 @@ export function transformedItem(item: Item, m: Affine): Item {
       const a = applyAffine(m, [item.x1, item.y1]);
       const b = applyAffine(m, [item.x2, item.y2]);
       return { ...item, x1: a[0], y1: a[1], x2: b[0], y2: b[1] };
+    }
+    case "picture": {
+      // Pictures move, turn by quarter turns and flip; any other turn just moves them.
+      const c = applyAffine(m, [item.cx, item.cy]);
+      const flipped = m[0] * m[3] - m[1] * m[2] < 0;
+      // The turn the matrix makes (after taking out a left-right flip).
+      const angle = Math.atan2(m[1], flipped ? -m[0] : m[0]);
+      const q = Math.round(angle / (Math.PI / 2));
+      let p: PictureItem = { ...item, cx: c[0], cy: c[1] };
+      if (flipped) p = { ...p, flip: !p.flip };
+      return Math.abs(angle - q * (Math.PI / 2)) < 1e-6 ? turnedPicture(p, flipped ? -q : q) : p;
     }
     default:
       return { id: item.id, name: item.name, op: item.op, hidden: item.hidden, group: item.group, kind: "shape", outlines: moveOutlines(itemOutlines(item), m) };
@@ -157,6 +189,8 @@ export function rotatedItem(item: Item, angle: number): Item {
     }
     case "circle":
       return item;
+    case "picture":
+      return angle % 90 === 0 ? turnedPicture(item, angle / 90) : item;
     default:
       return transformedItem(item, rotation(angle, centre));
   }
@@ -212,6 +246,7 @@ export function mirroredItem(item: Item): Item {
   const box = itemBox(item);
   if (!box) return item;
   const m = mirrorX(boxCentre(box)[0]);
+  if (item.kind === "picture") return { ...item, flip: !item.flip };
   return item.kind === "circle" ? item : transformedItem(item, m);
 }
 
@@ -312,5 +347,28 @@ export function describeItem(item: Item): string {
       const box = itemBox(item);
       return box ? `${n(box[2] - box[0])} × ${n(box[3] - box[1])} mm` : "empty";
     }
+    case "picture": {
+      const [w, h] = pictureSize(item);
+      return `photo ${n(w)} × ${n(h)} mm`;
+    }
   }
 }
+
+export const makePicture = (id: string, name: string, src: string, cx: number, cy: number, w: number, h: number): PictureItem => ({
+  id,
+  name,
+  op: "engrave",
+  kind: "picture",
+  src,
+  cx,
+  cy,
+  w,
+  h,
+  turns: 0,
+  flip: false,
+  mode: "dots",
+  brightness: 0,
+  contrast: 0,
+  invert: false,
+  dpm: 10,
+});
