@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { svgPathData } from "../laser/files";
 import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
+import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
 import { OP_INFO, type Item } from "../model/types";
 import type { Pt } from "../geometry/segments";
@@ -26,12 +27,16 @@ interface View {
 
 /** How far from an outline a click still counts, in screen pixels. */
 const REACH_PX = 6;
+/** How close (screen pixels) a point or edge must come to another shape's edge to snap to it. */
+const SNAP_PX = 8;
+/** The rulers' width in pixels. */
+const RULER = 22;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 60;
 
 type Gesture =
   | { kind: "pan"; start: Pt; view: View }
-  | { kind: "move"; start: Pt; moved: boolean }
+  | { kind: "move"; start: Pt; moved: boolean; box: [number, number, number, number] | null }
   | { kind: "box"; start: Pt; end: Pt }
   | { kind: "draw"; tool: Exclude<Tool, "select" | "text">; start: Pt; end: Pt }
   | { kind: "pinch"; ids: [number, number]; dist: number; mid: Pt; view: View };
@@ -51,6 +56,9 @@ export function BedView() {
   const pointers = useRef(new Map<number, Pt>());
   const spaceHeld = useRef(false);
   const [pointerMm, setPointerMm] = useState<Pt | null>(null);
+  /** The lines snapped to right now, drawn as guides. */
+  const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const linesRef = useRef<SnapLines>({ xs: [], ys: [] });
 
   const setGestureBoth = (g: Gesture | null) => {
     gestureRef.current = g;
@@ -73,8 +81,10 @@ export function BedView() {
     const h = el.clientHeight;
     if (!w || !h) return;
     const margin = 36;
-    const scale = Math.max(MIN_SCALE, Math.min((w - 2 * margin) / doc.bed[0], (h - 2 * margin) / doc.bed[1]));
-    setView({ scale, x: (w - doc.bed[0] * scale) / 2, y: (h + doc.bed[1] * scale) / 2 });
+    const aw = w - RULER;
+    const ah = h - RULER;
+    const scale = Math.max(MIN_SCALE, Math.min((aw - 2 * margin) / doc.bed[0], (ah - 2 * margin) / doc.bed[1]));
+    setView({ scale, x: RULER + (aw - doc.bed[0] * scale) / 2, y: RULER + (ah + doc.bed[1] * scale) / 2 });
   }, [doc.bed]);
 
   // Fit when the view first appears and when asked (F, the Fit button, an import).
@@ -141,11 +151,19 @@ export function BedView() {
     setView({ scale, x: at[0] - (at[0] - v.x) * k, y: at[1] - (at[1] - v.y) * k });
   };
 
-  /** Snap a drawn point to the millimetre grid (half millimetres zoomed in), unless Shift is held. */
+  /**
+   * Snap a drawn point: onto another shape's edge or middle when one is within reach (a guide shows),
+   * else to the millimetre grid (half millimetres zoomed in). Shift = no snapping at all.
+   */
   const snap = (p: Pt, shift: boolean): Pt => {
-    if (shift) return p;
+    if (shift) {
+      setGuides({ x: null, y: null });
+      return p;
+    }
+    const near = snapPoint(p, linesRef.current, SNAP_PX / viewRef.current.scale);
+    setGuides({ x: near.guideX, y: near.guideY });
     const step = viewRef.current.scale > 8 ? 0.5 : 1;
-    return [Math.round(p[0] / step) * step, Math.round(p[1] / step) * step];
+    return [near.guideX ?? Math.round(p[0] / step) * step, near.guideY ?? Math.round(p[1] / step) * step];
   };
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -173,8 +191,10 @@ export function BedView() {
       if (hit) {
         if (additive) s.select([hit.id], true);
         else if (!selection.includes(hit.id)) s.select([hit.id]);
+        const ids = useStore.getState().selection;
+        linesRef.current = snapLines(doc.items, ids, doc.bed);
         s.dragStart();
-        setGestureBoth({ kind: "move", start: mm, moved: false });
+        setGestureBoth({ kind: "move", start: mm, moved: false, box: selectionBox(doc.items, ids) });
       } else {
         if (!additive) s.clearSelection();
         setGestureBoth({ kind: "box", start: mm, end: mm });
@@ -182,12 +202,15 @@ export function BedView() {
       return;
     }
     if (tool === "text") {
+      linesRef.current = snapLines(doc.items, [], doc.bed);
       const p = snap(mm, e.shiftKey);
+      setGuides({ x: null, y: null });
       const id = newId(doc.items.map((it) => it.id));
       s.addItems([makeText(id, p[0], p[1])], { select: true, focus: true });
       s.setTool("select");
       return;
     }
+    linesRef.current = snapLines(doc.items, [], doc.bed);
     const p = snap(mm, e.shiftKey);
     setGestureBoth({ kind: "draw", tool, start: p, end: p });
   };
@@ -217,10 +240,16 @@ export function BedView() {
       }
       case "move": {
         const raw: Pt = [mm[0] - g.start[0], mm[1] - g.start[1]];
-        const step = e.shiftKey ? 0 : viewRef.current.scale > 8 ? 0.5 : 1;
-        const d: Pt = step ? [Math.round(raw[0] / step) * step, Math.round(raw[1] / step) * step] : raw;
         if (!g.moved && Math.hypot(raw[0], raw[1]) * viewRef.current.scale < 3) break;
         g.moved = true;
+        const step = e.shiftKey ? 0 : viewRef.current.scale > 8 ? 0.5 : 1;
+        let d: Pt = step ? [Math.round(raw[0] / step) * step, Math.round(raw[1] / step) * step] : raw;
+        if (!e.shiftKey && g.box) {
+          // Edges and middles of what's being moved line up with other shapes when they come close.
+          const sn = snapBoxMove(g.box, raw[0], raw[1], linesRef.current, SNAP_PX / viewRef.current.scale);
+          d = [sn.guideX !== null ? sn.dx : d[0], sn.guideY !== null ? sn.dy : d[1]];
+          setGuides({ x: sn.guideX, y: sn.guideY });
+        } else setGuides({ x: null, y: null });
         const ids = useStore.getState().selection;
         s.dragUpdate((base) => ({ ...base, items: base.items.map((it) => (ids.includes(it.id) ? movedItem(it, d[0], d[1]) : it)) }));
         break;
@@ -245,6 +274,7 @@ export function BedView() {
       return;
     }
     setGestureBoth(null);
+    setGuides({ x: null, y: null });
     switch (g.kind) {
       case "move":
         s.dragEnd();
@@ -266,6 +296,7 @@ export function BedView() {
     pointers.current.delete(e.pointerId);
     if (gestureRef.current?.kind === "move") useStore.getState().dragEnd();
     setGestureBoth(null);
+    setGuides({ x: null, y: null });
   };
 
   // What to draw: every shape's path data, worked out once per design.
@@ -332,6 +363,8 @@ export function BedView() {
             <rect key={`sel-${item.id}`} x={box![0]} y={box![1]} width={box![2] - box![0]} height={box![3] - box![1]} className="selection-box" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />
           ))}
           {draft && <path d={itemPathData(draft)} className="draft" fill="none" stroke="var(--accent)" strokeWidth={1.5 * px} strokeDasharray={`${4 * px} ${3 * px}`} />}
+          {guides.x !== null && <line x1={guides.x} y1={-1e4} x2={guides.x} y2={1e4} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
+          {guides.y !== null && <line x1={-1e4} y1={guides.y} x2={1e4} y2={guides.y} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {gesture?.kind === "box" && (
             <rect
               x={Math.min(gesture.start[0], gesture.end[0])}
@@ -343,6 +376,7 @@ export function BedView() {
             />
           )}
         </g>
+        <Rulers view={view} width={host.current?.clientWidth ?? 0} height={host.current?.clientHeight ?? 0} pointer={pointerMm} />
       </svg>
       <div className="bed-readout" aria-live="off">
         {pointerMm ? `${pointerMm[0].toFixed(1)}, ${pointerMm[1].toFixed(1)} mm` : ""}
@@ -351,6 +385,73 @@ export function BedView() {
       </div>
     </div>
   );
+}
+
+/** Millimetre rulers along the top and left edges of the view (screen coordinates), with the pointer marked. */
+function Rulers({ view, width, height, pointer }: { view: View; width: number; height: number; pointer: Pt | null }) {
+  if (!width || !height) return null;
+  const step = rulerStep(view.scale);
+  const minor = step / (step % 10 === 0 || step >= 10 ? 5 : 2);
+  const xTicks: { x: number; mm: number; big: boolean }[] = [];
+  const x0 = Math.floor((RULER - view.x) / view.scale / minor) * minor;
+  const x1 = (width - view.x) / view.scale;
+  for (let mm = x0; mm <= x1 && xTicks.length < 2000; mm += minor) {
+    const r = Math.round(mm * 1e6) / 1e6;
+    xTicks.push({ x: view.x + r * view.scale, mm: r, big: Math.abs(r / step - Math.round(r / step)) < 1e-6 });
+  }
+  const yTicks: { y: number; mm: number; big: boolean }[] = [];
+  const yTop = (view.y - RULER) / view.scale;
+  const yBottom = (view.y - height) / view.scale;
+  const y0 = Math.floor(yBottom / minor) * minor;
+  for (let mm = y0; mm <= yTop && yTicks.length < 2000; mm += minor) {
+    const r = Math.round(mm * 1e6) / 1e6;
+    yTicks.push({ y: view.y - r * view.scale, mm: r, big: Math.abs(r / step - Math.round(r / step)) < 1e-6 });
+  }
+  return (
+    <g className="rulers" pointerEvents="none">
+      <rect x={0} y={0} width={width} height={RULER} className="ruler-bg" />
+      <rect x={0} y={0} width={RULER} height={height} className="ruler-bg" />
+      {xTicks.map((t) => (
+        <g key={`x${t.mm}`}>
+          <line x1={t.x} y1={RULER} x2={t.x} y2={t.big ? RULER - 9 : RULER - 4} className="ruler-tick" />
+          {t.big && (
+            <text x={t.x + 3} y={10} className="ruler-text">
+              {t.mm}
+            </text>
+          )}
+        </g>
+      ))}
+      {yTicks.map((t) => (
+        <g key={`y${t.mm}`}>
+          <line x1={RULER} y1={t.y} x2={t.big ? RULER - 9 : RULER - 4} y2={t.y} className="ruler-tick" />
+          {t.big && (
+            <text x={10} y={t.y - 3} className="ruler-text" transform={`rotate(-90 10 ${t.y - 3})`}>
+              {t.mm}
+            </text>
+          )}
+        </g>
+      ))}
+      {pointer && (
+        <>
+          <line x1={view.x + pointer[0] * view.scale} y1={0} x2={view.x + pointer[0] * view.scale} y2={RULER} className="ruler-pointer" />
+          <line x1={0} y1={view.y - pointer[1] * view.scale} x2={RULER} y2={view.y - pointer[1] * view.scale} className="ruler-pointer" />
+        </>
+      )}
+      <rect x={0} y={0} width={RULER} height={RULER} className="ruler-bg" />
+    </g>
+  );
+}
+
+/** The box round some shapes, or null when there are none. */
+function selectionBox(items: readonly Item[], ids: readonly string[]): [number, number, number, number] | null {
+  let box: [number, number, number, number] | null = null;
+  for (const it of items) {
+    if (!ids.includes(it.id)) continue;
+    const b = itemBox(it);
+    if (!b) continue;
+    box = box ? [Math.min(box[0], b[0]), Math.min(box[1], b[1]), Math.max(box[2], b[2]), Math.max(box[3], b[3])] : b;
+  }
+  return box;
 }
 
 /** A shape's outlines as SVG path data in bed millimetres (y up — the view's group flips it). */

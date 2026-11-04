@@ -9,6 +9,8 @@ import { Modal } from "./Modal";
 import { setThemeChoice, themeChoice, type ThemeChoice } from "./theme";
 import { versionIsNew } from "./WhatsNewDialog";
 import { detectPlatform, shortcut } from "./platform";
+import { useMaterials } from "./materialsState";
+import { findMaterial, materialForDesign } from "../model/materials";
 
 export function TopBar() {
   const doc = useDocument();
@@ -131,6 +133,8 @@ function SettingsMenu() {
   const [open, setOpen] = useState(false);
   const doc = useDocument();
   const [choice, setChoice] = useState<ThemeChoice>(themeChoice);
+  const materials = useMaterials();
+  const inLibrary = findMaterial(materials, doc.material);
   // The menu is placed on the page itself (fixed), so the top bar's edge can't cut it off.
   const [at, setAt] = useState<{ top: number; right: number } | null>(null);
   useEffect(() => {
@@ -191,14 +195,38 @@ function SettingsMenu() {
           <p className="dialog-hint">The Bambu Lab R1's work area is 600 × 300 mm.</p>
           <div className="field-label settings-gap">Material (this design)</div>
           <label className="field">
-            <span>Name</span>
-            <input type="text" defaultValue={doc.material.name} key={doc.material.name} onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== doc.material.name && s().setMaterial({ ...doc.material, name: e.target.value.trim() })} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} />
+            <span>From your list</span>
+            <select
+              value={inLibrary ? inLibrary.name : "__own__"}
+              onChange={(e) => {
+                const m = materials.find((x) => x.name === e.target.value);
+                if (m) s().setMaterial(materialForDesign(m));
+              }}
+            >
+              {!inLibrary && <option value="__own__">{doc.material.name} (this design's own)</option>}
+              {materials.map((m) => (
+                <option key={m.name} value={m.name}>
+                  {m.name} — kerf {m.kerf} mm
+                </option>
+              ))}
+            </select>
           </label>
           <div className="field-row">
             {numberField("Thickness", doc.material.thickness, (thickness) => s().setMaterial({ ...doc.material, thickness }))}
             {numberField("Kerf", doc.material.kerf, (kerf) => s().setMaterial({ ...doc.material, kerf }))}
           </div>
-          <p className="dialog-hint">Kerf is how wide a cut the beam leaves. It's noted with the design for now; cutting lines moved out by half of it is coming.</p>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => {
+              setOpen(false);
+              useStore.getState().openDialog("material");
+            }}
+            title="Add, change or remove materials, with notes (kept on this computer)"
+          >
+            Materials…
+          </button>
+          <p className="dialog-hint">Kerf is how wide a cut the beam leaves. Export for laser can move cut lines out by half of it, so pieces come out the size you drew.</p>
           <div className="field-label settings-gap">Appearance (this computer)</div>
           <div className="segmented three" role="radiogroup" aria-label="Appearance">
             {(

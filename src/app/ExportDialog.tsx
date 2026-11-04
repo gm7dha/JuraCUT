@@ -19,8 +19,10 @@ export function ExportDialog() {
   const [what, setWhat] = useState<"all" | "selected">(selection.length ? "selected" : "all");
   const [mirror, setMirror] = useState(false);
   const [wholeBed, setWholeBed] = useState(false);
+  const kerf = doc.material.kerf;
+  const [useKerf, setUseKerf] = useState(kerf > 0);
   const items = what === "selected" ? doc.items.filter((it) => selection.includes(it.id)) : doc.items;
-  const sheet = useMemo(() => makeSheet(doc, { items, mirror, wholeBed }), [doc, items, mirror, wholeBed]);
+  const sheet = useMemo(() => makeSheet(doc, { items, mirror, wholeBed, kerf: useKerf ? kerf : 0 }), [doc, items, mirror, wholeBed, useKerf, kerf]);
   const counts = layerCounts(sheet);
   const preview = useMemo(() => laserSvg(sheet, { preview: true, title: doc.name }), [sheet, doc.name]);
   const outside = offBed(doc).filter((it) => items.includes(it));
@@ -62,6 +64,10 @@ export function ExportDialog() {
           <label className="check-row">
             <input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} />
             Mirror (flip left to right, for engraving on the back)
+          </label>
+          <label className="check-row" title="The beam takes away a strip as wide as the kerf, half each side of the line. Moving the lines by half of it makes pieces and holes come out the size you drew. Set the kerf for your material in Settings.">
+            <input type="checkbox" checked={useKerf} disabled={kerf <= 0} onChange={(e) => setUseKerf(e.target.checked)} />
+            {kerf > 0 ? `Allow for the kerf (${kerf} mm, ${doc.material.name}): cut lines moved out by half of it, holes in` : "Allow for the kerf (set the material's kerf in Settings first)"}
           </label>
           <p className="dialog-hint">
             Sheet: {n(sheet.size[0])} × {n(sheet.size[1])} mm, true size.

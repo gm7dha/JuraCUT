@@ -4,6 +4,7 @@
  * inner cuts (holes, cut first) by nesting, scores and engraving keep their
  * layer, and open cut lines are cut as inner lines (before any outline).
  */
+import { nestingDepths, offsetLoop } from "../geometry/offset";
 import { movePaths, pathsBox, sortLoops, type LaserPath, type LaserSheet } from "../geometry/segments";
 import { itemOutlines } from "../model/shapes";
 import type { Item, JuraCUTDocument, Op } from "../model/types";
@@ -11,14 +12,16 @@ import type { Item, JuraCUTDocument, Op } from "../model/types";
 export interface SheetOptions {
   /** Only these shapes (default: every shape that isn't hidden). */
   items?: readonly Item[];
+  /** The beam's width (mm): cut lines are moved out by half of it (holes in), so pieces come out the size drawn. */
+  kerf?: number;
   /** Flip left to right, for engraving on the back of a piece. */
   mirror?: boolean;
   /** Keep the shapes where they are on the bed (the sheet is the whole bed); else the sheet is just the box round them. */
   wholeBed?: boolean;
 }
 
-/** The laser paths of some shapes, on the bed, cuts sorted. */
-export function laserPaths(items: readonly Item[]): LaserPath[] {
+/** The laser paths of some shapes, on the bed, cuts sorted (and moved by half the kerf when one is given). */
+export function laserPaths(items: readonly Item[], kerf = 0): LaserPath[] {
   const byOp: Record<Op, { closed: LaserPath[]; open: LaserPath[] }> = {
     cut: { closed: [], open: [] },
     score: { closed: [], open: [] },
@@ -38,14 +41,36 @@ export function laserPaths(items: readonly Item[]): LaserPath[] {
   out.push(...byOp.score.closed, ...byOp.score.open);
   // Cuts: open runs first (lines never free a piece), then holes before the outlines round them.
   out.push(...byOp.cut.open);
-  out.push(...sortLoops(byOp.cut.closed.map((p) => p.segments)));
+  const sorted = sortLoops(byOp.cut.closed.map((p) => p.segments));
+  out.push(...(kerf > 0 ? withKerf(sorted, kerf) : sorted));
+  return out;
+}
+
+/**
+ * Cut loops moved by half the kerf: outsides (and islands) outwards, holes inwards. Open runs (cut lines)
+ * stay where they are. A hole smaller than the kerf disappears — the beam would take all of it anyway.
+ */
+export function withKerf(paths: LaserPath[], kerf: number): LaserPath[] {
+  const closed = paths.filter((p) => p.closed);
+  const depths = nestingDepths(closed.map((p) => p.segments));
+  const out: LaserPath[] = [];
+  let k = 0;
+  for (const p of paths) {
+    if (!p.closed) {
+      out.push(p);
+      continue;
+    }
+    const depth = depths[k++];
+    const moved = offsetLoop(p.segments, depth % 2 === 0 ? kerf / 2 : -kerf / 2);
+    if (moved) out.push({ ...p, segments: moved });
+  }
   return out;
 }
 
 /** The sheet to write: paths moved so the sheet's bottom-left corner is (0, 0). */
 export function makeSheet(doc: JuraCUTDocument, opts: SheetOptions = {}): LaserSheet {
   const items = opts.items ?? doc.items;
-  const paths = laserPaths(items);
+  const paths = laserPaths(items, opts.kerf ?? 0);
   const box = opts.wholeBed ? [0, 0, doc.bed[0], doc.bed[1]] : (pathsBox(paths) ?? [0, 0, 0, 0]);
   const W = box[2] - box[0];
   const H = box[3] - box[1];
