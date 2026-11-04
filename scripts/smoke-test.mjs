@@ -12,6 +12,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { chromium } from "playwright";
 
 const inCI = process.env.GITHUB_ACTIONS === "true";
@@ -43,6 +44,43 @@ const server = createServer(async (req, res) => {
   }
 });
 await new Promise((r) => server.listen(4173, "127.0.0.1", r));
+
+/** A small PNG (black shapes on white) made here, for the Trace window: a ring and a bar. */
+function testPng(w = 120, h = 80) {
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) {
+    raw[y * (w * 3 + 1)] = 0;
+    for (let x = 0; x < w; x++) {
+      const r = Math.hypot(x - 40, y - 40);
+      const dark = (r < 30 && r > 18) || (x > 80 && x < 110 && y > 20 && y < 60);
+      raw.fill(dark ? 0 : 255, y * (w * 3 + 1) + 1 + x * 3, y * (w * 3 + 1) + 4 + x * 3);
+    }
+  }
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf) => {
+    let c = 0xffffffff;
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const c = Buffer.alloc(4);
+    c.writeUInt32BE(crc(td));
+    return Buffer.concat([len, td, c]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
 
 let step = "starting";
 const browser = await chromium.launch();
@@ -123,7 +161,8 @@ try {
   await page.keyboard.press("Control+a");
   const selected = await store(() => window.juracutStore.getState().selection.length);
   expect(selected === 4, "4 selected");
-  await page.click(".tool-button:has-text('Arrange')");
+  await page.click(".arrange-button");
+  await page.click(".menu-choice:has-text('In rows')");
 
   step = "export an SVG";
   await page.click(".primary-button:has-text('Export for laser')");
@@ -192,7 +231,26 @@ try {
   });
   expect(lefts === 6, "six panels still selected after lining up");
   await page.click("button:has-text('Column')");
-  await page.click(".tool-button:has-text('Arrange')");
+  await page.click(".arrange-button");
+  await page.click(".menu-choice:has-text('In rows')");
+
+  step = "trace a picture";
+  const [pic] = await Promise.all([page.waitForEvent("filechooser"), page.click("button:has-text('Import')")]);
+  await pic.setFiles({ name: "logo.png", mimeType: "image/png", buffer: testPng() });
+  await page.waitForSelector(".trace-preview path");
+  await page.waitForFunction(() => (document.querySelector(".trace-preview path")?.getAttribute("d") ?? "").length > 20);
+  await page.click(".modal button:has-text('Put on the bed')");
+  const traced = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.name === "logo"));
+  expect(traced && traced.kind === "shape" && traced.op === "engrave" && traced.outlines.length === 3, "the ring (outside and hole) and the bar traced");
+
+  step = "pack tightly";
+  await page.click(".arrange-button");
+  await page.click(".menu-choice:has-text('Pack tightly')");
+  const outside = await store(() => {
+    const s = window.juracutStore.getState();
+    return s.history.present.items.length;
+  });
+  expect(outside > 0, "shapes still there after packing");
 
   step = "materials and kerf";
   await page.click(".settings-button");

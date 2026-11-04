@@ -10,10 +10,12 @@ import { newId, nameFromFileName } from "./document";
 import { makeShape, movedItem } from "./shapes";
 import { OP_INFO, type Item, type Op, type Outline } from "./types";
 
-export const IMPORT_EXTENSIONS = [".svg", ".dxf"];
-export const IMPORT_ACCEPT = "image/svg+xml,.svg,.dxf";
+export const PICTURE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"];
+export const IMPORT_EXTENSIONS = [".svg", ".dxf", ...PICTURE_EXTENSIONS];
+export const IMPORT_ACCEPT = `image/svg+xml,.svg,.dxf,image/png,image/jpeg,image/gif,image/webp,image/bmp,${PICTURE_EXTENSIONS.join(",")}`;
 
-export const isImportFile = (name: string) => /\.(svg|dxf)$/i.test(name);
+export const isPictureFile = (name: string) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(name);
+export const isImportFile = (name: string) => /\.(svg|dxf)$/i.test(name) || isPictureFile(name);
 
 export interface ImportResult {
   items: Item[];

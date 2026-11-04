@@ -6,7 +6,17 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.3 — Design library, groups, line up and space out
+## v0.4 — Trace pictures, pack tightly
+
+- **Trace a picture:** Import (or drop) a PNG, JPG, GIF, WebP or BMP and the Trace window turns it into outlines —
+  a logo, a drawing, a scanned sketch. Slide between dark and light (or let it choose), trace the light parts
+  instead, pick the detail, smooth curves with sharp corners kept, leave out specks, set the size in mm, and choose
+  engrave, cut or score. A preview shows the outlines over the picture.
+- **Pack tightly** (Arrange › Pack tightly): pieces are fitted together by their real shapes, not their boxes —
+  into each other's corners and into big holes — and turned where that helps (or not, for wood grain). The gap
+  between pieces is yours to set. **In rows** is the old Arrange.
+
+## v0.3 — Design library, groups, line up and space out · commit `6745917`
 
 - **Design library** (toolbar › Library): fill in the sizes, see a preview, put it on the bed.
   - **Finger-jointed box** — six panels (five without a lid) whose edges interlock; tick "Allow for the kerf" when you

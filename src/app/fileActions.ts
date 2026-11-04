@@ -8,7 +8,7 @@
  * file picker.
  */
 import { FILE_EXTENSION, FILE_MIME, nameFromFileName, readDocumentFile, serializeDocument } from "../model/document";
-import { IMPORT_ACCEPT, importDrawing, isImportFile } from "../model/importFile";
+import { IMPORT_ACCEPT, importDrawing, isImportFile, isPictureFile } from "../model/importFile";
 import { useStore } from "../model/store";
 import { downloadFile, safeFileName } from "./download";
 
@@ -43,11 +43,29 @@ const OPEN_TYPES = [
       "application/json": [FILE_EXTENSION],
       "image/svg+xml": [".svg"],
       "application/dxf": [".dxf"],
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/gif": [".gif"],
+      "image/webp": [".webp"],
+      "image/bmp": [".bmp"],
     },
   },
 ];
 
-const IMPORT_TYPES = [{ description: "SVG or DXF drawing", accept: { "image/svg+xml": [".svg"], "application/dxf": [".dxf"] } }];
+const IMPORT_TYPES = [
+  {
+    description: "SVG or DXF drawing, or a picture to trace",
+    accept: {
+      "image/svg+xml": [".svg"],
+      "application/dxf": [".dxf"],
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/gif": [".gif"],
+      "image/webp": [".webp"],
+      "image/bmp": [".bmp"],
+    },
+  },
+];
 
 /** The file the design was last saved to or opened from (Chrome/Edge only). */
 let currentHandle: FileHandle | null = null;
@@ -130,9 +148,23 @@ export async function openFile(file: File): Promise<boolean> {
   return true;
 }
 
-/** Bring an SVG or DXF drawing in as shapes. */
+/** Bring an SVG or DXF drawing in as shapes, or open a picture in the Trace window. */
 export async function importFile(file: File): Promise<boolean> {
   const s = useStore.getState();
+  if (isPictureFile(file.name)) {
+    if (file.size > 40 * 1024 * 1024) {
+      s.showToast(`${file.name} is too big to trace (over 40 MB). Save a smaller copy and try again.`, "error");
+      return false;
+    }
+    const url = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+    s.openTrace(file.name, url);
+    return true;
+  }
   try {
     const doc = s.history.present;
     const { items, summary } = importDrawing(await file.text(), file.name, doc.items.map((it) => it.id), { bed: doc.bed });

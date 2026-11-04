@@ -9,11 +9,12 @@ import { create } from "zustand";
 import { arrangeOnBed } from "../geometry/segments";
 import { newDocument, newId } from "./document";
 import { aligned, distributed, grouped, mirroredPieces, newGroupId, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignTo } from "./arrange";
-import { boxCentre, itemBox, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
+import { packPieces } from "../geometry/pack";
+import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
 
 export type Tool = "select" | "rect" | "circle" | "line" | "text";
-export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | null;
+export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
 
 export interface Toast {
   id: number;
@@ -46,6 +47,8 @@ export interface State {
   fitRequest: number;
   /** The shape whose words are being typed (text tool): its properties panel gets the focus. */
   focusItem: string | null;
+  /** A picture waiting to be traced (the Trace window shows it). */
+  picture: { name: string; url: string } | null;
 
   // The design.
   commit(next: JuraCUTDocument): void;
@@ -73,6 +76,8 @@ export interface State {
   rotateSelected(angle: number): void;
   mirrorSelected(): void;
   arrangeAll(gap?: number): void;
+  /** Fit pieces together by their real shapes (and into each other's holes), turning them if `turns`. */
+  packAll(gap?: number, turns?: boolean): void;
   groupSelected(): void;
   ungroupSelected(): void;
   alignSelected(to: AlignTo): void;
@@ -85,6 +90,8 @@ export interface State {
   clearSelection(): void;
   setTool(tool: Tool): void;
   setFocusItem(id: string | null): void;
+  /** Open the Trace window for a picture (a data: URL). */
+  openTrace(name: string, url: string): void;
 
   // The rest.
   openDialog(dialog: DialogName): void;
@@ -110,6 +117,7 @@ export const useStore = create<State>((set, get) => ({
   storageProblem: null,
   fitRequest: 0,
   focusItem: null,
+  picture: null,
 
   commit(next) {
     const { history } = get();
@@ -258,25 +266,12 @@ export const useStore = create<State>((set, get) => ({
   },
   arrangeAll(gap = 5) {
     const doc = get().history.present;
-    // Shapes inside another shape (a hole, words on a tag) travel with it as one piece.
-    const parents = pieceOf(doc.items);
-    const shown = doc.items.filter((it) => !it.hidden && itemBox(it));
-    const pieces = new Map<string, Item[]>();
-    for (const it of shown) {
-      // A group is one piece; a shape inside another goes with that one (and with its group, if it has one).
-      const holder = doc.items.find((x) => x.id === (parents.get(it.id) ?? it.id)) ?? it;
-      const root = it.group ? `group:${it.group}` : holder.group ? `group:${holder.group}` : holder.id;
-      pieces.set(root, [...(pieces.get(root) ?? []), it]);
-    }
+    const pieces = bedPieces(doc.items);
     if (!pieces.size) return;
-    const boxOf = (members: Item[]): [number, number, number, number] => {
-      const boxes = members.map((m) => itemBox(m)!);
-      return [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
-    };
     // Biggest first in rows across the bed, a quarter turn when that's the only way a piece fits; what won't fit goes beside the bed.
     const layout = arrangeOnBed(
       [...pieces].map(([id, members]) => {
-        const b = boxOf(members);
+        const b = unionBox(members);
         return { id, size: [b[2] - b[0] + gap, b[3] - b[1] + gap] };
       }),
       doc.bed,
@@ -286,10 +281,9 @@ export const useStore = create<State>((set, get) => ({
     for (const [id, members] of pieces) {
       const place = layout.places.find((p) => p.id === id);
       if (!place) continue;
-      const before = boxOf(members);
-      const centre = boxCentre(before);
+      const centre = boxCentre(unionBox(members));
       const turned = place.turned ? members.map((m) => rotatedItemAbout(m, 90, centre)) : members;
-      const b = boxOf(turned);
+      const b = unionBox(turned);
       const dx = place.x - (b[0] + b[2]) / 2;
       const dy = place.y - (b[1] + b[3]) / 2;
       for (const m of turned) moved.set(m.id, movedItem(m, dx, dy));
@@ -299,6 +293,35 @@ export const useStore = create<State>((set, get) => ({
       const n = layout.tooBig.length + layout.noRoom.length;
       get().showToast(`${n} ${n === 1 ? "piece doesn't" : "pieces don't"} fit on the bed with the others, so ${n === 1 ? "it's" : "they're"} placed beside it.`, "info");
     }
+  },
+  packAll(gap = 3, turns = true) {
+    const doc = get().history.present;
+    const pieces = bedPieces(doc.items);
+    if (!pieces.size) return;
+    const result = packPieces(
+      [...pieces].map(([id, members]) => ({ id, outlines: members.flatMap((m) => itemOutlines(m)) })),
+      doc.bed,
+      { gap, turns, cell: 1 },
+    );
+    const moved = new Map<string, Item>();
+    for (const place of result.places) {
+      const members = pieces.get(place.id)!;
+      const centre = boxCentre(unionBox(members));
+      const turned = place.turns ? members.map((m) => rotatedItemAbout(m, 90 * place.turns, centre)) : members;
+      const b = unionBox(turned);
+      for (const m of turned) moved.set(m.id, movedItem(m, place.x - b[0], place.y - b[1]));
+    }
+    // What didn't fit goes in a row beside the bed.
+    let x = doc.bed[0] + 10;
+    for (const id of result.left) {
+      const members = pieces.get(id)!;
+      const b = unionBox(members);
+      for (const m of members) moved.set(m.id, movedItem(m, x - b[0], -b[1]));
+      x += b[2] - b[0] + gap;
+    }
+    get().commit({ ...doc, items: doc.items.map((it) => moved.get(it.id) ?? it) });
+    const n = result.left.length;
+    if (n) get().showToast(`${n} ${n === 1 ? "piece doesn't" : "pieces don't"} fit on the bed with the others, so ${n === 1 ? "it's" : "they're"} placed beside it.`, "info");
   },
   reorder(id, to) {
     const doc = get().history.present;
@@ -337,6 +360,9 @@ export const useStore = create<State>((set, get) => ({
   setFocusItem(id) {
     set({ focusItem: id });
   },
+  openTrace(name, url) {
+    set({ picture: { name, url }, dialog: "trace" });
+  },
 
   openDialog(dialog) {
     set({ dialog });
@@ -356,6 +382,27 @@ export const useStore = create<State>((set, get) => ({
     set({ fitRequest: get().fitRequest + 1 });
   },
 }));
+
+/**
+ * The design's shapes as pieces for laying out: a group is one piece, and a shape inside another (a hole, words on a
+ * tag) goes with that one — and with its group, if it has one. Hidden and empty shapes are left where they are.
+ */
+function bedPieces(items: readonly Item[]): Map<string, Item[]> {
+  const parents = pieceOf(items);
+  const pieces = new Map<string, Item[]>();
+  for (const it of items) {
+    if (it.hidden || !itemBox(it)) continue;
+    const holder = items.find((x) => x.id === (parents.get(it.id) ?? it.id)) ?? it;
+    const root = it.group ? `group:${it.group}` : holder.group ? `group:${holder.group}` : holder.id;
+    pieces.set(root, [...(pieces.get(root) ?? []), it]);
+  }
+  return pieces;
+}
+
+function unionBox(members: Item[]): [number, number, number, number] {
+  const boxes = members.map((m) => itemBox(m)!);
+  return [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
+}
 
 function keepExisting(selection: string[], doc: JuraCUTDocument): string[] {
   const kept = selection.filter((id) => doc.items.some((it) => it.id === id));

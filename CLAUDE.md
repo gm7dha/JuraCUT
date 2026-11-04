@@ -55,6 +55,20 @@
   into cut lines (outlines minus what lies in a bridge, plus the bridges' long sides where they cross a stroke — the
   even–odd parity of the outlines), chained into loops. UI `src/app/LibraryDialog.tsx` (list, fields, preview, Put on
   the bed; last design in localStorage `juracut.libraryDesign`).
+- Tracing: `src/geometry/trace.ts` (pure, RGBA in): `greyscale` (see-through = white), `otsuThreshold`, `binarize`,
+  `traceBitmap` (pixel-edge loops, dark on the right, turn right at saddles so corner-touching pixels stay apart),
+  `simplifyLoop` (corners of the staircase, then Douglas–Peucker split at the first and furthest points),
+  `smoothLoop` (Catmull–Rom Béziers; turns over 60° stay corners), `tracePicture` (mm, y up, specks by area). UI
+  `src/app/TraceDialog.tsx`: pictures from Import/drop (`isPictureFile` in importFile.ts → `store.openTrace(name,
+  dataURL)` → dialog "trace"), read into a canvas at ≤ 1000 px a side; threshold slider (Otsu by default), invert,
+  detail (tolerance 0.4/0.8/1.6 px), smooth, width mm, specks in mm², op; one `shape` item placed 10 mm in.
+- Tight packing: `src/geometry/pack.ts` (pure). Pieces drawn on a grid (1 mm cells; `rasterize`: cells the outlines
+  pass through plus cells whose middle is inside, even–odd, so big holes stay free; grown by ceil(gap/2) cells),
+  biggest first, each allowed quarter turn tried at every place, the one reaching least far back (then leftmost) wins.
+  `Bed` keeps, per row, the last taken cell at or before each cell, so a clash jumps straight past what's in the way.
+  `store.packAll(gap, turns)` builds pieces like Arrange (`bedPieces`: groups and shapes inside others together),
+  turns them with `rotatedItemAbout`, and puts what doesn't fit beside the bed. UI: `src/app/ArrangeMenu.tsx` (the
+  toolbar's Arrange opens Pack tightly / In rows, gap and "may be turned", kept in localStorage `juracut.arrange`).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;
@@ -64,7 +78,7 @@
   array/object each call (use a shared constant), or React loops. Keep pure logic out of React and covered by Vitest.
 - UI (`src/app/`): `TopBar.tsx` (name, save state, version badge, Install, New/Open/Import/Save, Export for laser,
   Settings — bed, material, appearance — Help), `Toolbar.tsx` (tools, undo/redo, Cut/Score/Engrave, turn/flip/copy/
-  delete, Group/Ungroup, Library, Arrange, Fit), `SidePanel.tsx` (shapes list with eye and order buttons; the selected
+  delete, Group/Ungroup, Library, Arrange menu, Fit), `SidePanel.tsx` (shapes list with eye and order buttons; the selected
   shape's settings, or for several: op, position, line up and space out;
   `NumberBox` applies on blur/Enter), `BedView.tsx` (gestures: click/drag select and move, rubber band, drawing tools
   with 1 mm snapping — 0.5 mm zoomed in, Shift = no snap — wheel zoom to pointer, middle/right/Space pan, two-finger
@@ -80,7 +94,7 @@
 - `npm run smoke` (`scripts/smoke-test.mjs`) drives the built app in headless Chromium (`?smoke` exposes
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
   imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library → groups,
-  ungroups, lines up and spaces the panels → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
+  ungroups, lines up and spaces the panels → traces a PNG it makes itself (a ring and a bar) → packs tightly → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
   for it. `SMOKE_DIST` points it at a build somewhere else; `SMOKE_SCREENSHOT=1` saves smoke.png.
 - If the npm registry is unreachable from your environment: the pure code can be typechecked and tested with
   `tsc` and `tsx` and a tiny vitest/zustand stand-in, and the app bundled with esbuild (React from any local copy)
