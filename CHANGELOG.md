@@ -6,7 +6,19 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.4 — Trace pictures, pack tightly
+## v0.5 — Photo engraving, every JuraCAD laser design, a new Library window
+
+- **Engrave a photo:** Import (or drop) a picture and choose **Engrave as a photo**. Dots (the usual way to laser a
+  photo), black & white, or greys; lighter or darker, contrast, light parts for slate; size and detail (dots per mm).
+  The photo shows on the bed as it'll engrave, and turns, flips, moves and packs like any shape. Export puts it in the
+  SVG at true size, and **Save photos as PNG** saves each one at true size too, for Bambu Studio's own engraving.
+- **The Library window now looks like JuraCAD's:** design cards with little drawings, under headings, a search box,
+  and each design's sizes beside a preview.
+- **Every one of JuraCAD's laser designs:** new are the **flat-pack phone stand**, **rubber stamp** (mirrored words,
+  background engraved away), **living hinge panel**, **gear**, **picture frame** and **ruler**, and coasters can be
+  six-sided. From now on, laser designs added to JuraCAD come to JuraCUT too.
+
+## v0.4 — Trace pictures, pack tightly · commit `8e66cd1`
 
 - **Trace a picture:** Import (or drop) a PNG, JPG, GIF, WebP or BMP and the Trace window turns it into outlines —
   a logo, a drawing, a scanned sketch. Slide between dark and light (or let it choose), trace the light parts

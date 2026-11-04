@@ -18,7 +18,7 @@ Bambu Studio. Every trade-off favours simplicity over professional CAM depth.
 - Bambu Studio is the reference for features. Sending jobs over WiFi / Bambu Cloud is optional; exporting a file to
   Bambu Studio is always fine.
 
-**Not goals (for now):** driving the laser directly; raster photo processing beyond black-and-white; real-time
+**Not goals (for now):** driving the laser directly; real-time
 collaboration or cloud storage.
 
 ## Key decisions
@@ -57,8 +57,9 @@ Everything outside `src/app` is pure and tested. The app keeps the design in the
 - **v0.3 (done)** — groups, editing several shapes at once, line up and space out, a design library (finger-jointed
   box, tags, coasters, stencils).
 - **v0.4 (done)** — picture tracing to outlines, tight packing by real shapes.
-- **v0.5** — photo engraving (greyscale pictures dithered for the laser), more library designs (living hinge, picture
-  frame, gear, ruler), and the link to JuraCAD.
-- **Later** — a link to JuraCAD (send a flat design across and back), a Claude connection like JuraCAD's (an MCP
+- **v0.5 (done)** — photo engraving, every JuraCAD laser design, the Library window as JuraCAD's.
+- **v0.6** — the Align toolbar menu (line up with each other, a key shape or the bed; centre on the bed), and the
+  link to JuraCAD (send a flat design across and back).
+- **Later** — a Claude connection like JuraCAD's (an MCP
   extension with Live editing), the R1's camera as a bed background to line jobs up on material, Bambu material QR
   codes, sending jobs to the laser, rotary attachment helpers, a living hinge and box generator.

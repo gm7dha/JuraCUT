@@ -197,7 +197,8 @@ export const useStore = create<State>((set, get) => ({
   },
   setOp(ids, op) {
     const doc = get().history.present;
-    const items = doc.items.map((it) => (ids.includes(it.id) && it.op !== op ? { ...it, op } : it));
+    // Photos are always engraved.
+    const items = doc.items.map((it) => (ids.includes(it.id) && it.op !== op && it.kind !== "picture" ? { ...it, op } : it));
     if (items.some((it, i) => it !== doc.items[i])) get().commit({ ...doc, items });
   },
   deleteSelected() {

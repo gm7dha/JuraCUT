@@ -6,9 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FONTS, FONT_IDS } from "../geometry/text";
 import { boxOf, piecesOf } from "../model/arrange";
-import { describeItem, itemBox, placedAt } from "../model/shapes";
+import { describeItem, itemBox, pictureSize, placedAt } from "../model/shapes";
+import { PHOTO_MODES, RESOLUTIONS } from "./PhotoTab";
 import { useDocument, useSelection, useStore } from "../model/store";
-import { OPS, OP_INFO, type Item, type Op } from "../model/types";
+import { OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { Icons } from "./icons";
 
 export function SidePanel() {
@@ -114,7 +115,7 @@ function ItemProperties({ item }: { item: Item }) {
       <h3>
         <NameBox item={item} />
       </h3>
-      <OpPicker value={item.op} onChange={(op) => change({ op })} />
+      {item.kind === "picture" ? <PictureFields item={item} /> : <OpPicker value={item.op} onChange={(op) => change({ op })} />}
       {item.kind === "text" && <TextFields item={item} focus={focusItem === item.id} />}
       <div className="field-label">Position (bottom-left corner)</div>
       <div className="field-row">
@@ -203,6 +204,53 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
         </label>
         <NumberBox label="Angle" value={item.angle} unit="°" onCommit={(angle) => change({ angle })} />
       </div>
+    </>
+  );
+}
+
+/** A photo's settings: size (keeping its shape), style, lighter/darker, contrast, light parts, detail. */
+function PictureFields({ item }: { item: PictureItem }) {
+  const updateItem = useStore((s) => s.updateItem);
+  const change = (patch: Partial<PictureItem>) => updateItem(item.id, (it) => ({ ...it, ...patch }) as Item);
+  const [W, H] = pictureSize(item);
+  const ratio = item.h / item.w;
+  return (
+    <>
+      <p className="dialog-hint" style={{ marginTop: 0 }}>
+        A photo, engraved. Turn it with Turn 90°; Flip mirrors it.
+      </p>
+      <div className="field-label">Size</div>
+      <div className="field-row">
+        <NumberBox label="Width" value={W} unit="mm" min={2} onCommit={(v) => change(item.turns % 2 ? { h: v, w: v / ratio } : { w: v, h: v * ratio })} />
+        <NumberBox label="Height" value={H} unit="mm" min={2} onCommit={(v) => change(item.turns % 2 ? { w: v, h: v * ratio } : { h: v, w: v / ratio })} />
+      </div>
+      <div className="field-label">Style</div>
+      <div className="segmented three" role="radiogroup" aria-label="Style">
+        {PHOTO_MODES.map(([k, label, hint]) => (
+          <button key={k} type="button" role="radio" aria-checked={item.mode === k} className={item.mode === k ? "selected" : ""} title={hint} onClick={() => change({ mode: k })}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="field-row">
+        <NumberBox label="Lighter (+) / darker (−)" value={item.brightness} unit="" onCommit={(v) => change({ brightness: Math.max(-100, Math.min(100, v)) })} />
+        <NumberBox label="Contrast" value={item.contrast} unit="" onCommit={(v) => change({ contrast: Math.max(-100, Math.min(100, v)) })} />
+      </div>
+      <label className="check-row">
+        <input type="checkbox" checked={item.invert} onChange={(e) => change({ invert: e.target.checked })} />
+        Engrave the light parts
+      </label>
+      <label className="field">
+        <span>Detail</span>
+        <select value={item.dpm} onChange={(e) => change({ dpm: Number(e.target.value) })}>
+          {RESOLUTIONS.map(([v, label]) => (
+            <option key={v} value={v}>
+              {label}
+            </option>
+          ))}
+          {!RESOLUTIONS.some(([v]) => v === item.dpm) && <option value={item.dpm}>{item.dpm} per mm</option>}
+        </select>
+      </label>
     </>
   );
 }

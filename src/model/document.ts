@@ -114,6 +114,27 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         align: it.align === "centre" || it.align === "right" ? it.align : "left",
         angle: num(it.angle),
       };
+    case "picture": {
+      const src = typeof it.src === "string" && /^data:image\/(png|jpeg|webp|gif);base64,/.test(it.src) && it.src.length <= 8_000_000 ? it.src : null;
+      if (!src) return null;
+      return {
+        ...base,
+        op: "engrave",
+        kind: "picture",
+        src,
+        cx: num(it.cx),
+        cy: num(it.cy),
+        w: Math.max(num(it.w, 50), 1),
+        h: Math.max(num(it.h, 50), 1),
+        turns: ((Math.round(num(it.turns)) % 4) + 4) % 4,
+        flip: it.flip === true,
+        mode: it.mode === "black" || it.mode === "greys" ? it.mode : "dots",
+        brightness: Math.max(-100, Math.min(100, num(it.brightness))),
+        contrast: Math.max(-100, Math.min(100, num(it.contrast))),
+        invert: it.invert === true,
+        dpm: Math.max(2, Math.min(25, num(it.dpm, 10))),
+      };
+    }
     case "shape": {
       const outlines = Array.isArray(it.outlines) ? it.outlines.map(parseOutline).filter((o): o is Outline => !!o) : [];
       return { ...base, kind: "shape", outlines };

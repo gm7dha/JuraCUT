@@ -453,6 +453,11 @@ button:disabled {
   color: var(--ink-2);
 }
 
+/* The panel scrolls; its rows keep their height rather than squashing into each other. */
+.panel-section.properties > * {
+  flex-shrink: 0;
+}
+
 .panel-section.properties h3 {
   padding-left: 0;
   padding-right: 0;
@@ -1034,61 +1039,139 @@ kbd {
   vertical-align: middle;
 }
 
-/* Design library */
-.library-layout {
+/* Design library (as JuraCAD's) */
+.library-grid {
   display: grid;
-  grid-template-columns: 210px 1fr 280px;
-  gap: 16px;
-  min-height: 360px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
 }
 
-.library-list {
+.library-card {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.library-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 10px;
+  align-items: flex-start;
   text-align: left;
-  padding: 8px 10px;
-  border: 1px solid transparent;
+  padding: 10px;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: transparent;
-  line-height: 1.35;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
 }
 
-.library-item:hover {
-  background: var(--line-2);
-}
-
-.library-item.selected {
+.library-card:hover,
+.library-card:focus-visible {
+  border-color: var(--accent);
   background: var(--accent-soft);
-  border-color: var(--accent-line);
+}
+
+.library-card svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.library-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.library-card-text .muted {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.library-heading {
+  font-size: 13px;
+  margin: 14px 0 6px;
+}
+
+.library-group {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 10px 0 4px;
+}
+
+.library-words {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  resize: vertical;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.library-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
 }
 
 .library-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  margin: 10px 0;
+}
+
+.library-inputs {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 60vh;
+  gap: 8px;
+  max-height: 52vh;
   overflow-y: auto;
   padding-right: 4px;
 }
 
-.library-input .field-label {
-  margin-top: 4px;
+.library-input label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 
-.library-input .check-row {
-  margin-top: 8px;
+.library-input .library-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.dialog-hint.field-hint {
-  margin: 2px 0 2px;
-  font-size: 11.5px;
+.library-input p {
+  margin: 2px 0 0;
+}
+
+.library-number {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.library-number input,
+.library-input select {
+  width: 120px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.library-input select {
+  width: 180px;
 }
 
 .library-side {
@@ -1097,10 +1180,14 @@ kbd {
   gap: 6px;
 }
 
+.library-side p {
+  margin: 0;
+}
+
 .library-preview {
   width: 100%;
-  height: 260px;
-  background: var(--bed);
+  height: 300px;
+  background: var(--subtle);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
@@ -1111,13 +1198,32 @@ kbd {
   justify-content: center;
 }
 
-@media (max-width: 900px) {
-  .library-layout {
+.library-preview .preview-cut {
+  fill: var(--accent-soft);
+  fill-opacity: 0.6;
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+}
+
+.library-preview .preview-score {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+}
+
+.library-preview .preview-engrave {
+  fill: var(--ink-2);
+  stroke: none;
+}
+
+.error-text {
+  color: var(--error);
+}
+
+@media (max-width: 760px) {
+  .library-form {
     grid-template-columns: 1fr;
-  }
-  .library-list {
-    flex-direction: row;
-    flex-wrap: wrap;
   }
 }
 
@@ -1215,6 +1321,40 @@ kbd {
   width: 100%;
   height: 100%;
   max-height: calc(60vh - 20px);
+}
+
+.photo-preview {
+  max-width: 100%;
+  max-height: calc(60vh - 20px);
+  image-rendering: pixelated;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.library-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.library-tabs button {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.library-tabs button.selected {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .trace-slider {

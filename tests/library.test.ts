@@ -7,6 +7,8 @@ import { DEFAULT_MATERIAL } from "../src/model/document";
 import { itemBox, itemOutlines } from "../src/model/shapes";
 import { aligned, distributed, grouped, piecesOf, ungrouped, withGroups } from "../src/model/arrange";
 import { makeRect } from "../src/model/shapes";
+import { gearOutline, gearSizes, hingeCuts, rulerMarks } from "../src/library/workshop";
+import { groupDesigns, searchDesigns } from "../src/library/browse";
 
 const design = (id: string) => LIBRARY.find((d) => d.id === id)!;
 const make = (id: string, v: Record<string, unknown> = {}) => {
@@ -80,7 +82,7 @@ describe("design library", () => {
 
   it("cleans values to their limits", () => {
     const d = design("coasters");
-    const v = cleanValues(d, DEFAULT_MATERIAL, { count: 99.4, size: "abc", shape: "hexagon", ring: "yes" });
+    const v = cleanValues(d, DEFAULT_MATERIAL, { count: 99.4, size: "abc", shape: "octagon", ring: "yes" });
     expect(v.count).toBe(12);
     expect(v.size).toBe(95);
     expect(v.shape).toBe("round");
@@ -115,5 +117,74 @@ describe("groups, align and distribute", () => {
     const fixed = distributed(items, ["a", "b", "c"], "x", 5).map((it) => itemBox(it)!);
     expect(fixed[1][0]).toBe(15);
     expect(fixed[2][0]).toBe(40);
+  });
+});
+
+
+describe("workshop designs", () => {
+  it("every new design makes something sensible", () => {
+    const hinge = make("living-hinge");
+    expect(hinge.items.map((i) => i.name)).toEqual(["Hinge panel", "Hinge cuts"]);
+    expect(hinge.items[1].op).toBe("cut");
+    const gear = make("gear", { teeth: 20, module: 2 });
+    expect(gear.items).toHaveLength(2);
+    const frame = make("picture-frame");
+    expect(frame.items.map((i) => i.name)).toEqual(["Frame front", "Frame window", "Frame middle", "Frame back", "Frame hanging hole"]);
+    const r = make("ruler", { length: 100 });
+    expect(r.items.filter((i) => i.op === "score")).toHaveLength(1);
+    expect(r.items.filter((i) => i.kind === "text")).toHaveLength(11);
+  });
+
+  it("keeps JuraCAD's gear, hinge and ruler maths", () => {
+    const s = gearSizes(20, 2, 20);
+    expect(s.outside).toBe(22);
+    const pts = gearOutline(20, 2, 20);
+    const radii = pts.map(([x, y]) => Math.hypot(x, y));
+    expect(Math.max(...radii)).toBeCloseTo(22, 3);
+    expect(Math.min(...radii)).toBeCloseTo(17.5, 3);
+    const cuts = hingeCuts({ depth: 80, zone: 40, cut: 20, gap: 3, spacing: 1.6 });
+    expect(cuts.length).toBeGreaterThan(50);
+    expect(cuts.every(([a, b]) => b[1] - a[1] <= 20 + 1e-9 && a[1] >= -37 - 1e-9 && b[1] <= 37 + 1e-9)).toBe(true);
+    expect(rulerMarks(20, 30).map(([, l]) => l).slice(0, 11)).toEqual([10, 4, 4, 4, 4, 7, 4, 4, 4, 4, 10]);
+  });
+});
+
+describe("JuraCAD's laser designs, all of them", () => {
+  it("has every laser design JuraCAD has", () => {
+    // JuraCAD's LASER_DESIGNS + its finger-joint box and flat-pack stand: keep this list in step with JuraCAD's library.
+    const juracad = ["finger-box", "flat-stand", "stencil", "rubber-stamp", "name-tag", "coaster", "picture-frame", "living-hinge", "gear", "ruler"];
+    const ours: Record<string, string> = { "name-tag": "tag", coaster: "coasters" };
+    for (const id of juracad) expect(LIBRARY.some((d) => d.id === (ours[id] ?? id))).toBe(true);
+  });
+
+  it("makes the flat-pack stand's three pieces and a stamp with its background engraved", () => {
+    const stand = make("flat-stand");
+    expect(stand.items.map((i) => i.name)).toEqual(["Stand side", "Stand front foot", "Stand back foot"]);
+    const stamp = make("rubber-stamp", { words: "AB", height: 6 });
+    expect(stamp.items.map((i) => [i.name, i.op])).toEqual([
+      ["Stamp background", "engrave"],
+      ["Stamp outline", "cut"],
+    ]);
+    // Outline + the border's two outlines + A (2 loops) + B (3 loops).
+    expect(itemOutlines(stamp.items[0])).toHaveLength(3 + 2 + 3);
+    expect(designProblems(LIBRARY.find((d) => d.id === "rubber-stamp")!, DEFAULT_MATERIAL, { ...defaultValues(LIBRARY.find((d) => d.id === "rubber-stamp")!, DEFAULT_MATERIAL), height: 40 })[0]).toMatch(/don't fit/);
+    expect(make("coasters", { shape: "hexagon", count: 2 }).items.filter((i) => i.kind === "shape")).toHaveLength(4);
+  });
+});
+
+describe("library window", () => {
+  it("lists every design under a heading, in order", () => {
+    const groups = groupDesigns();
+    expect(groups.map((g) => g.group)).toEqual(["Boxes and stands", "Signs and stamps", "Home", "Workshop"]);
+    expect(groups.flatMap((g) => g.designs).length).toBe(LIBRARY.length);
+    expect(LIBRARY.every((d) => d.icon.startsWith("<"))).toBe(true);
+  });
+
+  it("finds designs by the start of any word", () => {
+    expect(searchDesigns("gea")[0].id).toBe("gear");
+    expect(searchDesigns("photo").map((d) => d.id)).toContain("picture-frame");
+    expect(searchDesigns("14.5").map((d) => d.id)).toEqual(["gear"]);
+    expect(searchDesigns("  ")).toEqual([]);
+    expect(searchDesigns("zebra")).toEqual([]);
   });
 });

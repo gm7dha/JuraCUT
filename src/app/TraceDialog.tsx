@@ -14,11 +14,12 @@ import { OPS, OP_INFO, type Op } from "../model/types";
 import { itemPathData } from "./BedView";
 import { Icons } from "./icons";
 import { Modal } from "./Modal";
+import { PhotoTab } from "./PhotoTab";
 
 /** Pictures bigger than this (pixels along the longer side) are made smaller before tracing: plenty for a laser, and quick. */
 const MAX_SIDE = 1000;
 
-interface Pixels {
+export interface Pixels {
   rgba: Uint8ClampedArray;
   width: number;
   height: number;
@@ -45,6 +46,7 @@ async function readPixels(url: string): Promise<Pixels> {
 }
 
 const DETAIL = { fine: 0.4, normal: 0.8, simple: 1.6 } as const;
+const HOW_KEY = "juracut.pictureHow";
 type Detail = keyof typeof DETAIL;
 
 export function TraceDialog() {
@@ -60,6 +62,21 @@ export function TraceDialog() {
   const [specks, setSpecks] = useState(1);
   const [width, setWidth] = useState(100);
   const [op, setOp] = useState<Op>("engrave");
+  const [how, setHow] = useState<"trace" | "photo">(() => {
+    try {
+      return localStorage.getItem(HOW_KEY) === "photo" ? "photo" : "trace";
+    } catch {
+      return "trace";
+    }
+  });
+  const chooseHow = (k: "trace" | "photo") => {
+    setHow(k);
+    try {
+      localStorage.setItem(HOW_KEY, k);
+    } catch {
+      // Not remembered; fine.
+    }
+  };
 
   useEffect(() => {
     if (!picture) return;
@@ -110,8 +127,32 @@ export function TraceDialog() {
 
   const vb = pixels ? `0 ${-heightMm} ${width} ${heightMm}` : "0 0 1 1";
 
+  const tabs = (
+    <div className="library-tabs" role="tablist" aria-label="What to make of the picture">
+      {(
+        [
+          ["trace", "Trace into outlines"],
+          ["photo", "Engrave as a photo"],
+        ] as const
+      ).map(([k, label]) => (
+        <button key={k} type="button" role="tab" aria-selected={how === k} className={how === k ? "selected" : ""} onClick={() => chooseHow(k)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (how === "photo" && !error)
+    return (
+      <Modal title={`Picture — ${picture.name}`} onClose={close} width={900}>
+        {tabs}
+        <PhotoTab picture={picture} pixels={pixels} onDone={close} />
+      </Modal>
+    );
+
   return (
-    <Modal title={`Trace a picture — ${picture.name}`} onClose={close} width={900}>
+    <Modal title={`Picture — ${picture.name}`} onClose={close} width={900}>
+      {!error && tabs}
       {error ? (
         <p className="dialog-hint attention">
           <Icons.Warning size={16} /> {error}
