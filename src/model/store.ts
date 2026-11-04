@@ -8,7 +8,7 @@ import { create } from "zustand";
 
 import { arrangeOnBed } from "../geometry/segments";
 import { newDocument, newId } from "./document";
-import { aligned, distributed, grouped, mirroredPieces, newGroupId, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignTo } from "./arrange";
+import { aligned, centredOnBed, distributed, grouped, mirroredPieces, newGroupId, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
@@ -47,6 +47,8 @@ export interface State {
   fitRequest: number;
   /** The shape whose words are being typed (text tool): its properties panel gets the focus. */
   focusItem: string | null;
+  /** What Line up lines pieces up against (kept in this browser). */
+  alignAgainst: AlignAgainst;
   /** A picture waiting to be traced (the Trace window shows it). */
   picture: { name: string; url: string } | null;
 
@@ -81,6 +83,9 @@ export interface State {
   groupSelected(): void;
   ungroupSelected(): void;
   alignSelected(to: AlignTo): void;
+  setAlignAgainst(against: AlignAgainst): void;
+  /** Move the selection, as it is, to the middle of the bed. */
+  centreSelected(axis?: "x" | "y" | "both"): void;
   distributeSelected(axis: "x" | "y", gap?: number): void;
   reorder(id: string, to: number): void;
 
@@ -102,6 +107,16 @@ export interface State {
 }
 
 let dragBase: JuraCUTDocument | null = null;
+
+const AGAINST_KEY = "juracut.alignAgainst";
+function rememberedAgainst(): AlignAgainst {
+  try {
+    const v = globalThis.localStorage?.getItem(AGAINST_KEY);
+    return v === "key" || v === "bed" ? v : "each";
+  } catch {
+    return "each";
+  }
+}
 let toastId = 0;
 const EMPTY: string[] = [];
 
@@ -118,6 +133,7 @@ export const useStore = create<State>((set, get) => ({
   fitRequest: 0,
   focusItem: null,
   picture: null,
+  alignAgainst: rememberedAgainst(),
 
   commit(next) {
     const { history } = get();
@@ -257,9 +273,25 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...history.present, items: ungrouped(history.present.items, selection) });
   },
   alignSelected(to) {
+    const { history, selection, alignAgainst } = get();
+    if (!selection.length) return;
+    const items = aligned(history.present.items, selection, to, history.present.bed, alignAgainst);
+    if (items.some((it, i) => it !== history.present.items[i])) get().commit({ ...history.present, items });
+  },
+  setAlignAgainst(against) {
+    if (against === get().alignAgainst) return;
+    set({ alignAgainst: against });
+    try {
+      globalThis.localStorage?.setItem(AGAINST_KEY, against);
+    } catch {
+      // Not remembered; fine.
+    }
+  },
+  centreSelected(axis = "both") {
     const { history, selection } = get();
     if (!selection.length) return;
-    get().commit({ ...history.present, items: aligned(history.present.items, selection, to, history.present.bed) });
+    const items = centredOnBed(history.present.items, selection, history.present.bed, axis);
+    if (items.some((it, i) => it !== history.present.items[i])) get().commit({ ...history.present, items });
   },
   distributeSelected(axis, gap) {
     const { history, selection } = get();

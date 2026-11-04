@@ -21,6 +21,7 @@ function groupsOf(s: State): string[] {
   }
   return lastGroups;
 }
+import { AlignMenu } from "./AlignMenu";
 import { ArrangeMenu } from "./ArrangeMenu";
 import { Icons } from "./icons";
 import { detectPlatform, shortcut } from "./platform";
@@ -115,6 +116,7 @@ export function Toolbar() {
       </div>
       <div className="tool-divider" />
       <div className="tool-group">
+        <AlignMenu disabled={!any} />
         <ArrangeMenu disabled={count === 0} />
         <button type="button" className="tool-button" onClick={() => s().requestFit()} title="Zoom to fit the whole bed (F)">
           <Icons.Fit size={20} />

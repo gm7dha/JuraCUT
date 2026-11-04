@@ -87,7 +87,22 @@ function useShortcuts() {
         }
         return;
       }
-      if (e.altKey) return;
+      if (e.altKey) {
+        // Line up (Alt, or Option on a Mac, which changes e.key — so go by the key's place).
+        const k = e.code.replace(/^Key/, "");
+        const to = ({ A: "left", D: "right", W: "top", S: "bottom", H: "centre", V: "middle" } as const)[k as "A"];
+        if (e.shiftKey && (k === "H" || k === "V")) {
+          e.preventDefault();
+          s.distributeSelected(k === "H" ? "x" : "y");
+        } else if (!e.shiftKey && to) {
+          e.preventDefault();
+          s.alignSelected(to);
+        } else if (!e.shiftKey && k === "C") {
+          e.preventDefault();
+          s.centreSelected();
+        }
+        return;
+      }
       const step = e.shiftKey ? 10 : 1;
       switch (e.key) {
         case "Escape":

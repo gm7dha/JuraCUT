@@ -43,8 +43,9 @@
   px, screen coordinates, pointer marked); Fit leaves room for them. Shift = no snapping.
 - Groups, line up, space out: `src/model/arrange.ts` (pure). `Item.group` (an id; saved in files): `withGroups` widens
   ids to whole groups (the store's `select` always does, so a click picks the group), `grouped`/`ungrouped`/`tidyGroups`
-  (a group of one isn't a group; delete tidies), `piecesOf` (a group is one piece), `aligned` (pieces line up with
-  their combined box; a single piece with the bed), `distributed` (equal gaps, outside two fixed — or a set gap),
+  (a group of one isn't a group; delete tidies), `piecesOf` (a group is one piece), `aligned` (`AlignAgainst`: "each" — their combined box —,
+  "key" — `keyPiece`, the piece holding the first selected id, which stays put — or "bed"; a single piece always the
+  bed), `centredOnBed` (the selection moved as it is), `distributed` (equal gaps, outside two fixed — or a set gap),
   `turnedPieces`/`mirroredPieces` (groups turn/flip about their middle). Arrange treats groups (and shapes inside a
   grouped shape) as one piece. Duplicating a group makes a new group.
 - **The laser library must stay in step with JuraCAD's** (the owner's standing wish): every laser design in JuraCAD
@@ -104,7 +105,10 @@
   array/object each call (use a shared constant), or React loops. Keep pure logic out of React and covered by Vitest.
 - UI (`src/app/`): `TopBar.tsx` (name, save state, version badge, Install, New/Open/Import/Save, Export for laser,
   Settings — bed, material, appearance — Help), `Toolbar.tsx` (tools, undo/redo, Cut/Score/Engrave, turn/flip/copy/
-  delete, Group/Ungroup, Library, Arrange menu, Fit), `SidePanel.tsx` (shapes list with eye and order buttons; the selected
+  delete, Group/Ungroup, Library, Align menu — `AlignMenu.tsx` over `AlignControls.tsx`, shared with the side panel: against each other / key shape / bed,
+  `store.alignAgainst` kept in localStorage `juracut.alignAgainst`, the key piece outlined on the bed (`.key-box`),
+  centre on the bed, space out; Alt/⌥ + A D W S H V (line up), C (centre), Shift+H/V (space out), read by `e.code` —
+  Arrange menu, Fit), `SidePanel.tsx` (shapes list with eye and order buttons; the selected
   shape's settings, or for several: op, position, line up and space out;
   `NumberBox` applies on blur/Enter), `BedView.tsx` (gestures: click/drag select and move, rubber band, drawing tools
   with 1 mm snapping — 0.5 mm zoomed in, Shift = no snap — wheel zoom to pointer, middle/right/Space pan, two-finger
@@ -121,7 +125,8 @@
 - `npm run smoke` (`scripts/smoke-test.mjs`) drives the built app in headless Chromium (`?smoke` exposes
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
   imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library → groups,
-  ungroups, lines up and spaces the panels → traces a PNG it makes itself (a ring and a bar) → engraves it as a photo (bed, SVG image, PNG with pHYs, style
+  ungroups, lines up and spaces the panels, lines them up against the key shape from the Align menu (it stays put) and
+  centres them with Alt+C → traces a PNG it makes itself (a ring and a bar) → engraves it as a photo (bed, SVG image, PNG with pHYs, style
   changed in the panel) → packs tightly → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
   for it. `SMOKE_DIST` points it at a build somewhere else; `SMOKE_SCREENSHOT=1` saves smoke.png.
 - If the npm registry is unreachable from your environment: the pure code can be typechecked and tested with

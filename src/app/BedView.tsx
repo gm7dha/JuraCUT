@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { svgPathData } from "../laser/files";
+import { keyPiece } from "../model/arrange";
 import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
 import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
@@ -45,6 +46,7 @@ type Gesture =
 export function BedView() {
   const doc = useDocument();
   const selection = useSelection();
+  const alignAgainst = useStore((st) => st.alignAgainst);
   const tool = useStore((s) => s.tool);
   const fitRequest = useStore((s) => s.fitRequest);
   const theme = useStore((s) => s.theme);
@@ -304,6 +306,7 @@ export function BedView() {
   const drawn = useMemo(() => doc.items.filter((it) => !it.hidden).map((it) => ({ item: it, d: itemPathData(it), box: itemBox(it) })), [doc.items]);
   const draft = gesture?.kind === "draw" ? drawnItem(gesture, [], true) : null;
   const selectedBoxes = drawn.filter((x) => selection.includes(x.item.id) && x.box);
+  const keyBox = useMemo(() => (alignAgainst === "key" ? (keyPiece(doc.items, selection)?.box ?? null) : null), [alignAgainst, doc.items, selection]);
   const cursor = gesture?.kind === "pan" ? "grabbing" : tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
   const [W, H] = doc.bed;
   const px = 1 / view.scale; // one screen pixel in mm
@@ -371,6 +374,8 @@ export function BedView() {
           {selectedBoxes.map(({ item, box }) => (
             <rect key={`sel-${item.id}`} x={box![0]} y={box![1]} width={box![2] - box![0]} height={box![3] - box![1]} className="selection-box" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />
           ))}
+          {/* Lining up against the key shape: it's outlined, as it's the one the others line up with. */}
+          {keyBox && <rect x={keyBox[0] - 3 * px} y={keyBox[1] - 3 * px} width={keyBox[2] - keyBox[0] + 6 * px} height={keyBox[3] - keyBox[1] + 6 * px} className="key-box" strokeWidth={2.5 * px} />}
           {draft && <path d={itemPathData(draft)} className="draft" fill="none" stroke="var(--accent)" strokeWidth={1.5 * px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {guides.x !== null && <line x1={guides.x} y1={-1e4} x2={guides.x} y2={1e4} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {guides.y !== null && <line x1={-1e4} y1={guides.y} x2={1e4} y2={guides.y} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
