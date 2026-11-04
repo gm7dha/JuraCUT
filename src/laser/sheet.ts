@@ -1,0 +1,64 @@
+/**
+ * From a design to the sheet the laser files are written from: every shape's
+ * outlines on their layers. Closed "cut" loops are sorted into outer cuts and
+ * inner cuts (holes, cut first) by nesting, scores and engraving keep their
+ * layer, and open cut lines are cut as inner lines (before any outline).
+ */
+import { movePaths, pathsBox, sortLoops, type LaserPath, type LaserSheet } from "../geometry/segments";
+import { itemOutlines } from "../model/shapes";
+import type { Item, JuraCUTDocument, Op } from "../model/types";
+
+export interface SheetOptions {
+  /** Only these shapes (default: every shape that isn't hidden). */
+  items?: readonly Item[];
+  /** Flip left to right, for engraving on the back of a piece. */
+  mirror?: boolean;
+  /** Keep the shapes where they are on the bed (the sheet is the whole bed); else the sheet is just the box round them. */
+  wholeBed?: boolean;
+}
+
+/** The laser paths of some shapes, on the bed, cuts sorted. */
+export function laserPaths(items: readonly Item[]): LaserPath[] {
+  const byOp: Record<Op, { closed: LaserPath[]; open: LaserPath[] }> = {
+    cut: { closed: [], open: [] },
+    score: { closed: [], open: [] },
+    engrave: { closed: [], open: [] },
+  };
+  for (const it of items) {
+    if (it.hidden) continue;
+    for (const o of itemOutlines(it)) {
+      if (!o.segments.length) continue;
+      const layer = it.op === "cut" ? "inner" : it.op;
+      (o.closed ? byOp[it.op].closed : byOp[it.op].open).push({ layer, segments: o.segments, closed: o.closed });
+    }
+  }
+  const out: LaserPath[] = [];
+  // Engraving: every closed loop in one even–odd fill (the sheet writer merges them); open lines engrave as scores would.
+  out.push(...byOp.engrave.closed, ...byOp.engrave.open.map((p) => ({ ...p, layer: "score" as const })));
+  out.push(...byOp.score.closed, ...byOp.score.open);
+  // Cuts: open runs first (lines never free a piece), then holes before the outlines round them.
+  out.push(...byOp.cut.open);
+  out.push(...sortLoops(byOp.cut.closed.map((p) => p.segments)));
+  return out;
+}
+
+/** The sheet to write: paths moved so the sheet's bottom-left corner is (0, 0). */
+export function makeSheet(doc: JuraCUTDocument, opts: SheetOptions = {}): LaserSheet {
+  const items = opts.items ?? doc.items;
+  const paths = laserPaths(items);
+  const box = opts.wholeBed ? [0, 0, doc.bed[0], doc.bed[1]] : (pathsBox(paths) ?? [0, 0, 0, 0]);
+  const W = box[2] - box[0];
+  const H = box[3] - box[1];
+  const moved = movePaths(paths, opts.mirror ? [-1, 0, 0, 1, box[2], -box[1]] : [1, 0, 0, 1, -box[0], -box[1]]);
+  return { paths: moved, size: [W, H], pieces: [{ name: doc.name, box: [0, 0, W, H] }] };
+}
+
+/** Shapes that lie (even partly) off the bed, so the user can be warned. */
+export function offBed(doc: JuraCUTDocument): Item[] {
+  const [W, H] = doc.bed;
+  return doc.items.filter((it) => {
+    if (it.hidden) return false;
+    const box = pathsBox(itemOutlines(it).map((o) => ({ layer: "outer" as const, ...o })));
+    return !!box && (box[0] < -1e-6 || box[1] < -1e-6 || box[2] > W + 1e-6 || box[3] > H + 1e-6);
+  });
+}
