@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.5 — Photo engraving, every JuraCAD laser design, a new Library window
+## v0.5.1 — Eight more laser designs from JuraCAD
+
+- **Boxes and stands:** a **sliding-lid box** (the lid runs in grooves made from slotted rails, as a laser can't cut
+  a groove part-way), a **tray with dividers** that slot together into rows × columns of compartments, and a
+  three-piece **bookend** that needs no glue.
+- **Home:** a **clock face** for a quartz movement (numbers, and engraved or scored hour marks), **cord winders** and a
+  layered **tealight holder**.
+- **Toys and gifts** (a new heading): a **jigsaw puzzle** with round locking tabs (the pattern number picks the
+  arrangement — the same number gives the same puzzle as in JuraCAD) and an **ornament or keyring** — star, heart,
+  circle or snowflake with a name engraved on it.
+
+## v0.5 — Photo engraving, every JuraCAD laser design, a new Library window · commit `16e25df`
 
 - **Engrave a photo:** Import (or drop) a picture and choose **Engrave as a photo**. Dots (the usual way to laser a
   photo), black & white, or greys; lighter or darker, contrast, light parts for slate; size and detail (dots per mm).

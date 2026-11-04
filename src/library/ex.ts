@@ -20,7 +20,7 @@ export function tidy(n: number): string {
 
 export const lit = (v: number): Ex => ({ t: tidy(v), v });
 export const ZERO: Ex = lit(0);
-export const plus = (a: Ex, b: Ex): Ex => lit(a.v + b.v);
+export const plus = (...xs: Ex[]): Ex => lit(xs.reduce((sum, x) => sum + x.v, 0));
 export const minus = (a: Ex, b: Ex): Ex => lit(a.v - b.v);
 export const neg = (a: Ex): Ex => lit(-a.v);
 export const times = (a: Ex, k: number): Ex => lit(a.v * k);

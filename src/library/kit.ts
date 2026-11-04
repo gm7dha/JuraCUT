@@ -5,7 +5,7 @@
 import { FONTS, FONT_IDS, isFontId, type FontId } from "../geometry/text";
 import type { Segment } from "../geometry/segments";
 import { newId } from "../model/document";
-import { itemBox, movedItem } from "../model/shapes";
+import { itemBox, makeText, movedItem } from "../model/shapes";
 import type { Item, Material, Outline } from "../model/types";
 
 export type InputKind = "number" | "count" | "text" | "choice" | "toggle" | "font";
@@ -81,3 +81,40 @@ export function placed(items: Item[], x = 10, y = 10): Item[] {
   return items.map((it) => movedItem(it, x - x0, y - y0));
 }
 
+
+/** "12.5 mm" for messages. */
+export const mm = (v: number) => `${Math.round(v * 100) / 100} mm`;
+
+/** Rounded to 6 places (no 0.30000000000000004 in shapes). */
+export const r6 = (v: number) => Math.round(v * 1e6) / 1e6;
+
+/** Engraved words whose box is centred on (cx, cy), capitals `size` tall, turned `angle` degrees. */
+export function wordsAt(id: string, name: string, text: string, size: number, fontId: FontId, cx: number, cy: number, angle = 0): Item {
+  const t = { ...makeText(id, 0, 0, text, size), name, font: fontId, align: "centre" as const, angle };
+  const box = itemBox(t);
+  return box ? movedItem(t, cx - (box[0] + box[2]) / 2, cy - (box[1] + box[3]) / 2) : t;
+}
+
+/**
+ * Pieces (each a few shapes that go together) laid out flat in rows, `gap` apart, a new row when the next would pass
+ * `width` (the bed less a margin); the first piece's corner at (0, 0).
+ */
+export function inRows(pieces: Item[][], gap = 5, width = 580): Item[] {
+  const out: Item[] = [];
+  let [x, y, rowH] = [0, 0, 0];
+  for (const piece of pieces) {
+    const boxes = piece.map(itemBox).filter((b): b is [number, number, number, number] => !!b);
+    if (!boxes.length) continue;
+    const box = [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
+    const [w, h] = [box[2] - box[0], box[3] - box[1]];
+    if (x > 0 && x + w > width) {
+      x = 0;
+      y += rowH + gap;
+      rowH = 0;
+    }
+    out.push(...piece.map((it) => movedItem(it, x - box[0], y - box[1])));
+    x += w + gap;
+    rowH = Math.max(rowH, h);
+  }
+  return out;
+}

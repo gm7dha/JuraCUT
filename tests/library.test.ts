@@ -9,6 +9,11 @@ import { aligned, distributed, grouped, piecesOf, ungrouped, withGroups } from "
 import { makeRect } from "../src/model/shapes";
 import { gearOutline, gearSizes, hingeCuts, rulerMarks } from "../src/library/workshop";
 import { groupDesigns, searchDesigns } from "../src/library/browse";
+import { allEdges, makePuzzle, pieceOutline } from "../src/library/puzzle";
+import { edgeSegments, ornamentPolygon, ornamentShape, puzzleSpec } from "../src/library/toys3";
+import { bookend, bookendOutlines, dividerTray, slidingBox, slidingOutlines } from "../src/library/boxes3";
+import { clockLayout } from "../src/library/laserHome3";
+import { arcInfo } from "../src/geometry/segments";
 
 const design = (id: string) => LIBRARY.find((d) => d.id === id)!;
 const make = (id: string, v: Record<string, unknown> = {}) => {
@@ -152,7 +157,10 @@ describe("workshop designs", () => {
 describe("JuraCAD's laser designs, all of them", () => {
   it("has every laser design JuraCAD has", () => {
     // JuraCAD's LASER_DESIGNS + its finger-joint box and flat-pack stand: keep this list in step with JuraCAD's library.
-    const juracad = ["finger-box", "flat-stand", "stencil", "rubber-stamp", "name-tag", "coaster", "picture-frame", "living-hinge", "gear", "ruler"];
+    const juracad = [
+      "finger-box", "flat-stand", "stencil", "rubber-stamp", "name-tag", "coaster", "picture-frame", "living-hinge", "gear", "ruler",
+      "sliding-lid-box", "divider-tray", "bookend", "clock-face", "cord-winder", "tealight", "jigsaw", "ornament",
+    ];
     const ours: Record<string, string> = { "name-tag": "tag", coaster: "coasters" };
     for (const id of juracad) expect(LIBRARY.some((d) => d.id === (ours[id] ?? id))).toBe(true);
   });
@@ -175,7 +183,7 @@ describe("JuraCAD's laser designs, all of them", () => {
 describe("library window", () => {
   it("lists every design under a heading, in order", () => {
     const groups = groupDesigns();
-    expect(groups.map((g) => g.group)).toEqual(["Boxes and stands", "Signs and stamps", "Home", "Workshop"]);
+    expect(groups.map((g) => g.group)).toEqual(["Boxes and stands", "Signs and stamps", "Home", "Workshop", "Toys and gifts"]);
     expect(groups.flatMap((g) => g.designs).length).toBe(LIBRARY.length);
     expect(LIBRARY.every((d) => d.icon.startsWith("<"))).toBe(true);
   });
@@ -186,5 +194,110 @@ describe("library window", () => {
     expect(searchDesigns("14.5").map((d) => d.id)).toEqual(["gear"]);
     expect(searchDesigns("  ")).toEqual([]);
     expect(searchDesigns("zebra")).toEqual([]);
+  });
+});
+
+describe("JuraCAD's third batch of laser designs", () => {
+  const values = (id: string, extra: Record<string, unknown> = {}) => ({ ...defaultValues(design(id), DEFAULT_MATERIAL), ...(extra as Record<string, number | string | boolean>) });
+  const flat = (p: { v: number }[][]): [number, number][] => p.map(([x, y]) => [x.v, y.v]);
+  const near = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 1e-6;
+
+  it("jigsaw: the same pattern number gives the same puzzle, the pieces tile the board, and each cut is one smooth run", () => {
+    const spec = puzzleSpec(values("jigsaw"));
+    expect(JSON.stringify(makePuzzle(spec))).toBe(JSON.stringify(makePuzzle(spec)));
+    expect(JSON.stringify(makePuzzle({ ...spec, seed: 2 }))).not.toBe(JSON.stringify(makePuzzle(spec)));
+    const p = makePuzzle(spec);
+    const total = Array.from({ length: spec.rows * spec.columns }, (_, i) => area(pieceOutline(p, Math.floor(i / spec.columns), i % spec.columns))).reduce((a, b) => a + b, 0);
+    expect(total).toBeCloseTo(spec.width * spec.height, 0);
+    for (const e of allEdges(p)) {
+      const segs = edgeSegments(e);
+      expect(segs.map((s) => s.kind)).toEqual(["line", "arc", "arc", "arc", "line"]);
+      for (let i = 0; i + 1 < segs.length; i++) expect(near((segs[i] as { to: [number, number] }).to, (segs[i + 1] as { from: [number, number] }).from)).toBe(true);
+      e.arcs.forEach((a, i) => {
+        const info = arcInfo(segs[i + 1] as Extract<(typeof segs)[number], { kind: "arc" }>)!;
+        expect(info.r).toBeCloseTo(a.r, 5);
+        expect(Math.abs(info.turn)).toBeLessThan(2 * Math.PI);
+      });
+    }
+    // The cuts between pieces are open and go first; the border last.
+    const made = make("jigsaw");
+    expect(made.items.map((i) => i.name)).toEqual(["Puzzle border", "Puzzle cuts"]);
+    const paths = laserPaths(made.items);
+    expect(paths.filter((q) => !q.closed)).toHaveLength((spec.rows - 1) * spec.columns + (spec.columns - 1) * spec.rows);
+    expect(paths[paths.length - 1].closed).toBe(true);
+  });
+
+  it("sliding-lid box: grooves the lid plus clearance, the low end level with their floor, 8 pieces", () => {
+    const v = values("sliding-lid-box");
+    const s = slidingBox(v);
+    const t = s.b.t.v;
+    expect(s.g1.v - s.g0.v).toBeCloseTo(t + 2 * s.c.v, 9);
+    const o = slidingOutlines(s);
+    expect(Math.max(...flat(o.right).map((q) => q[1]))).toBeCloseTo(s.g0.v, 9);
+    // The rail's slot is open at the right-hand end: its outline reaches the wall there both below and above the slot.
+    const rail = flat(o.rail);
+    expect(rail.filter((q) => Math.abs(q[0] - (s.b.W.v - t)) < 1e-9).map((q) => q[1]).sort((a, b) => a - b)).toEqual([t, s.g0.v, s.g1.v, s.b.H.v]);
+    const made = make("sliding-lid-box");
+    expect(made.items.filter((i) => i.kind === "shape")).toHaveLength(8);
+    expect(made.items.some((i) => i.kind === "circle")).toBe(true);
+    expect(designProblems(design("sliding-lid-box"), DEFAULT_MATERIAL, values("sliding-lid-box", { height: 20 }))[0]).toMatch(/too low/);
+  });
+
+  it("tray with dividers: one divider per row and column boundary, and none when there's one of each", () => {
+    expect(make("divider-tray", { rows: 3, columns: 4 }).items).toHaveLength(5 + 2 + 3);
+    expect(make("divider-tray", { rows: 1, columns: 1 }).items).toHaveLength(5);
+    const d = dividerTray(values("divider-tray"));
+    expect(d.rowAt).toHaveLength(1);
+    expect(d.columnAt).toHaveLength(2);
+    expect(designProblems(design("divider-tray"), DEFAULT_MATERIAL, values("divider-tray", { columns: 12, width: 60 }))[0]).toMatch(/only/);
+  });
+
+  it("bookend: each tab has a slot of the same size", () => {
+    const b = bookend(values("bookend"));
+    const o = bookendOutlines(b);
+    const t = b.t.v;
+    const W = b.W.v;
+    for (const slot of o.baseSlots.slice(0, 2)) {
+      const pts = flat(slot);
+      const xs = pts.map((q) => q[0]);
+      const ys = pts.map((q) => q[1]);
+      expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(t, 9);
+      expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(0.2 * W, 9);
+    }
+    const made = make("bookend");
+    expect(made.items.map((i) => [i.name, itemOutlines(i).length])).toEqual([["Bookend: base", 4], ["Bookend: upright", 2], ["Bookend: brace", 1]]);
+  });
+
+  it("clock face: twelve marks, the quarters longer, engraved or scored", () => {
+    const L = clockLayout(values("clock-face"));
+    expect(L.marks).toHaveLength(12);
+    expect(L.marks[0][2] - L.marks[0][1]).toBeCloseTo(1.5 * (L.marks[1][2] - L.marks[1][1]), 9);
+    const engraved = make("clock-face");
+    expect(engraved.items.filter((i) => i.kind === "text")).toHaveLength(24);
+    const scored = make("clock-face", { marks: "score", numbers: "quarters" });
+    expect(scored.items.filter((i) => i.op === "score")).toHaveLength(12);
+    expect(scored.items.filter((i) => i.kind === "text")).toHaveLength(4);
+    expect(designProblems(design("clock-face"), DEFAULT_MATERIAL, values("clock-face", { height: 60 }))[0]).toMatch(/too big|run into|too close/);
+  });
+
+  it("ornaments: every shape is one closed outline holding its hole and words", () => {
+    for (const shape of ["star", "heart", "circle", "snowflake"]) {
+      const v = values("ornament", { shape });
+      expect(designProblems(design("ornament"), DEFAULT_MATERIAL, v)).toEqual([]);
+      const made = make("ornament", { shape });
+      expect(made.items.map((i) => i.kind)).toEqual([shape === "circle" ? "circle" : "shape", "circle", "text"]);
+      const outline = itemOutlines(made.items[0]);
+      expect(outline).toHaveLength(1);
+      expect(outline[0].closed).toBe(true);
+      expect(area(ornamentPolygon(ornamentShape(v)))).toBeGreaterThan(0);
+    }
+    expect(designProblems(design("ornament"), DEFAULT_MATERIAL, values("ornament", { height: 30 }))[0]).toMatch(/don't fit/);
+  });
+
+  it("cord winders and the tealight holder make the pieces they say", () => {
+    expect(make("cord-winder", { count: 3 }).items).toHaveLength(3);
+    const tea = make("tealight", { rings: 3 });
+    expect(tea.items).toHaveLength(1 + 2 * 3);
+    expect(tea.items.filter((i) => i.kind === "circle" && /hole/.test(i.name)).map((i) => (i.kind === "circle" ? i.r * 2 : 0))).toEqual([40, 40, 40]);
   });
 });
