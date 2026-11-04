@@ -35,10 +35,17 @@ export function shortcut(p: Platform, key: string, opts: { shift?: boolean } = {
   return `Ctrl+${opts.shift ? "Shift+" : ""}${key}`;
 }
 
+/** A line-up shortcut's label: "⌥A" on a Mac, "Alt+A" elsewhere. */
+export function altShortcut(p: Platform, key: string, opts: { shift?: boolean } = {}): string {
+  if (p === "mac") return `${opts.shift ? "⇧" : ""}⌥${key}`;
+  return `Alt+${opts.shift ? "Shift+" : ""}${key}`;
+}
+
 /** Mouse and keyboard help rows for the Help dialog, worded for this kind of computer. */
 export function helpRows(p: Platform) {
   const k = keyNames(p);
   const mac = p === "mac";
+  const alt = mac ? "⌥ Option" : "Alt";
   const mouse: [string, string][] = [
     ["Select a shape", "Click it (an outline, or anywhere inside a closed shape)"],
     ["Add to selection", `${k.shift}-click or ${k.mod}-click`],
@@ -59,6 +66,11 @@ export function helpRows(p: Platform) {
     ["Arrow keys", "Nudge the selected shapes 1 mm (10 mm with Shift)"],
     [k.del, "Delete the selected shapes"],
     [`${k.mod} + D`, "Duplicate the selected shapes"],
+    [`${alt} + A / D`, "Line up left edges / right edges"],
+    [`${alt} + W / S`, "Line up tops / bottoms"],
+    [`${alt} + H / V`, "Line up middles across / up and down"],
+    [`${alt} + C`, "Centre the selected shapes on the bed"],
+    [`${alt} + ${k.shift} + H / V`, "Space out evenly across / up and down"],
     [`${k.mod} + A`, "Select every shape"],
     [`${k.mod} + Z`, "Undo"],
     [mac ? `${k.mod} + ${k.shift} + Z  or  ${k.mod} + Y` : `${k.mod} + Y  or  ${k.mod} + ${k.shift} + Z`, "Redo"],

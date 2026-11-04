@@ -5,7 +5,7 @@ import { cleanValues, defaultValues, designProblems, LIBRARY, makeDesign } from 
 import { laserPaths } from "../src/laser/sheet";
 import { DEFAULT_MATERIAL } from "../src/model/document";
 import { itemBox, itemOutlines } from "../src/model/shapes";
-import { aligned, distributed, grouped, piecesOf, ungrouped, withGroups } from "../src/model/arrange";
+import { aligned, centredOnBed, distributed, keyPiece, grouped, piecesOf, ungrouped, withGroups } from "../src/model/arrange";
 import { makeRect } from "../src/model/shapes";
 import { gearOutline, gearSizes, hingeCuts, rulerMarks } from "../src/library/workshop";
 import { groupDesigns, searchDesigns } from "../src/library/browse";
@@ -111,6 +111,24 @@ describe("groups, align and distribute", () => {
     expect(left.map((it) => itemBox(it)![0])).toEqual([0, 0, 0]);
     const top = aligned(items, ["c"], "top", [600, 300]);
     expect(itemBox(top[2])![3]).toBe(300);
+  });
+
+  it("lines up against the key shape (which stays put) or the bed, and centres on the bed", () => {
+    // "c" picked first: the key.
+    const right = aligned(items, ["c", "a", "b"], "right", [600, 300], "key");
+    expect(right[2]).toBe(items[2]);
+    expect(right.map((it) => itemBox(it)![2])).toEqual([itemBox(items[2])![2], itemBox(items[2])![2], itemBox(items[2])![2]]);
+    expect(keyPiece(items, ["b", "a"])!.ids).toEqual(["b"]);
+    expect(keyPiece(items, ["b"])).toBeNull();
+    const bedTop = aligned(items, ["a", "b", "c"], "top", [600, 300], "bed");
+    expect(bedTop.map((it) => itemBox(it)![3])).toEqual([300, 300, 300]);
+    const centred = centredOnBed(items, ["a", "b"], [600, 300]);
+    const box = [itemBox(centred[0])!, itemBox(centred[1])!];
+    expect((Math.min(box[0][0], box[1][0]) + Math.max(box[0][2], box[1][2])) / 2).toBeCloseTo(300, 9);
+    expect((Math.min(box[0][1], box[1][1]) + Math.max(box[0][3], box[1][3])) / 2).toBeCloseTo(150, 9);
+    // Moved together: the gap between them is unchanged.
+    expect(box[1][0] - box[0][0]).toBeCloseTo(itemBox(items[1])![0] - itemBox(items[0])![0], 9);
+    expect(centredOnBed(items, ["c"], [600, 300], "x")[2]).not.toBe(items[2]);
   });
 
   it("spaces pieces out evenly, or a set gap apart", () => {

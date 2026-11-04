@@ -1379,8 +1379,37 @@ kbd {
 }
 
 /* Arrange menu */
-.arrange-menu {
+.arrange-menu,
+.align-menu {
   width: min(300px, calc(100vw - 16px));
+}
+
+.align-controls .icon-row {
+  margin-bottom: 8px;
+}
+
+.align-hint {
+  margin: -4px 0 8px;
+}
+
+.centre-on-bed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.key-box {
+  fill: none;
+  stroke: var(--accent);
+  pointer-events: none;
+}
+
+.key-label {
+  fill: var(--accent);
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .menu-choice {

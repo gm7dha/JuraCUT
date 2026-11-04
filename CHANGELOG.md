@@ -6,7 +6,17 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.5.1 — Eight more laser designs from JuraCAD
+## v0.6 — An Align menu
+
+- **Align** (toolbar, beside Arrange): line the selected shapes up — left edges, middles, right edges, tops, middles
+  or bottoms — against **each other**, a **key shape** (the one you picked first: it stays put and is outlined on the
+  bed, and the others line up with it), or **the bed**. The choice is remembered, and the side panel has the same
+  controls.
+- **Centre on the bed** in one click: the selection moves, as it is, to the middle of the bed.
+- **Shortcuts** (Alt, or ⌥ Option on a Mac): A / D left / right edges, W / S tops / bottoms, H / V middles across /
+  up and down, C centre on the bed, and with Shift, H / V space out evenly.
+
+## v0.5.1 — Eight more laser designs from JuraCAD · commit `f3cc590`
 
 - **Boxes and stands:** a **sliding-lid box** (the lid runs in grooves made from slotted rails, as a laser can't cut
   a groove part-way), a **tray with dividers** that slot together into rows × columns of compartments, and a

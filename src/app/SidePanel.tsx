@@ -10,6 +10,7 @@ import { describeItem, itemBox, pictureSize, placedAt } from "../model/shapes";
 import { PHOTO_MODES, RESOLUTIONS } from "./PhotoTab";
 import { useDocument, useSelection, useStore } from "../model/store";
 import { OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
+import { AlignControls } from "./AlignControls";
 import { Icons } from "./icons";
 
 export function SidePanel() {
@@ -267,7 +268,6 @@ function ManyProperties({ items }: { items: Item[] }) {
   const s = useStore.getState;
   const [gap, setGap] = useState(5);
   const lone = pieces === 1;
-  const alignHint = lone ? "Line it up with the bed" : "Line them up with each other";
   return (
     <>
       <h3>{oneGroup ? `Group of ${items.length} shapes` : `${items.length} shapes selected`}</h3>
@@ -284,34 +284,11 @@ function ManyProperties({ items }: { items: Item[] }) {
           </p>
         </>
       )}
-      <div className="field-label">{lone ? "Line up with the bed" : "Line up"}</div>
-      <div className="icon-row" role="group" aria-label="Line up">
-        {(
-          [
-            ["left", Icons.AlignLeft, "left edges"],
-            ["centre", Icons.AlignCentre, "middles, across"],
-            ["right", Icons.AlignRight, "right edges"],
-            ["top", Icons.AlignTop, "tops"],
-            ["middle", Icons.AlignMiddle, "middles, up and down"],
-            ["bottom", Icons.AlignBottom, "bottoms"],
-          ] as const
-        ).map(([to, Icon, what]) => (
-          <button key={to} type="button" className="icon-button" title={`${alignHint}: ${what}`} aria-label={`Line up ${what}`} onClick={() => s().alignSelected(to)}>
-            <Icon size={18} />
-          </button>
-        ))}
-      </div>
+      <AlignControls />
       {!lone && (
         <>
-          <div className="field-label">Space out</div>
-          <div className="icon-row" role="group" aria-label="Space out">
-            <button type="button" className="icon-button" disabled={pieces < 3} title="Equal gaps across (the outside two stay put)" aria-label="Equal gaps across" onClick={() => s().distributeSelected("x")}>
-              <Icons.SpreadX size={18} />
-            </button>
-            <button type="button" className="icon-button" disabled={pieces < 3} title="Equal gaps up and down (the outside two stay put)" aria-label="Equal gaps up and down" onClick={() => s().distributeSelected("y")}>
-              <Icons.SpreadY size={18} />
-            </button>
-            <span className="icon-row-gap" />
+          <div className="field-label">Set a gap</div>
+          <div className="icon-row" role="group" aria-label="Set a gap">
             <label className="field inline-gap">
               <span className="field-input">
                 <input type="number" min={0} step="any" value={gap} aria-label="Gap" onChange={(e) => setGap(Math.max(0, Number(e.target.value) || 0))} />

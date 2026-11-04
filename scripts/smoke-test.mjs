@@ -239,6 +239,32 @@ try {
   });
   expect(lefts === 6, "six panels still selected after lining up");
   await page.click("button:has-text('Column')");
+  // The toolbar's Align menu: line up against the key shape (the first one picked stays put), then centre on the bed.
+  const keyBefore = await store(() => {
+    const st = window.juracutStore.getState();
+    return JSON.stringify(st.history.present.items.find((i) => i.id === st.selection[0]));
+  });
+  await page.click(".align-button");
+  await page.click(".align-menu button[role='radio']:has-text('Key shape')");
+  await page.click(".align-menu button[aria-label='Line up right edges']");
+  const keyAfter = await store(() => {
+    const st = window.juracutStore.getState();
+    return JSON.stringify(st.history.present.items.find((i) => i.id === st.selection[0]));
+  });
+  expect(keyBefore === keyAfter, "the key shape stays put when the others line up with it");
+  await page.keyboard.press("Escape");
+  await page.mouse.move(5, 5);
+  await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+  await page.keyboard.press("Alt+KeyC");
+  const centred = await store(() => {
+    const st = window.juracutStore.getState();
+    const boxes = st.history.present.items.filter((i) => st.selection.includes(i.id)).map((i) => window.juracutBox(i));
+    const x0 = Math.min(...boxes.map((b) => b[0]));
+    const x1 = Math.max(...boxes.map((b) => b[2]));
+    return Math.abs((x0 + x1) / 2 - st.history.present.bed[0] / 2) < 1e-6;
+  });
+  expect(centred, "Alt+C centres the selection on the bed");
+  await page.evaluate(() => window.juracutStore.getState().setAlignAgainst("each"));
   await page.click(".arrange-button");
   await page.click(".menu-choice:has-text('In rows')");
 

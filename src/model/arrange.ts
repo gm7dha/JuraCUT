@@ -79,14 +79,27 @@ export function boxOf(items: readonly Item[], ids: readonly string[]): Box | nul
 export type AlignTo = "left" | "centre" | "right" | "bottom" | "middle" | "top";
 
 /**
- * Line the chosen pieces up with each other (with their combined box): left
- * edges, middles or right edges; bottoms, middles or tops. A single piece
- * lines up with the bed instead.
+ * What the pieces line up against: each other (the box round them all), the key shape (the piece picked first, which
+ * stays put), or the bed. A single piece always lines up with the bed.
  */
-export function aligned(items: readonly Item[], ids: readonly string[], to: AlignTo, bed: [number, number]): Item[] {
+export type AlignAgainst = "each" | "key" | "bed";
+
+/** The piece the others line up with when lining up against the key shape: the one holding the first shape picked. */
+export function keyPiece(items: readonly Item[], ids: readonly string[]): { ids: string[]; box: Box } | null {
+  const pieces = piecesOf(items, ids);
+  if (pieces.length < 2) return null;
+  return pieces.find((p) => p.ids.includes(ids[0])) ?? pieces[0];
+}
+
+/**
+ * Line the chosen pieces up: left edges, middles or right edges; bottoms, middles or tops — against each other (the box
+ * round them all), the key shape (which stays put) or the bed. A single piece lines up with the bed.
+ */
+export function aligned(items: readonly Item[], ids: readonly string[], to: AlignTo, bed: [number, number], against: AlignAgainst = "each"): Item[] {
   const pieces = piecesOf(items, ids);
   if (!pieces.length) return [...items];
-  const all: Box = pieces.length === 1 ? [0, 0, bed[0], bed[1]] : union(pieces.map((p) => p.box))!;
+  const key = against === "key" ? keyPiece(items, ids) : null;
+  const all: Box = pieces.length === 1 || against === "bed" ? [0, 0, bed[0], bed[1]] : key ? key.box : union(pieces.map((p) => p.box))!;
   const shift = new Map<string, [number, number]>();
   for (const p of pieces) {
     const b = p.box;
@@ -100,9 +113,26 @@ export function aligned(items: readonly Item[], ids: readonly string[], to: Alig
     if (to === "middle") dy = (all[1] + all[3]) / 2 - (b[1] + b[3]) / 2;
     for (const id of p.ids) shift.set(id, [dx, dy]);
   }
+  return movedBy(items, shift);
+}
+
+/**
+ * Move the chosen shapes together, as they are, so the box round them sits in the middle of the bed: across, up and
+ * down, or both.
+ */
+export function centredOnBed(items: readonly Item[], ids: readonly string[], bed: [number, number], axis: "x" | "y" | "both" = "both"): Item[] {
+  const box = boxOf(items, ids);
+  if (!box) return [...items];
+  const dx = axis === "y" ? 0 : bed[0] / 2 - (box[0] + box[2]) / 2;
+  const dy = axis === "x" ? 0 : bed[1] / 2 - (box[1] + box[3]) / 2;
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return [...items];
+  return items.map((it) => (ids.includes(it.id) && itemBox(it) ? movedItem(it, dx, dy) : it));
+}
+
+function movedBy(items: readonly Item[], shift: Map<string, [number, number]>): Item[] {
   return items.map((it) => {
     const d = shift.get(it.id);
-    return d ? movedItem(it, d[0], d[1]) : it;
+    return d && (d[0] || d[1]) ? movedItem(it, d[0], d[1]) : it;
   });
 }
 

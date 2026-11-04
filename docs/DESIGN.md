@@ -58,8 +58,9 @@ Everything outside `src/app` is pure and tested. The app keeps the design in the
   box, tags, coasters, stencils).
 - **v0.4 (done)** — picture tracing to outlines, tight packing by real shapes.
 - **v0.5 (done)** — photo engraving, every JuraCAD laser design, the Library window as JuraCAD's.
-- **v0.6** — the Align toolbar menu (line up with each other, a key shape or the bed; centre on the bed), and the
-  link to JuraCAD (send a flat design across and back).
+- **v0.6 (done)** — the Align toolbar menu (line up with each other, a key shape or the bed; centre on the bed;
+  shortcuts).
+- **v0.7** — the link to JuraCAD (send a flat design across and back).
 - **Later** — a Claude connection like JuraCAD's (an MCP
   extension with Live editing), the R1's camera as a bed background to line jobs up on material, Bambu material QR
   codes, sending jobs to the laser, rotary attachment helpers, a living hinge and box generator.

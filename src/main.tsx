@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./app/App";
 import "./app/styles.css";
+import { itemBox } from "./model/shapes";
 import { useStore } from "./model/store";
 import { initTheme } from "./app/theme";
 
@@ -21,6 +22,7 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 // The browser smoke test (opened with ?smoke) reaches the store to check what's on the bed.
 if (new URLSearchParams(window.location.search).has("smoke")) {
   (window as unknown as { juracutStore: typeof useStore }).juracutStore = useStore;
+  (window as unknown as { juracutBox: typeof itemBox }).juracutBox = itemBox;
 }
 
 // Light or dark, before the first paint.
