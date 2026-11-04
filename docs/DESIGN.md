@@ -54,8 +54,10 @@ Everything outside `src/app` is pure and tested. The app keeps the design in the
 - **v0.1 (done)** — the bed, drawing tools, words, SVG/DXF import, cut/score/engrave, arrange, export for laser,
   save/open, install, light/dark.
 - **v0.2 (done)** — kerf compensation, a material library with notes, rulers, snapping to other shapes.
-- **v0.3** — grouping and multi-shape editing in the panel, align and distribute, image tracing (a photo or scan to outlines or a black-and-white engraving), nesting that packs pieces
-  more tightly, a library of ready designs (boxes with finger joints, tags, stencils, coasters…) like JuraCAD's.
+- **v0.3 (done)** — groups, editing several shapes at once, line up and space out, a design library (finger-jointed
+  box, tags, coasters, stencils).
+- **v0.4** — image tracing (a photo or scan to outlines or a black-and-white engraving), nesting that packs pieces
+  more tightly, more library designs (living hinge, picture frame, gear, ruler).
 - **Later** — a link to JuraCAD (send a flat design across and back), a Claude connection like JuraCAD's (an MCP
   extension with Live editing), the R1's camera as a bed background to line jobs up on material, Bambu material QR
   codes, sending jobs to the laser, rotary attachment helpers, a living hinge and box generator.

@@ -138,7 +138,7 @@ export function transformedItem(item: Item, m: Affine): Item {
       return { ...item, x1: a[0], y1: a[1], x2: b[0], y2: b[1] };
     }
     default:
-      return { id: item.id, name: item.name, op: item.op, hidden: item.hidden, kind: "shape", outlines: moveOutlines(itemOutlines(item), m) };
+      return { id: item.id, name: item.name, op: item.op, hidden: item.hidden, group: item.group, kind: "shape", outlines: moveOutlines(itemOutlines(item), m) };
   }
 }
 

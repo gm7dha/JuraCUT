@@ -92,6 +92,7 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
     name: str(it.name, "Shape"),
     op: isOp(it.op) ? it.op : ("cut" as const),
     ...(it.hidden === true ? { hidden: true } : {}),
+    ...(typeof it.group === "string" && it.group ? { group: it.group.slice(0, 40) } : {}),
   };
   taken.add(base.id);
   switch (it.kind) {

@@ -39,6 +39,8 @@ interface ItemBase {
   op: Op;
   /** Hidden shapes stay in the design but aren't exported. */
   hidden?: boolean;
+  /** Shapes with the same group id are picked, moved and turned together. */
+  group?: string;
 }
 
 /** A rectangle, `angle` degrees anticlockwise about its centre, corners rounded by `radius`. */

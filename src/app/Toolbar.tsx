@@ -6,6 +6,21 @@ import type { ReactElement } from "react";
 
 import { canRedo, canUndo, useSelection, useStore, type Tool } from "../model/store";
 import { OP_INFO } from "../model/types";
+import type { State } from "../model/store";
+
+const NONE: string[] = [];
+let lastKey = "";
+let lastGroups: string[] = NONE;
+/** The group of each selected shape ("" = none), cached so the selector returns the same array while nothing changes. */
+function groupsOf(s: State): string[] {
+  const groups = s.history.present.items.filter((it) => s.selection.includes(it.id)).map((it) => it.group ?? "");
+  const key = groups.join("|");
+  if (key !== lastKey) {
+    lastKey = key;
+    lastGroups = groups.length ? groups : NONE;
+  }
+  return lastGroups;
+}
 import { Icons } from "./icons";
 import { detectPlatform, shortcut } from "./platform";
 
@@ -28,6 +43,10 @@ export function Toolbar() {
   const s = useStore.getState;
   const any = selection.length > 0;
   const word = selection.length === 1 ? "the selected shape" : "the selected shapes";
+  const groups = useStore((st) => groupsOf(st));
+  const inGroup = groups.some((g) => g !== "");
+  // Already exactly one group: nothing to group.
+  const grouped = groups.length > 0 && groups.every((g) => g !== "" && g === groups[0]);
 
   return (
     <div className="toolbar" role="toolbar" aria-label="Tools">
@@ -38,6 +57,13 @@ export function Toolbar() {
             <span>{t.label}</span>
           </button>
         ))}
+      </div>
+      <div className="tool-divider" />
+      <div className="tool-group">
+        <button type="button" className="tool-button" onClick={() => s().openDialog("library")} title="Ready-made designs: a finger-jointed box, tags, coasters, stencils">
+          <Icons.Library size={20} />
+          <span>Library</span>
+        </button>
       </div>
       <div className="tool-divider" />
       <div className="tool-group">
@@ -68,6 +94,14 @@ export function Toolbar() {
         <button type="button" className="tool-button" disabled={!any} onClick={() => s().mirrorSelected()} title={`Flip ${word} left to right (for engraving on the back)`}>
           <Icons.Mirror size={20} />
           <span>Flip</span>
+        </button>
+        <button type="button" className="tool-button" disabled={selection.length < 2 || grouped} onClick={() => s().groupSelected()} title={`Group the selected shapes, so they're picked, moved and turned together (${shortcut(platform, "G")})`}>
+          <Icons.Group size={20} />
+          <span>Group</span>
+        </button>
+        <button type="button" className="tool-button" disabled={!inGroup} onClick={() => s().ungroupSelected()} title={`Ungroup, so each shape can be picked on its own (${shortcut(platform, "G", { shift: true })})`}>
+          <Icons.Ungroup size={20} />
+          <span>Ungroup</span>
         </button>
         <button type="button" className="tool-button" disabled={!any} onClick={() => s().duplicateSelected()} title={`Make a copy of ${word} (${shortcut(platform, "D")})`}>
           <Icons.Duplicate size={20} />

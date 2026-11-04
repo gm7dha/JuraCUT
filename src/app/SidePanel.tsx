@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FONTS, FONT_IDS } from "../geometry/text";
+import { boxOf, piecesOf } from "../model/arrange";
 import { describeItem, itemBox, placedAt } from "../model/shapes";
 import { useDocument, useSelection, useStore } from "../model/store";
 import { OPS, OP_INFO, type Item, type Op } from "../model/types";
@@ -42,7 +43,10 @@ export function SidePanel() {
                   title={`${describeItem(it)} — ${OP_INFO[it.op].label}`}
                 >
                   <span className="op-dot" style={{ background: OP_INFO[it.op].colour }} aria-label={OP_INFO[it.op].label} />
-                  <span className="shape-name">{it.name}</span>
+                  <span className="shape-name">
+                    {it.group && <span className="group-mark" title="In a group" aria-label="In a group" />}
+                    {it.name}
+                  </span>
                   <span className="shape-size muted small">{describeItem(it)}</span>
                   <button
                     type="button"
@@ -205,12 +209,77 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
 
 function ManyProperties({ items }: { items: Item[] }) {
   const setOp = useStore((s) => s.setOp);
+  const doc = useDocument();
   const ops = new Set(items.map((it) => it.op));
+  const ids = items.map((it) => it.id);
+  const pieces = piecesOf(doc.items, ids).length;
+  const groups = new Set(items.map((it) => it.group ?? ""));
+  const oneGroup = groups.size === 1 && !groups.has("");
+  const box = boxOf(doc.items, ids);
+  const s = useStore.getState;
+  const [gap, setGap] = useState(5);
+  const lone = pieces === 1;
+  const alignHint = lone ? "Line it up with the bed" : "Line them up with each other";
   return (
     <>
-      <h3>{items.length} shapes selected</h3>
-      <OpPicker value={ops.size === 1 ? items[0].op : null} onChange={(op) => setOp(items.map((it) => it.id), op)} />
-      <p className="dialog-hint">Drag them together on the bed, or use the toolbar to turn, flip, copy or delete them all.</p>
+      <h3>{oneGroup ? `Group of ${items.length} shapes` : `${items.length} shapes selected`}</h3>
+      <OpPicker value={ops.size === 1 ? items[0].op : null} onChange={(op) => setOp(ids, op)} />
+      {box && (
+        <>
+          <div className="field-label">Position (bottom-left corner of them all)</div>
+          <div className="field-row">
+            <NumberBox label="X" value={box[0]} unit="mm" onCommit={(v) => s().moveSelected(v - box[0], 0)} />
+            <NumberBox label="Y" value={box[1]} unit="mm" onCommit={(v) => s().moveSelected(0, v - box[1])} />
+          </div>
+          <p className="dialog-hint" style={{ marginTop: 0 }}>
+            {Math.round((box[2] - box[0]) * 100) / 100} × {Math.round((box[3] - box[1]) * 100) / 100} mm
+          </p>
+        </>
+      )}
+      <div className="field-label">{lone ? "Line up with the bed" : "Line up"}</div>
+      <div className="icon-row" role="group" aria-label="Line up">
+        {(
+          [
+            ["left", Icons.AlignLeft, "left edges"],
+            ["centre", Icons.AlignCentre, "middles, across"],
+            ["right", Icons.AlignRight, "right edges"],
+            ["top", Icons.AlignTop, "tops"],
+            ["middle", Icons.AlignMiddle, "middles, up and down"],
+            ["bottom", Icons.AlignBottom, "bottoms"],
+          ] as const
+        ).map(([to, Icon, what]) => (
+          <button key={to} type="button" className="icon-button" title={`${alignHint}: ${what}`} aria-label={`Line up ${what}`} onClick={() => s().alignSelected(to)}>
+            <Icon size={18} />
+          </button>
+        ))}
+      </div>
+      {!lone && (
+        <>
+          <div className="field-label">Space out</div>
+          <div className="icon-row" role="group" aria-label="Space out">
+            <button type="button" className="icon-button" disabled={pieces < 3} title="Equal gaps across (the outside two stay put)" aria-label="Equal gaps across" onClick={() => s().distributeSelected("x")}>
+              <Icons.SpreadX size={18} />
+            </button>
+            <button type="button" className="icon-button" disabled={pieces < 3} title="Equal gaps up and down (the outside two stay put)" aria-label="Equal gaps up and down" onClick={() => s().distributeSelected("y")}>
+              <Icons.SpreadY size={18} />
+            </button>
+            <span className="icon-row-gap" />
+            <label className="field inline-gap">
+              <span className="field-input">
+                <input type="number" min={0} step="any" value={gap} aria-label="Gap" onChange={(e) => setGap(Math.max(0, Number(e.target.value) || 0))} />
+                <span className="unit">mm</span>
+              </span>
+            </label>
+            <button type="button" className="text-button small-button" title={`Set them ${gap} mm apart in a row, left to right`} onClick={() => s().distributeSelected("x", gap)}>
+              Row
+            </button>
+            <button type="button" className="text-button small-button" title={`Set them ${gap} mm apart in a column, bottom to top`} onClick={() => s().distributeSelected("y", gap)}>
+              Column
+            </button>
+          </div>
+        </>
+      )}
+      <p className="dialog-hint">{oneGroup ? "Clicking any shape in a group picks the whole group. Ungroup (toolbar) to change one on its own." : "Group them (toolbar) to keep them together."}</p>
     </>
   );
 }

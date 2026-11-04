@@ -159,6 +159,41 @@ try {
   await chooser2.setFiles({ name: "Test.juracut", mimeType: "application/json", buffer: Buffer.from(savedText) });
   await page.waitForFunction(() => window.juracutStore.getState().history.present.items.length === 7);
 
+  step = "design library: a stencil and a box";
+  await page.evaluate(() => window.juracutStore.getState().newDocument());
+  await page.click(".tool-button:has-text('Library')");
+  await page.waitForSelector(".library-item");
+  await page.click(".library-item:has-text('Stencil')");
+  await page.fill("#lib-text", "HELLO");
+  await page.waitForSelector(".library-preview path");
+  await page.click("button:has-text('Put on the bed')");
+  list = await items();
+  expect(list.length === 2 && list.some((i) => i.name === "Stencil letters"), "a stencil sheet and its letters");
+  await page.click(".tool-button:has-text('Library')");
+  await page.click(".library-item:has-text('Finger-jointed box')");
+  await page.click("button:has-text('Put on the bed')");
+  list = await items();
+  expect(list.length === 8, "6 box panels added");
+
+  step = "group, line up and space out";
+  await page.evaluate(() => {
+    const s = window.juracutStore.getState();
+    const ids = s.history.present.items.filter((i) => i.name.startsWith("Box")).map((i) => i.id);
+    s.select(ids);
+  });
+  await page.click(".tool-button:has-text('Group')");
+  const groupCount = await store(() => new Set(window.juracutStore.getState().history.present.items.filter((i) => i.name.startsWith("Box")).map((i) => i.group)).size);
+  expect(groupCount === 1, "the box panels in one group");
+  await page.click(".tool-button:has-text('Ungroup')");
+  await page.click("button[aria-label='Line up left edges']");
+  const lefts = await store(() => {
+    const st = window.juracutStore.getState();
+    return st.history.present.items.filter((i) => st.selection.includes(i.id)).length;
+  });
+  expect(lefts === 6, "six panels still selected after lining up");
+  await page.click("button:has-text('Column')");
+  await page.click(".tool-button:has-text('Arrange')");
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");
@@ -181,12 +216,13 @@ try {
   await page.keyboard.press("Escape");
 
   step = "undo, dark mode, help";
-  await page.evaluate(() => { const s = window.juracutStore.getState(); s.undo(); s.undo(); s.undo(); });
-  // Back past the material change and the Open: the empty design New made.
-  await page.keyboard.press("Control+z");
+  // Undo takes the square back off; redo puts it back.
+  const before = await store(() => window.juracutStore.getState().history.present.items.length);
   await page.keyboard.press("Control+z");
   const after = await store(() => window.juracutStore.getState().history.present.items.length);
-  expect(after === 0, "undo brought back the empty design");
+  expect(after === before - 1, "undo took the last shape away");
+  await page.keyboard.press("Control+y");
+  expect((await store(() => window.juracutStore.getState().history.present.items.length)) === before, "redo put it back");
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Dark')");
   expect((await page.evaluate(() => document.documentElement.dataset.theme)) === "dark", "dark mode");

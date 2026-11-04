@@ -222,4 +222,78 @@ export const Icons = {
       <path d="M12 5v14M5 12l7 7 7-7" />
     </Svg>
   ),
+  Library: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="4" y="4" width="6" height="16" rx="1" />
+      <rect x="11" y="4" width="5" height="16" rx="1" />
+      <path d="m17 5 3.5 14.5" />
+    </Svg>
+  ),
+  Group: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="3 2" />
+      <rect x="7" y="7" width="6" height="6" rx="1" />
+      <circle cx="15" cy="15" r="3" />
+    </Svg>
+  ),
+  Ungroup: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="8" height="8" rx="1" />
+      <circle cx="16.5" cy="16.5" r="4" />
+    </Svg>
+  ),
+  AlignLeft: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M4 3v18" />
+      <rect x="7" y="6" width="12" height="4" rx="1" />
+      <rect x="7" y="14" width="7" height="4" rx="1" />
+    </Svg>
+  ),
+  AlignCentre: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M12 3v18" strokeDasharray="2 2" />
+      <rect x="5" y="6" width="14" height="4" rx="1" />
+      <rect x="8" y="14" width="8" height="4" rx="1" />
+    </Svg>
+  ),
+  AlignRight: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M20 3v18" />
+      <rect x="5" y="6" width="12" height="4" rx="1" />
+      <rect x="10" y="14" width="7" height="4" rx="1" />
+    </Svg>
+  ),
+  AlignTop: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M3 4h18" />
+      <rect x="6" y="7" width="4" height="12" rx="1" />
+      <rect x="14" y="7" width="4" height="7" rx="1" />
+    </Svg>
+  ),
+  AlignMiddle: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M3 12h18" strokeDasharray="2 2" />
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="8" width="4" height="8" rx="1" />
+    </Svg>
+  ),
+  AlignBottom: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M3 20h18" />
+      <rect x="6" y="5" width="4" height="12" rx="1" />
+      <rect x="14" y="10" width="4" height="7" rx="1" />
+    </Svg>
+  ),
+  SpreadX: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M3 4v16M21 4v16" />
+      <rect x="9" y="8" width="6" height="8" rx="1" />
+    </Svg>
+  ),
+  SpreadY: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M4 3h16M4 21h16" />
+      <rect x="8" y="9" width="8" height="6" rx="1" />
+    </Svg>
+  ),
 };

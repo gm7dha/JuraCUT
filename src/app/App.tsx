@@ -6,6 +6,7 @@ import { BedView } from "./BedView";
 import { ExportDialog } from "./ExportDialog";
 import { HelpDialog } from "./HelpDialog";
 import { MaterialsDialog } from "./MaterialsDialog";
+import { LibraryDialog } from "./LibraryDialog";
 import { Icons } from "./icons";
 import { openFile, saveToFile, openFromFile } from "./fileActions";
 import { inPopup, inTextBox } from "./popupGuard";
@@ -32,6 +33,7 @@ export function App() {
       {dialog === "export" && <ExportDialog />}
       {dialog === "help" && <HelpDialog />}
       {dialog === "material" && <MaterialsDialog />}
+      {dialog === "library" && <LibraryDialog />}
       {dialog === "whatsNew" && <WhatsNewDialog />}
     </div>
   );
@@ -77,6 +79,9 @@ function useShortcuts() {
         } else if (k === "a") {
           e.preventDefault();
           s.selectAll();
+        } else if (k === "g") {
+          e.preventDefault();
+          e.shiftKey ? s.ungroupSelected() : s.groupSelected();
         }
         return;
       }

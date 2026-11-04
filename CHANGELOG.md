@@ -6,7 +6,21 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.2 — Kerf, materials, rulers and snapping
+## v0.3 — Design library, groups, line up and space out
+
+- **Design library** (toolbar › Library): fill in the sizes, see a preview, put it on the bed.
+  - **Finger-jointed box** — six panels (five without a lid) whose edges interlock; tick "Allow for the kerf" when you
+    export and they fit snugly.
+  - **Name or key tag** — rounded corners, a ring hole and engraved words (made smaller to fit if need be).
+  - **Coasters** — round or square sets, with engraved words and a scored ring.
+  - **Stencil** — words cut out of a sheet, with bridges added so the middles of O, A, R and friends don't fall out.
+- **Groups:** select shapes and press Group (Ctrl/⌘ + G) to keep them together — clicking one picks them all, and they
+  move, turn and flip as one. Ungroup with Ctrl/⌘ + Shift + G.
+- **Line up and space out:** with several shapes selected, the panel lines up their left edges, middles, right
+  edges, tops or bottoms, spaces them out evenly, or sets them a chosen gap apart in a row or column. A single shape
+  lines up with the bed. Type a position for a whole selection at once.
+
+## v0.2 — Kerf, materials, rulers and snapping · commit `18b9cc6`
 
 - **Kerf compensation:** Export for laser can move cut lines out by half the material's kerf (and holes in), so
   pieces and holes come out the size you drew. Corners that open up get a round join; a circle stays a circle.
