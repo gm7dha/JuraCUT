@@ -6,7 +6,15 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.6.1 — Eight more laser designs from JuraCAD
+## v0.7 — Send designs to and from JuraCAD
+
+- **Send to JuraCAD** (Export for laser): the outlines open in JuraCAD as a new sketch on the Top plane, ready to
+  extrude into a part — in JuraCAD's open tab, or a new one.
+- **From JuraCAD:** its Export for laser panel has "Send to JuraCUT", which puts the outlines straight onto this bed,
+  each colour as cut, score or engrave.
+- Both apps are on the same website, so designs pass between their tabs inside your browser: nothing is uploaded.
+
+## v0.6.1 — Eight more laser designs from JuraCAD · commit `62cf618`
 
 - **Boxes and stands:** a **living-hinge box** (round corners; the four walls are one strip that bends round them), a
   **card deck box** sized from your cards (thumb notches, lift-off lid) and a **business card holder**.

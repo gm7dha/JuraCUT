@@ -6,7 +6,7 @@
 
 JuraCUT runs entirely in your browser. Your designs never leave your computer, there's no account, and it's free.
 
-> **Status: v0.6 preview.** Draw shapes and words, bring in SVG or DXF drawings, say what the laser does with each
+> **Status: v0.7 preview.** Draw shapes and words, bring in SVG or DXF drawings, say what the laser does with each
 > (cut, score or engrave), lay everything out on the bed and export an SVG for Bambu Studio. See the
 > [roadmap](docs/DESIGN.md#roadmap).
 
@@ -30,6 +30,7 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
   stamps, coasters, clock face, cord winders, tealight holder and lantern, spice rack, key rack, picture frame, living
   hinge, gear, ruler, jigsaw puzzle, name puzzle, dice tower and ornaments.
 - **Engrave photos**: dots, black & white or greys, at true size.
+- **Send designs to and from JuraCAD**: JuraCAD's outlines straight onto the bed, and back as a sketch to extrude.
 - **Trace pictures** (PNG, JPG…) into outlines to engrave, cut or score.
 - **Pack tightly**: pieces fitted together by their real shapes to save material.
 - **Groups**, and **Align**: line shapes up with each other, a key shape or the bed, centre them on the bed, or

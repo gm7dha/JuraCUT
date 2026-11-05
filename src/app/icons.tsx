@@ -22,6 +22,13 @@ function Svg({ size = 20, children, ...rest }: IconProps & { children: ReactNode
 }
 
 export const Icons = {
+  /** Sending to the other app: an arrow out of a box. */
+  Share: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M14 4h6v6M20 4l-9 9" />
+      <path d="M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" />
+    </Svg>
+  ),
   Import: (p: IconProps) => (
     <Svg {...p}>
       <path d="M12 3v10M8 9.5l4 4 4-4" />

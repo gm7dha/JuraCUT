@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { layerCounts, LASER_LAYERS, LAYER_ORDER } from "../geometry/segments";
 import { colourKey, laserDxf, laserSvg } from "../laser/files";
+import { sendToJuraCAD } from "./juraLinkApp";
 import { makeSheet, offBed } from "../laser/sheet";
 import { useDocument, useSelection, useStore } from "../model/store";
 import { downloadFile, safeFileName } from "./download";
@@ -144,6 +145,15 @@ export function ExportDialog() {
             <Icons.Export size={18} /> Save {photos === 1 ? "photo" : "photos"} as PNG
           </button>
         )}
+        <button
+          type="button"
+          className="text-button send-to-juracad"
+          onClick={() => void sendToJuraCAD(doc.name, laserDxf(makeSheet(doc, { items })))}
+          disabled={sheet.paths.length === 0}
+          title="Open these outlines in JuraCAD as a sketch, ready to extrude into a part (true size, not mirrored, no kerf)"
+        >
+          <Icons.Share size={18} /> Send to JuraCAD
+        </button>
         <button type="button" className="text-button" onClick={() => save("dxf")} disabled={empty} title="DXF: for Bambu Studio and every other laser or CAD program; arcs stay exact">
           <Icons.Export size={18} /> Save DXF
         </button>

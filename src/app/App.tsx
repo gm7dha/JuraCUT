@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 
+import { startLink } from "./juraLinkApp";
+
 import { KEEP_PROBLEM, keepInBrowser, readKept } from "../model/keep";
 import { useStore } from "../model/store";
 import { BedView } from "./BedView";
@@ -21,6 +23,8 @@ export function App() {
   useShortcuts();
   useKeepInBrowser();
   useFileDrop();
+  // The link with JuraCAD (after the kept design is back, so a design sent here lands on it).
+  useEffect(() => startLink(), []);
 
   return (
     <div className="app">
