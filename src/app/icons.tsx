@@ -229,12 +229,6 @@ export const Icons = {
       <path d="M12 5v14M5 12l7 7 7-7" />
     </Svg>
   ),
-  Mountain: (p: IconProps) => (
-    <Svg {...p}>
-      <path d="M2.5 19.5 9 8.5l4 6.5 2.5-3.5 6 8z" />
-      <path d="m6.9 12 2.1-3.5 2.2 3.6-1.3-.8-1 .9-.9-.8z" />
-    </Svg>
-  ),
   Library: (p: IconProps) => (
     <Svg {...p}>
       <rect x="4" y="4" width="6" height="16" rx="1" />

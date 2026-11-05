@@ -6,7 +6,12 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.11.1 — Mountain puzzle: map names on flat ground
+## v0.12 — Mountain puzzle taken out
+
+- The **Mountain** tool has been taken out of JuraCUT. The mountain puzzle is now 3D printing only, in JuraCAD's
+  Mountain tool. Nothing else changes.
+
+## v0.11.1 — Mountain puzzle: map names on flat ground · commit `452d333`
 
 - Map names now go on the flattest ground near their place, crossing at most 3 sheets. On a steep slope each sheet shows
   only a thin strip, so a name spread over many sheets was cut into slivers you couldn't read. A name with no flat
