@@ -136,8 +136,9 @@
   (pure, `sheetMarks`): heights read as the contours are (bilinear on the puzzle's samples); a sheet's band = floor((h −
   low) / band); lines clipped to the puzzle, sampled 0.4 mm, split halfway where the band changes, each stretch scored on
   its sheet (`thinStraight`); water/buildings clipped (Sutherland–Hodgman) and engraved on their lowest vertex's sheet;
-  names (`NAME_SIZE` 3.5, `nameWidth`) at their place or the nearest spot ≤ `NAME_REACH` clear of water and other names,
-  engraved on EVERY sheet their box crosses (bands on a slope are 1–3 mm, so no name fits on one); piece names keep off
+  names (`NAME_SIZE` 3.5, `nameWidth`) on the spot within `NAME_REACH` (30) whose box crosses the fewest sheets (then the
+  nearest), clear of water and other names, at most `NAME_SHEETS` (3) — else left off with a warning (on a slope each sheet
+  shows a 1–3 mm strip, so a name over many sheets is slivers) — engraved on each sheet it crosses; piece names keep off
   them (`labelPlaces(…, keepOff)`, `nameBox`). `ContourLayer.marks`; contourItems adds "paths and rivers" (score),
   "lochs and buildings" and "map names" (engrave). Tests: tests/osm.test.ts.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via

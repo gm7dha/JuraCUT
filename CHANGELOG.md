@@ -6,7 +6,13 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.11 — Mountain puzzle: OpenStreetMap files
+## v0.11.1 — Mountain puzzle: map names on flat ground
+
+- Map names now go on the flattest ground near their place, crossing at most 3 sheets. On a steep slope each sheet shows
+  only a thin strip, so a name spread over many sheets was cut into slivers you couldn't read. A name with no flat
+  enough spot within 30 mm is left off, and the window says how many.
+
+## v0.11 — Mountain puzzle: OpenStreetMap files · commit `05ffa98`
 
 - **Mountain puzzle:** a new way to choose the mountain, **An OpenStreetMap file**. On openstreetmap.org, zoom to the
   mountain, press Export and save the .osm file; the puzzle takes its area from the file. The heights still come from the
