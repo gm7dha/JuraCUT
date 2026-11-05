@@ -350,7 +350,8 @@ try {
   const parcel = await store(() => window.fakeJuraCAD.inbox.find((m) => m.type === "parcel" && m.parcel.to === "juracad").parcel);
   expect(parcel.kind === "dxf" && parcel.content.includes("ENTITIES") && parcel.from === "juracut", "a DXF went to JuraCAD");
   await page.waitForSelector(".toast:has-text('Sent to JuraCAD')");
-  await page.keyboard.press("Escape");
+  // Sent: the Export window closes by itself.
+  await page.waitForSelector(".modal", { state: "detached" });
   await page.evaluate(() => window.fakeJuraCAD.channel.close());
 
   step = "materials and kerf";

@@ -148,7 +148,7 @@ export function ExportDialog() {
         <button
           type="button"
           className="text-button send-to-juracad"
-          onClick={() => void sendToJuraCAD(doc.name, laserDxf(makeSheet(doc, { items })))}
+          onClick={() => void sendToJuraCAD(doc.name, laserDxf(makeSheet(doc, { items }))).then((ok) => ok && openDialog(null))}
           disabled={sheet.paths.length === 0}
           title="Open these outlines in JuraCAD as a sketch, ready to extrude into a part (true size, not mirrored, no kerf)"
         >

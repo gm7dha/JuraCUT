@@ -49,6 +49,15 @@ describe("parseTransform", () => {
 });
 
 describe("svgOutlines", () => {
+  it("brings a circle in as a true circle (so it's cut, and sent to JuraCAD, as one), unless it's squashed", () => {
+    const round = svgOutlines('<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="30mm" viewBox="0 0 40 30"><circle cx="20" cy="10" r="5" stroke="#0000FF" fill="none"/></svg>');
+    expect(round.outlines[0].outline.segments).toEqual([{ kind: "circle", center: [20, -10], radius: 5 }]);
+    const turned = svgOutlines('<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="30mm" viewBox="0 0 40 30"><g transform="rotate(30) scale(2)"><circle cx="0" cy="0" r="1"/></g></svg>');
+    expect(turned.outlines[0].outline.segments[0]).toMatchObject({ kind: "circle", radius: 2 });
+    const squashed = svgOutlines('<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="30mm" viewBox="0 0 40 30"><g transform="scale(2 1)"><circle cx="5" cy="5" r="1"/></g></svg>');
+    expect(squashed.outlines[0].outline.segments.map((x) => x.kind)).toEqual(["bezier", "bezier", "bezier", "bezier"]);
+  });
+
   it("brings a millimetre drawing in at true size, y up", () => {
     const r = svgOutlines(`<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="50mm" viewBox="0 0 100 50"><rect x="10" y="10" width="30" height="20"/></svg>`);
     expect(r.unitMm).toBe(1);
