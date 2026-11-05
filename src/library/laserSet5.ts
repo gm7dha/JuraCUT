@@ -29,7 +29,7 @@ const rad = (d: number) => (d * Math.PI) / 180;
 function bedNote(items: Item[]): string[] {
   const boxes = items.map(itemBox).filter((b): b is [number, number, number, number] => !!b);
   const tall = Math.max(...boxes.map((b) => b[3])) - Math.min(...boxes.map((b) => b[1]));
-  return tall > 280 ? ["The pieces don't all fit on the bed at once: cut them in a few goes (Arrange › Pack tightly helps)."] : [];
+  return tall + 10 > 300 ? ["The pieces don't all fit on the bed at once: cut them in a few goes (Arrange › Pack tightly helps)."] : [];
 }
 
 // ---------------------------------------------------------------------------

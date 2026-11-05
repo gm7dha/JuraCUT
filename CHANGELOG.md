@@ -9,10 +9,11 @@ The point in the history for each version is the commit shown (see https://githu
 ## v0.10 — Bird box and seven more designs
 
 - Eight more designs in the **Library**, the same as JuraCAD's newest laser designs:
-  - **Bird box** (under a new **Garden** heading): a nest box for blue tits, great tits or house sparrows, sized as the
-    RSPB and BTO advise where a laser can — the right hole for the bird, at least 125 mm above the floor, drainage
+  - **Bird box** (under a new **Garden** heading): a nest box for blue tits, great tits or house sparrows, following the
+    RSPB's and BTO's advice where a laser can — the right hole for the bird, at least 125 mm above the floor, drainage
     holes, a lift-off roof, and score lines inside the front so the young can climb out (put the scored side inward).
-    Use at least 6 mm exterior plywood and hang it out of full sun, facing north to east.
+    They advise 15 mm timber walls, so thinner plywood is a compromise: use at least 6 mm exterior plywood and hang it
+    out of full sun, facing north to east.
   - **Earring stand**: two plates that slot together into a cross, with holes for earrings.
   - **Box with drawers**: a finger-jointed case with shelves and 1–6 sliding drawers.
   - **Honeycomb desk pot** (under a new **Desk** heading): a pen pot with a pattern cut in its walls and optional dividers.
