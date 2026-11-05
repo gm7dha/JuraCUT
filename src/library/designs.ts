@@ -19,6 +19,7 @@ import { BOXES_3 } from "./boxes3";
 import { HOME_3 } from "./laserHome3";
 import { TOYS_3 } from "./toys3";
 import { LASER_DESIGNS_4 } from "./laserSet4";
+import { LASER_DESIGNS_5 } from "./laserSet5";
 import { planBridges } from "./bridges";
 import { boxProblems, fingerCounts, panelOutlines } from "./fingers";
 import { lit } from "./ex";
@@ -246,7 +247,7 @@ const stencil: LibraryDesign = {
   },
 };
 
-export const LIBRARY: LibraryDesign[] = [fingerBox, STAND_AND_STAMP[0], tag, stencil, STAND_AND_STAMP[1], coasters, ...WORKSHOP_DESIGNS, ...BOXES_3, ...HOME_3, ...TOYS_3, ...LASER_DESIGNS_4];
+export const LIBRARY: LibraryDesign[] = [fingerBox, STAND_AND_STAMP[0], tag, stencil, STAND_AND_STAMP[1], coasters, ...WORKSHOP_DESIGNS, ...BOXES_3, ...HOME_3, ...TOYS_3, ...LASER_DESIGNS_4, ...LASER_DESIGNS_5];
 
 export type { DesignInput, InputKind, LibraryDesign, MadeDesign, Values } from "./kit";
 

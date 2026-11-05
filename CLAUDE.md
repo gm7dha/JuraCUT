@@ -71,9 +71,17 @@
   `toys3.ts`: jigsaw — `puzzle.ts` is JuraCAD's unchanged, cuts between pieces one open run each — and ornament;
   `laserSet4.ts`: living-hinge box, card deck box, business card holder, spice rack, tealight lantern, key rack, dice
   tower, name puzzle — over JuraCAD's pure `outlines.ts` and `patterns.ts` (copied unchanged) and `sidePanels.ts`
-  (JuraCAD's maths for pieces held between two slotted sides; `assemblyItems` lays them out flat));
+  (JuraCAD's maths for pieces held between two slotted sides; `assemblyItems` lays them out flat);
+  `laserSet5.ts`: bird box (Garden; RSPB/BTO sizes — the inside climbing lines are a score shape grouped with the front),
+  earring stand, box with drawers, honeycomb desk pot (Desk), sunburst mirror frame, tablet/book stand (Desk), coaster
+  holder, tissue box cover — over `boxPanels.ts` (JuraCAD's: a finger box as separate panels standing `upright`,
+  `upsideDown` or `onBack` — `panelPlace`; `boxItems` lays each panel out as JuraCAD's sketch draws it, with its holes —
+  circles, polygons, slots (`holeOutline`: two half circles) — and score `lines`; `plateItem`, `panelAreas`, `panelsFit`).
+  JuraCAD's "Kerf allowance" inputs are left out here, as if 0: pieces and holes are true size (no `drawnHole`), and
+  Export's kerf does what JuraCAD's allowance does; thickness defaults come from the material (the bird box's at least 6);
+  values are kept inside their limits (`cleanValues`) rather than refused as JuraCAD does);
   `cleanValues`, `makeDesign`. `browse.ts` — `groupDesigns` (headings in `GROUP_ORDER`: Boxes and stands, Signs and
-  stamps, Home, Workshop, Toys and gifts) and `searchDesigns` (as JuraCAD's). `fingers.ts` is JuraCAD's
+  stamps, Home, Workshop, Toys and gifts, Garden, Desk — JuraCAD's laser tab's order) and `searchDesigns` (as JuraCAD's). `fingers.ts` is JuraCAD's
   finger maths unchanged, over a numbers-only `ex.ts` (JuraCUT's boxes have no kerf allowance of their own — Export's
   kerf does it). `bridges.ts` is JuraCAD's stencil bridge planner unchanged; `stencilCut.ts` turns letters + bridges
   into cut lines (outlines minus what lies in a bridge, plus the bridges' long sides where they cross a stroke — the
@@ -151,7 +159,7 @@
   (`BASE_PATH` in the workflow, read by vite.config.ts and the smoke test).
 - `npm run smoke` (`scripts/smoke-test.mjs`) drives the built app in headless Chromium (`?smoke` exposes
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
-  imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library → groups,
+  imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library (and a bird box found by searching: 7 pieces + score lines, undone) → groups,
   ungroups, lines up and spaces the panels, lines them up against the key shape from the Align menu (it stays put) and
   centres them with Alt+C → takes a design from a pretend JuraCAD tab and sends one back → traces a PNG it makes itself (a ring and a bar) → engraves it as a photo (bed, SVG image, PNG with pHYs, style
   changed in the panel) → packs tightly → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off

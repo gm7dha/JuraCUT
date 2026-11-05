@@ -9,7 +9,7 @@ import type { LibraryDesign } from "./kit";
 import { DEFAULT_MATERIAL } from "../model/document";
 
 /** The order headings are shown in (any others follow, in the library's order). */
-export const GROUP_ORDER = ["Boxes and stands", "Signs and stamps", "Home", "Workshop", "Toys and gifts"];
+export const GROUP_ORDER = ["Boxes and stands", "Signs and stamps", "Home", "Workshop", "Toys and gifts", "Garden", "Desk"];
 
 export interface DesignGroup {
   group: string;

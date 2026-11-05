@@ -221,6 +221,18 @@ try {
   await page.click("button:has-text('Back')");
   await page.waitForSelector(".library-card");
   await page.keyboard.press("Escape");
+  // A bird box found by searching: 7 pieces cut, and the front's climbing lines scored; then undone.
+  await page.click(".tool-button:has-text('Library')");
+  await page.fill(".library-search", "bird box");
+  await page.click(".library-card:has-text('Bird box')");
+  await page.waitForSelector(".library-preview path");
+  await page.click("button:has-text('Put on the bed')");
+  list = await items();
+  const bird = list.filter((i) => i.name.startsWith("Bird box"));
+  expect(bird.filter((i) => i.op === "cut").length === 7 && bird.filter((i) => i.op === "score").length === 1, `a bird box: 7 pieces and its score lines (got ${bird.length})`);
+  await page.evaluate(() => window.juracutStore.getState().undo());
+  list = await items();
+  expect(list.length === 8, "the bird box undone");
 
   step = "group, line up and space out";
   await page.evaluate(() => {
