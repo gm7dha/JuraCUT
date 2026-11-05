@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { bedItems, bedSheets } from "../src/terrain/contourItems";
-import { nameWidth, NAME_SIZE } from "../src/terrain/contourMarks";
+import { nameWidth, NAME_SHEETS, NAME_SIZE } from "../src/terrain/contourMarks";
 import { CONTOUR_DEFAULTS, makeContourPuzzle } from "../src/terrain/contourPuzzle";
 import { gridFrom } from "../src/terrain/elevation";
 import { gridToLatLon, latLonToGrid, parseGridRef } from "../src/terrain/osGrid";
@@ -112,7 +112,9 @@ describe("Map features on the sheets", () => {
     // Each name on every sheet whose band it crosses (the same place on each), and on no other.
     const names = new Map<string, { at: [number, number]; sheets: number[] }>();
     for (const l of puzzle.layers) for (const n of l.marks.names) names.set(n.text, { at: n.at, sheets: [...(names.get(n.text)?.sheets ?? []), l.index] });
-    expect([...names.keys()].sort()).toEqual(["CIC Hut", "Lochan Meall", "Sgùrr & Beinn 1044 m"]);
+    // The hill is a steep cone with no flat top: its name would be cut into slivers, so it's left off (and said so).
+    expect([...names.keys()].sort()).toEqual(["CIC Hut", "Lochan Meall"]);
+    expect(puzzle.warnings.some((w) => w.startsWith("1 map name has no room"))).toBe(true);
     for (const [text, { at, sheets }] of names) {
       const w = nameWidth(text) / 2;
       const seen = new Set<number>();
@@ -120,6 +122,7 @@ describe("Map features on the sheets", () => {
       const near = (a: Set<number> | number[], L: number) => [L - 1, L, L + 1].some((m) => (a instanceof Set ? a.has(m) : a.includes(m)));
       for (const L of seen) expect(near(sheets, L), `${text} seen on ${L + 1}`).toBe(true);
       for (const L of sheets) expect(near(seen, L), `${text} engraved on ${L + 1}`).toBe(true);
+      expect(sheets.length, text).toBeLessThanOrEqual(NAME_SHEETS);
     }
     // Piece names keep off map names on the same sheet.
     for (const l of puzzle.layers)

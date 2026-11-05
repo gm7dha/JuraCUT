@@ -2,8 +2,8 @@
  * Map features on a layered mountain's sheets (pure, mm, y up). A sheet shows where the ground's height is between its
  * own contour and the next one's, so each thing goes on the sheet whose band it lies in: paths, tracks, roads, rivers
  * and streams are split where they cross a contour and each stretch is scored on its own sheet; lochs and buildings are
- * engraved on the sheet of their lowest shore; names are engraved, at their place (or as near as is clear of water and
- * of each other), on every sheet whose visible band they cross.
+ * engraved on the sheet of their lowest shore; names go on the flattest ground near their place (crossing as few sheets
+ * as can be, at most `NAME_SHEETS`), clear of water and of each other, engraved on each sheet they cross.
  */
 import { insideRing, type MapFeatures } from "./osm";
 
@@ -11,8 +11,10 @@ type P2 = [number, number];
 
 /** Map names' capital height (mm). */
 export const NAME_SIZE = 3.5;
-/** How far a name may move from its place to find room (mm). */
-export const NAME_REACH = 20;
+/** How far a name may move from its place to find flatter ground (mm). */
+export const NAME_REACH = 30;
+/** A name may cross at most this many sheets (more, and it's cut into slivers too thin to read). */
+export const NAME_SHEETS = 3;
 /** Buildings are engraved at least this big across (mm). */
 export const BUILDING_LEAST = 1;
 
@@ -125,9 +127,10 @@ export function sheetMarks(
     if (shape.kind === "water") water.push({ layer: L, rings });
   }
 
-  // Names: at their place (or the nearest spot clear of water and other names), engraved on every sheet they're seen
-  // on — on a slope each sheet shows only a strip, so the name steps down the hill a sheet at a time and reads whole
-  // from above; where the sheet above covers it, it's hidden.
+  // Names: on the flattest ground near their place — the spot whose box crosses the fewest sheets (then the nearest),
+  // clear of water and of other names. Each sheet shows a strip of it and the sheet above covers the rest, so a name
+  // crossing many sheets on a steep slope would be cut into slivers: up to `NAME_SHEETS` it's engraved on each sheet it
+  // crosses, in the same place (reading whole from above); with no such spot within reach it's left off.
   const placed: [number, number, number, number][] = [];
   let unplaced = 0;
   const overlaps = (b: [number, number, number, number]) => placed.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]);
@@ -136,33 +139,37 @@ export function sheetMarks(
     if (x0 < 0 || y0 < 0 || x0 > W || y0 > H) continue;
     const w = nameWidth(name.text) / 2 + 0.6;
     const h = NAME_SIZE / 2 + 0.6;
-    let done = false;
-    for (let r = 0; r <= NAME_REACH && !done; r += 1.5) {
-      const turns = r === 0 ? 1 : Math.ceil((2 * Math.PI * r) / 1.5);
-      for (let t = 0; t < turns && !done; t++) {
+    let best: { at: P2; sheets: Set<number>; box: [number, number, number, number] } | null = null;
+    for (let r = 0; r <= NAME_REACH; r += 1.5) {
+      const turns = r === 0 ? 1 : Math.ceil((2 * Math.PI * r) / 2);
+      for (let t = 0; t < turns; t++) {
         // Below the place first (a name usually sits under its peak), then round.
         const ang = -Math.PI / 2 + (2 * Math.PI * t) / turns;
         const [cx, cy] = [x0 + r * Math.cos(ang), y0 + r * Math.sin(ang)];
         const box: [number, number, number, number] = [cx - w, cy - h, cx + w, cy + h];
         if (box[0] < 1 || box[1] < 1 || box[2] > W - 1 || box[3] > H - 1 || overlaps(box)) continue;
         const seen = new Set<number>();
-        let wet = false;
+        let ok = true;
         const nx = Math.ceil((box[2] - box[0]) / 0.5);
         const ny = Math.ceil((box[3] - box[1]) / 0.5);
-        for (let j = 0; j <= ny && !wet; j++)
-          for (let i = 0; i <= nx && !wet; i++) {
+        for (let j = 0; j <= ny && ok; j++)
+          for (let i = 0; i <= nx && ok; i++) {
             const p: P2 = [box[0] + ((box[2] - box[0]) * i) / nx, box[1] + ((box[3] - box[1]) * j) / ny];
             const L = layerAt(p[0], p[1]);
             seen.add(L);
-            if (water.some((wt) => wt.layer === L && inRings(p, wt.rings))) wet = true;
+            // No better than the best so far, or on water: give up on this spot.
+            if ((best && seen.size >= best.sheets.size) || water.some((wt) => wt.layer === L && inRings(p, wt.rings))) ok = false;
           }
-        if (wet) continue;
-        for (const L of seen) sheets[L].names.push({ text: name.text, at: [cx, cy] });
-        placed.push(box);
-        done = true;
+        if (ok && seen.size <= NAME_SHEETS) best = { at: [cx, cy], sheets: seen, box };
       }
+      if (best?.sheets.size === 1) break;
     }
-    if (!done) unplaced++;
+    if (!best) {
+      unplaced++;
+      continue;
+    }
+    for (const L of best.sheets) sheets[L].names.push({ text: name.text, at: best.at });
+    placed.push(best.box);
   }
   return { sheets, unplaced };
 }
