@@ -71,7 +71,7 @@ describe("Contours", () => {
 const W = 4000;
 const H = 3000;
 const hills = gridFrom({ e: 200000, n: 770000 }, W, H, 20, (e, n) => 300 + 1000 * Math.exp(-(((e - 201800) / 900) ** 2 + ((n - 771500) / 700) ** 2)) + 300 * Math.exp(-(((e - 203200) / 400) ** 2 + ((n - 770700) / 500) ** 2)) + 40 * Math.sin(e / 170));
-const SPEC: ContourSpec = { ...CONTOUR_DEFAULTS, layers: 16 };
+const SPEC: ContourSpec = { ...CONTOUR_DEFAULTS, width: 250, piece: 40, layers: 16 };
 
 describe("Layered puzzle", () => {
   const puzzle = makeContourPuzzle(hills, W, H, SPEC);
@@ -136,9 +136,13 @@ describe("Layered puzzle", () => {
   });
 
   it("refuses pieces too small for the sheet's tabs", () => {
+    // Necks at least 3 mm whatever the sheet: 30 mm pieces work in 3 mm and 5 mm alike.
     expect(smallestPiece(3)).toBe(27);
-    expect(smallestPiece(6)).toBeGreaterThan(smallestPiece(3));
+    expect(smallestPiece(5)).toBe(27);
+    expect(contourChecks({ ...SPEC, piece: 30, thickness: 5 }).problems).toEqual([]);
     expect(contourChecks({ ...SPEC, piece: 26 }).problems[0]).toMatch(/too small/);
+    expect(contourChecks({ ...SPEC, layers: 100 }).problems).toEqual([]);
+    expect(contourChecks({ ...SPEC, layers: 101 }).problems[0]).toMatch(/100 sheets/);
     expect(contourChecks(SPEC).problems).toEqual([]);
     expect(() => makeContourPuzzle(hills, W, H, { ...SPEC, piece: 10 })).toThrow(/too small/);
   });

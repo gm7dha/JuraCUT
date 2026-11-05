@@ -36,7 +36,11 @@ export interface ContourSpec {
   labels: boolean;
 }
 
-export const CONTOUR_DEFAULTS: ContourSpec = { width: 250, thickness: 3, layers: 12, piece: 40, seed: 1, stagger: true, guides: true, labels: true };
+export const CONTOUR_DEFAULTS: ContourSpec = { width: 150, thickness: 3, layers: 66, piece: 30, seed: 1, stagger: true, guides: true, labels: true };
+/** The most sheets (a 200 mm mountain in 2 mm sheet). */
+export const MAX_SHEETS = 100;
+/** The narrowest a tab's neck may be, whatever the sheet (mm): thicker sheet only makes a neck stronger. */
+export const LEAST_NECK = 3;
 
 /** A tab's height as a share of the piece (as the laser jigsaw). */
 export const TAB = 0.25;
@@ -50,8 +54,8 @@ export const LABEL_SIZE = 3;
 
 /** The narrowest tab neck for a piece size (mm). */
 export const neckOf = (piece: number) => 2 * NECK * ((TAB * piece) / TAB_RISE) * (1 - SIZE_SPREAD);
-/** The narrowest a neck may be for this sheet: thinner snaps (the laser jigsaw's own rule). */
-export const neckNeeded = (thickness: number) => Math.max(MIN_NECK, thickness);
+/** The narrowest a neck may be: `LEAST_NECK`, for any thickness (never less than the laser jigsaw's own MIN_NECK). */
+export const neckNeeded = (_thickness: number) => Math.max(MIN_NECK, LEAST_NECK);
 /** The smallest piece (whole mm) whose necks are strong enough. */
 export const smallestPiece = (thickness: number) => Math.ceil(neckNeeded(thickness) / neckOf(1));
 /** Pieces smaller than this (mm²) are joined to a neighbour. */
@@ -63,11 +67,11 @@ export function contourChecks(spec: ContourSpec): { problems: string[]; warnings
   const warnings: string[] = [];
   if (!(spec.thickness >= 1 && spec.thickness <= 12)) problems.push("The sheet should be 1 to 12 mm thick.");
   if (!(spec.width >= 60 && spec.width <= 1000)) problems.push("The puzzle should be 60 to 1000 mm wide.");
-  if (!(spec.layers >= 2 && spec.layers <= 60)) problems.push("Use 2 to 60 sheets.");
+  if (!(spec.layers >= 2 && spec.layers <= MAX_SHEETS)) problems.push(`Use 2 to ${MAX_SHEETS} sheets.`);
   if (!problems.length) {
     const least = smallestPiece(spec.thickness);
     if (spec.piece < least)
-      problems.push(`Pieces of ${spec.piece} mm are too small for ${spec.thickness} mm sheet: the tabs' necks would snap. Use at least ${least} mm.`);
+      problems.push(`Pieces of ${spec.piece} mm are too small: the tabs' necks would snap. Use at least ${least} mm.`);
     else if (spec.piece > spec.width / 1.5) warnings.push("The pieces are nearly as big as the puzzle: there'll be very few of them.");
   }
   return { problems, warnings };
