@@ -14,6 +14,9 @@ import { edgeSegments, ornamentPolygon, ornamentShape, puzzleSpec } from "../src
 import { bookend, bookendOutlines, dividerTray, slidingBox, slidingOutlines } from "../src/library/boxes3";
 import { clockLayout } from "../src/library/laserHome3";
 import { arcInfo } from "../src/geometry/segments";
+import { bottomOutline, deckBox, diceTower, hingeBox, hingeColumns, lanternHoles, MIN_ROWS, namePuzzle, spiceRack, stripOutline } from "../src/library/laserSet4";
+import { sideSlots } from "../src/library/sidePanels";
+import { patternGap } from "../src/library/patterns";
 
 const design = (id: string) => LIBRARY.find((d) => d.id === id)!;
 const make = (id: string, v: Record<string, unknown> = {}) => {
@@ -178,6 +181,7 @@ describe("JuraCAD's laser designs, all of them", () => {
     const juracad = [
       "finger-box", "flat-stand", "stencil", "rubber-stamp", "name-tag", "coaster", "picture-frame", "living-hinge", "gear", "ruler",
       "sliding-lid-box", "divider-tray", "bookend", "clock-face", "cord-winder", "tealight", "jigsaw", "ornament",
+      "hinge-box", "deck-box", "card-stand", "spice-rack", "lantern", "key-rack", "dice-tower", "name-puzzle",
     ];
     const ours: Record<string, string> = { "name-tag": "tag", coaster: "coasters" };
     for (const id of juracad) expect(LIBRARY.some((d) => d.id === (ours[id] ?? id))).toBe(true);
@@ -317,5 +321,82 @@ describe("JuraCAD's third batch of laser designs", () => {
     const tea = make("tealight", { rings: 3 });
     expect(tea.items).toHaveLength(1 + 2 * 3);
     expect(tea.items.filter((i) => i.kind === "circle" && /hole/.test(i.name)).map((i) => (i.kind === "circle" ? i.r * 2 : 0))).toEqual([40, 40, 40]);
+  });
+});
+
+describe("JuraCAD's fourth batch of laser designs", () => {
+  const values = (id: string, extra: Record<string, unknown> = {}) => ({ ...defaultValues(design(id), DEFAULT_MATERIAL), ...(extra as Record<string, number | string | boolean>) });
+
+  it("living-hinge box: the strip's notches match the bottom's fingers, and each corner has enough hinge rows", () => {
+    for (const extra of [{}, { width: 150, depth: 100, radius: 25 }, { finger: 7 }]) {
+      const v = values("hinge-box", extra);
+      expect(designProblems(design("hinge-box"), DEFAULT_MATERIAL, v)).toEqual([]);
+      const b = hingeBox(v);
+      const strip = stripOutline(b);
+      // Total notch length round the strip = total finger length the bottom sticks out along its sides.
+      const notched = strip.notches.reduce((a, [p, q]) => a + q - p, 0);
+      const pts = bottomOutline(b);
+      let out = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const [p, q] = [pts[i], pts[(i + 1) % pts.length]];
+        const onEdge = (x: [number, number]) => Math.abs(Math.abs(x[0]) - b.W / 2) < 1e-6 || Math.abs(Math.abs(x[1]) - b.D / 2) < 1e-6;
+        if (onEdge(p) && onEdge(q)) out += Math.hypot(q[0] - p[0], q[1] - p[1]);
+      }
+      expect(notched).toBeCloseTo(out, 4);
+      expect(strip.zones).toHaveLength(4);
+      expect(Math.floor(b.corner / Number(v.spacing))).toBeGreaterThanOrEqual(MIN_ROWS);
+      expect(hingeColumns(b, v).length).toBeGreaterThan(0);
+    }
+    const made = make("hinge-box");
+    expect(made.items.map((i) => i.name)).toEqual(["Hinge box: wall strip", "Hinge box: hinge cuts", "Hinge box: bottom", "Hinge box: lid", "Hinge box: lid under-plate"]);
+    // The bottom's four inside corners are round.
+    expect(itemOutlines(made.items[2])[0].segments.filter((s) => s.kind === "arc")).toHaveLength(4);
+    expect(designProblems(design("hinge-box"), DEFAULT_MATERIAL, values("hinge-box", { radius: 6 }))[0]).toMatch(/Round the corners/);
+  });
+
+  it("deck box: sized from the cards, with a round thumb notch in the front and back", () => {
+    const d = deckBox(values("deck-box"));
+    expect(d.b.W.v).toBe(63 + 2 + 6);
+    const made = make("deck-box");
+    expect(made.items).toHaveLength(7);
+    const front = itemOutlines(made.items[0])[0].segments;
+    expect(front.filter((s) => s.kind === "arc")).toHaveLength(1);
+    expect(make("deck-box", { lid: false, notch: 0 }).items).toHaveLength(5);
+  });
+
+  it("dice tower and spice rack: a slot in each side for every tab, pieces clear of each other", () => {
+    const tower = diceTower(values("dice-tower"));
+    expect(sideSlots(tower.a)).toHaveLength(tower.a.pieces.reduce((k, p) => k + p.tabs.length, 0));
+    expect(make("dice-tower").items).toHaveLength(2 + tower.a.pieces.length);
+    expect(designProblems(design("dice-tower"), DEFAULT_MATERIAL, values("dice-tower", { baffles: 5, height: 100 }))[0]).toMatch(/too close|too short/);
+    const rack = spiceRack(values("spice-rack"));
+    expect(rack.a.pieces).toHaveLength(9);
+    expect(make("spice-rack").items).toHaveLength(11);
+    expect(make("card-stand").items).toHaveLength(5);
+  });
+
+  it("lantern: every wall's shapes keep a bridge's width apart", () => {
+    for (const pattern of ["circles", "diamonds", "hexagons", "stars"]) {
+      const v = values("lantern", { pattern });
+      expect(designProblems(design("lantern"), DEFAULT_MATERIAL, v)).toEqual([]);
+      const holes = lanternHoles(v);
+      expect(holes.length).toBeGreaterThan(4);
+      expect(patternGap(holes)).toBeGreaterThanOrEqual(Number(v.bridge) - 1e-6);
+    }
+    const made = make("lantern");
+    expect(made.items).toHaveLength(5);
+    expect(itemOutlines(made.items[0]).length).toBe(1 + lanternHoles(values("lantern")).length);
+  });
+
+  it("key rack and name puzzle: words that fit, one piece per letter, holes a little bigger", () => {
+    expect(make("key-rack").items.filter((i) => i.name.startsWith("Key rack hook"))).toHaveLength(5);
+    expect(designProblems(design("key-rack"), DEFAULT_MATERIAL, values("key-rack", { letters: 90 }))[0]).toMatch(/don't fit/);
+    const p = namePuzzle(values("name-puzzle"));
+    expect(p.letters.map((l) => l.ch).join("")).toBe("ALEX");
+    expect(p.letters[0].counters).toHaveLength(1);
+    const made = make("name-puzzle");
+    expect(made.items.filter((i) => i.name.startsWith("Name puzzle letter"))).toHaveLength(4);
+    // Thick sheet needs a wider strip of board between the holes.
+    expect(designProblems(design("name-puzzle"), DEFAULT_MATERIAL, values("name-puzzle", { gap: 3, thickness: 6 }))[0]).toMatch(/less than 6 mm apart/);
   });
 });
