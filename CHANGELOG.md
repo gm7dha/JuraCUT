@@ -6,6 +6,22 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
+## v0.10 — Bird box and seven more designs
+
+- Eight more designs in the **Library**, the same as JuraCAD's newest laser designs:
+  - **Bird box** (under a new **Garden** heading): a nest box for blue tits, great tits or house sparrows, sized as the
+    RSPB and BTO advise where a laser can — the right hole for the bird, at least 125 mm above the floor, drainage
+    holes, a lift-off roof, and score lines inside the front so the young can climb out (put the scored side inward).
+    Use at least 6 mm exterior plywood and hang it out of full sun, facing north to east.
+  - **Earring stand**: two plates that slot together into a cross, with holes for earrings.
+  - **Box with drawers**: a finger-jointed case with shelves and 1–6 sliding drawers.
+  - **Honeycomb desk pot** (under a new **Desk** heading): a pen pot with a pattern cut in its walls and optional dividers.
+  - **Sunburst mirror frame**: a sun of rays round a round craft mirror, with a keyhole hanger hidden behind it.
+  - **Tablet or book stand** (Desk): a slot-together stand that leans back at the angle you choose.
+  - **Coaster holder**: holds a set of the library's coasters standing on edge.
+  - **Tissue box cover**: drops over a box of tissues, with a rounded slot in the top.
+- As with the other boxes, tick "Allow for the kerf" when you export so the joints fit snugly.
+
 ## v0.9 — Mountain puzzle sizes
 
 - **Mountain puzzle:** choose the finished **height** in mm (it works out the number of sheets and shows how much the

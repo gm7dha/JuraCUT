@@ -17,6 +17,16 @@ import { arcInfo } from "../src/geometry/segments";
 import { bottomOutline, deckBox, diceTower, hingeBox, hingeColumns, lanternHoles, MIN_ROWS, namePuzzle, spiceRack, stripOutline } from "../src/library/laserSet4";
 import { sideSlots } from "../src/library/sidePanels";
 import { patternGap } from "../src/library/patterns";
+import { pathPoints } from "../src/geometry/segments";
+import { panelAreas, panelPlace, panelShapes, shapeOf, holeArea, type PlateHole } from "../src/library/boxPanels";
+import { lit } from "../src/library/ex";
+import { assemblyAreas, sectionOf as sectionOfPiece } from "../src/library/sidePanels";
+import { boxOf, insidePolygon, signedArea, type P2 } from "../src/library/outlines";
+import {
+  BIRD_HOLES, birdBox, birdHoles, bookStand, CLIMB, coasterHolder, coasterStanding, DIVIDER_ROOM, drawerBox, DRAIN, earringStand, HANG, HEX_WALL_SHARE,
+  HOLE_WEB, keyholeOutline, MIN_FLOOR, MIN_HOLE_HEIGHT, MIN_SHEET, MIN_TIP, MIRROR_ROOM, penBox, penDividers, penHoles, pocketSlot, pullHole, shelfOutline,
+  sideSlots as shelfSlots, standGaps, sunburst, tissueCover, tissueSlot, WALL_SHARE,
+} from "../src/library/laserSet5";
 
 const design = (id: string) => LIBRARY.find((d) => d.id === id)!;
 const make = (id: string, v: Record<string, unknown> = {}) => {
@@ -182,6 +192,7 @@ describe("JuraCAD's laser designs, all of them", () => {
       "finger-box", "flat-stand", "stencil", "rubber-stamp", "name-tag", "coaster", "picture-frame", "living-hinge", "gear", "ruler",
       "sliding-lid-box", "divider-tray", "bookend", "clock-face", "cord-winder", "tealight", "jigsaw", "ornament",
       "hinge-box", "deck-box", "card-stand", "spice-rack", "lantern", "key-rack", "dice-tower", "name-puzzle",
+      "bird-box", "earring-stand", "drawer-box", "pen-holder", "sunburst-mirror", "book-stand", "coaster-holder", "tissue-box",
     ];
     const ours: Record<string, string> = { "name-tag": "tag", coaster: "coasters" };
     for (const id of juracad) expect(LIBRARY.some((d) => d.id === (ours[id] ?? id))).toBe(true);
@@ -205,7 +216,7 @@ describe("JuraCAD's laser designs, all of them", () => {
 describe("library window", () => {
   it("lists every design under a heading, in order", () => {
     const groups = groupDesigns();
-    expect(groups.map((g) => g.group)).toEqual(["Boxes and stands", "Signs and stamps", "Home", "Workshop", "Toys and gifts"]);
+    expect(groups.map((g) => g.group)).toEqual(["Boxes and stands", "Signs and stamps", "Home", "Workshop", "Toys and gifts", "Garden", "Desk"]);
     expect(groups.flatMap((g) => g.designs).length).toBe(LIBRARY.length);
     expect(LIBRARY.every((d) => d.icon.startsWith("<"))).toBe(true);
   });
@@ -398,5 +409,292 @@ describe("JuraCAD's fourth batch of laser designs", () => {
     expect(made.items.filter((i) => i.name.startsWith("Name puzzle letter"))).toHaveLength(4);
     // Thick sheet needs a wider strip of board between the holes.
     expect(designProblems(design("name-puzzle"), DEFAULT_MATERIAL, values("name-puzzle", { gap: 3, thickness: 6 }))[0]).toMatch(/less than 6 mm apart/);
+  });
+});
+
+describe("JuraCAD's fifth batch of laser designs", () => {
+  const IDS = ["bird-box", "earring-stand", "drawer-box", "pen-holder", "sunburst-mirror", "book-stand", "coaster-holder", "tissue-box"];
+  const values = (id: string, extra: Record<string, unknown> = {}) => ({ ...defaultValues(design(id), DEFAULT_MATERIAL), ...(extra as Record<string, number | string | boolean>) });
+  const problems = (id: string, extra: Record<string, unknown> = {}) => designProblems(design(id), DEFAULT_MATERIAL, values(id, extra));
+  const polyArea = (p: P2[]) => Math.abs(signedArea(p));
+  /** A piece's area as cut: its biggest loop less the others (its holes). */
+  const cutArea = (it: Parameters<typeof itemOutlines>[0]) => {
+    const areas = itemOutlines(it).filter((o) => o.closed).map((o) => polyArea(pathPoints(o.segments, true, 0.002) as P2[]));
+    const big = Math.max(...areas);
+    return 2 * big - areas.reduce((a, b) => a + b, 0);
+  };
+  const near = (a: number, b: number, tol = 1) => expect(Math.abs(a - b), `${a} ≈ ${b}`).toBeLessThan(tol);
+  const cut = (id: string, extra: Record<string, unknown> = {}) => make(id, extra).items.filter((i) => i.op === "cut");
+
+  it("finger boxes standing any way round, as JuraCAD lays out their sketches", () => {
+    const b = { W: lit(100), D: lit(60), H: lit(40), t: lit(3), kerf: lit(0), lid: false, finger: 8 };
+    const s = panelShapes(b);
+    const dims = { W: 100, D: 60, H: 40, t: 3 };
+    const span = (pts: P2[]) => {
+      const [x0, y0, x1, y1] = boxOf(pts);
+      return [x1 - x0, y1 - y0];
+    };
+    expect(span(shapeOf(s, "front").nominal.map(panelPlace("front", "upright", dims).map))).toEqual([100, 40]);
+    expect(panelPlace("back", "upright", dims).move).toEqual({ dy: 57 });
+    const down = shapeOf(s, "front").nominal.map(panelPlace("front", "upsideDown", dims).map);
+    expect(down.filter((p) => Math.abs(p[1]) < 1e-9).length).toBe(2);
+    expect(panelPlace("bottom", "upsideDown", dims).move).toEqual({ dz: 37 });
+    expect(panelPlace("bottom", "onBack", dims)).toMatchObject({ plane: "Front", flip: true, move: { dy: 37 } });
+    expect(span(shapeOf(s, "left").nominal.map(panelPlace("left", "onBack", dims).map))).toEqual([40, 60]);
+    const floor = shapeOf(s, "front").nominal.map(panelPlace("front", "onBack", dims).map);
+    expect(span(floor)).toEqual([100, 40]);
+    expect(floor.filter((p) => Math.abs(p[1]) < 1e-9).length).toBe(2);
+  });
+
+  it("bird box: the RSPB's hole sizes, the hole's bottom the chosen height above the floor, refusals as advised", () => {
+    expect(Object.fromEntries(Object.entries(BIRD_HOLES).map(([k, b]) => [k, b.hole]))).toEqual({ "blue-tit": 25, "great-tit": 28, "house-sparrow": 32 });
+    for (const bird of Object.keys(BIRD_HOLES)) {
+      const bb = birdBox(values("bird-box", { bird }));
+      const t = bb.b.t.v;
+      expect(bb.holeAt[1] - bb.hole / 2 - t).toBeCloseTo(130, 9);
+      expect(bb.b.H.v - bb.holeAt[1] - bb.hole / 2).toBeGreaterThan(20);
+      expect(bb.holeAt[0]).toBeCloseTo(bb.b.W.v / 2, 9);
+    }
+    expect([MIN_HOLE_HEIGHT, MIN_FLOOR, MIN_SHEET]).toEqual([125, 100, 6]);
+    // JuraCUT keeps values inside their limits (as with every design): a lower hole, smaller floor or thinner sheet becomes the least allowed.
+    const low = cleanValues(design("bird-box"), DEFAULT_MATERIAL, values("bird-box", { holeHeight: 110, floorWidth: 90, thickness: 4 }));
+    expect([low.holeHeight, low.floorWidth, low.thickness]).toEqual([125, 100, 6]);
+    expect(values("bird-box").thickness).toBe(6);
+    expect(design("bird-box").description).toMatch(/15 mm/);
+    expect(design("bird-box").description).toMatch(/north to east/);
+    expect(problems("bird-box", { bird: "house-sparrow", holeHeight: 125 })).toEqual([]);
+    const bb = birdBox(values("bird-box"));
+    const t = bb.b.t.v;
+    for (const [x, y] of bb.drains) for (const v of [x, y]) expect(v - DRAIN.d / 2).toBeGreaterThan(t + 5);
+    expect(bb.roof[1]).toBe(-30);
+    expect(bb.under[0]).toBeGreaterThan(t);
+    expect(bb.under[2]).toBeLessThan(bb.b.W.v - t);
+  });
+
+  it("bird box: the climbing lines inside the front come out as score lines, grouped with the front", () => {
+    const bb = birdBox(values("bird-box"));
+    const [t, W] = [bb.b.t.v, bb.b.W.v];
+    expect(bb.climb.length).toBeGreaterThan(10);
+    for (const l of bb.climb) {
+      expect(l.x0).toBeCloseTo(t + CLIMB.side, 9);
+      expect(l.x1).toBeCloseTo(W - t - CLIMB.side, 9);
+      expect(l.z).toBeGreaterThanOrEqual(t + CLIMB.from - 1e-9);
+      expect(l.z).toBeLessThanOrEqual(bb.holeAt[1] - bb.hole / 2 - CLIMB.below + 1e-9);
+    }
+    for (let i = 1; i < bb.climb.length; i++) expect(bb.climb[i].z - bb.climb[i - 1].z).toBeCloseTo(CLIMB.pitch, 9);
+    const made = make("bird-box");
+    expect(made.items.filter((i) => i.op === "cut")).toHaveLength(7);
+    const score = made.items.filter((i) => i.op === "score");
+    expect(score.map((i) => i.name)).toEqual(["Bird box: front score lines"]);
+    const lines = itemOutlines(score[0]);
+    expect(lines).toHaveLength(bb.climb.length);
+    expect(lines.every((o) => !o.closed)).toBe(true);
+    const front = made.items.find((i) => i.name === "Bird box: front")!;
+    expect(front.group).toBeTruthy();
+    expect(score[0].group).toBe(front.group);
+    // The lines lie inside the front, clear of its fingers.
+    const fb = itemBox(front)!;
+    const lb = itemBox(score[0])!;
+    expect(lb[0]).toBeCloseTo(fb[0] + t + CLIMB.side, 6);
+    expect(lb[2]).toBeCloseTo(fb[2] - t - CLIMB.side, 6);
+    const paths = laserPaths(made.items);
+    expect(paths.filter((p) => p.layer === "score")).toHaveLength(bb.climb.length);
+    expect(paths.filter((p) => p.layer === "outer")).toHaveLength(7);
+    expect(paths.filter((p) => p.layer === "inner")).toHaveLength(1 + 2 + 4);
+  });
+
+  it("every piece is its panel less its holes, true size (Export's kerf does the allowance)", () => {
+    const expected: Record<string, number[]> = {};
+    {
+      const bb = birdBox(values("bird-box"));
+      const a = panelAreas(bb.b, birdHoles(bb));
+      const r = (q: number[]) => (q[2] - q[0]) * (q[3] - q[1]);
+      expected["bird-box"] = [a.bottom, a.front, a.back, a.left, a.right, r(bb.roof), r(bb.under)];
+    }
+    {
+      const d = drawerBox(values("drawer-box"));
+      const slots = shelfSlots(d);
+      const c = panelAreas(d.caseBox, { left: slots, right: slots });
+      const dr = panelAreas(d.drawer, { front: pullHole(d) });
+      expected["drawer-box"] = [c.bottom, c.front, c.back, c.left, c.right, ...d.shelves.map(() => polyArea(shelfOutline(d))), ...d.drawerAt.flatMap(() => [dr.bottom, dr.front, dr.back, dr.left, dr.right])];
+    }
+    {
+      const v = values("pen-holder");
+      const holes = penHoles(v) as PlateHole[];
+      const a = panelAreas(penBox(v), { front: holes, back: holes, left: holes, right: holes });
+      const dv = penDividers(v);
+      expected["pen-holder"] = [a.bottom, a.front, a.back, a.left, a.right, polyArea(dv.plates[0]), polyArea(dv.plates[1])];
+    }
+    {
+      const c = tissueCover(values("tissue-box"));
+      const a = panelAreas(c.b, { bottom: [tissueSlot(c)] });
+      expected["tissue-box"] = [a.bottom, a.front, a.back, a.left, a.right];
+    }
+    {
+      const e = earringStand(values("earring-stand"));
+      const holes = e.holes.length * holeArea({ kind: "circle", c: [0, 0], d: e.hole });
+      expected["earring-stand"] = [polyArea(e.plates[0]) - holes, polyArea(e.plates[1]) - holes];
+    }
+    {
+      const s = sunburst(values("sunburst-mirror"));
+      const circle = (d: number) => (Math.PI * d * d) / 4;
+      expected["sunburst-mirror"] = [polyArea(s.sun) - circle(s.window), circle(s.disc) - circle(s.ringHole) - holeArea(pocketSlot(s.hang)), circle(s.disc) - polyArea(keyholeOutline(s.hang))];
+    }
+    for (const id of ["book-stand", "coaster-holder"]) {
+      const a = id === "book-stand" ? bookStand(values(id)).a : coasterHolder(values(id)).a;
+      const w = assemblyAreas(a);
+      expected[id] = [w.side, w.side, ...a.pieces.map((p) => w.pieces[p.role])];
+    }
+    for (const id of IDS) {
+      const got = cut(id).map(cutArea);
+      expect(got.length, id).toBe(expected[id].length);
+      got.forEach((a, i) => near(a, expected[id][i]));
+    }
+  });
+
+  it("pieces laid out on the bed never overlap, for several sizes of each", () => {
+    const cases: [string, Record<string, unknown>][] = [
+      ...IDS.map((id): [string, Record<string, unknown>] => [id, {}]),
+      ["bird-box", { bird: "house-sparrow", floorWidth: 100, floorDepth: 100 }],
+      ["drawer-box", { drawers: 1, height: 80 }],
+      ["pen-holder", { dividers: false, pattern: "circles" }],
+      ["sunburst-mirror", { alternate: false, mirrorThickness: 5 }],
+      ["coaster-holder", { shape: "hexagon" }],
+      ["tissue-box", { boxWidth: 240, boxDepth: 120, boxHeight: 85 }],
+    ];
+    for (const [id, extra] of cases) {
+      expect(problems(id, extra), id).toEqual([]);
+      const made = make(id, extra);
+      const pieces = new Map<string, [number, number, number, number]>();
+      for (const it of made.items) {
+        const k = it.group ?? it.id;
+        const b = itemBox(it)!;
+        const was = pieces.get(k);
+        pieces.set(k, was ? [Math.min(was[0], b[0]), Math.min(was[1], b[1]), Math.max(was[2], b[2]), Math.max(was[3], b[3])] : b);
+      }
+      const boxes = [...pieces.values()];
+      for (let i = 0; i < boxes.length; i++)
+        for (let j = i + 1; j < boxes.length; j++) {
+          const [a, b] = [boxes[i], boxes[j]];
+          const apart = a[2] <= b[0] + 1e-6 || b[2] <= a[0] + 1e-6 || a[3] <= b[1] + 1e-6 || b[3] <= a[1] + 1e-6;
+          expect(apart, `${id}: pieces ${i} and ${j}`).toBe(true);
+        }
+    }
+  });
+
+  it("earring stand: halving slots the sheet's thickness, half the height; holes clear of each other and the edges", () => {
+    const e = earringStand(values("earring-stand"));
+    const [a, b] = e.plates;
+    expect(polyArea(a)).toBeCloseTo(e.w * e.h - (e.t * e.h) / 2 - e.chamfer * e.chamfer, 6);
+    expect(polyArea(b)).toBeCloseTo(e.w * e.h - (e.t * e.h) / 2 - e.chamfer * e.chamfer, 6);
+    expect(insidePolygon([0, e.h * 0.75], a)).toBe(false);
+    expect(insidePolygon([0, e.h * 0.25], a)).toBe(true);
+    expect(insidePolygon([0, e.h * 0.25], b)).toBe(false);
+    expect(insidePolygon([0, e.h * 0.75], b)).toBe(true);
+    expect(e.holes.length).toBeGreaterThan(20);
+    const g = standGaps(e);
+    expect(g.between).toBeGreaterThanOrEqual(HOLE_WEB);
+    expect(g.edge).toBeGreaterThanOrEqual(HOLE_WEB);
+    expect(e.holes.filter((p) => p[0] < 0).length).toBe(e.holes.filter((p) => p[0] > 0).length);
+    expect(problems("earring-stand", { rows: 30, columns: 20 })[0]).toMatch(/closer than/);
+  });
+
+  it("box with drawers: the clearance either side, above and behind; shelves' tabs match the sides' slots", () => {
+    const d = drawerBox(values("drawer-box"));
+    const { W, D, H, t, c, n } = d;
+    expect(d.drawer.W.v + 2 * c + 2 * t).toBeCloseTo(W, 9);
+    expect(d.drawer.D.v + c + t).toBeCloseTo(D, 9);
+    expect(n * (d.drawer.H.v + c) + (n - 1) * t + 2 * t).toBeCloseTo(H, 6);
+    expect(d.shelves).toHaveLength(n - 1);
+    const tops = [...d.shelves, H - t];
+    d.drawerAt.forEach((at, i) => {
+      expect(at.dz).toBeCloseTo(i === 0 ? t : d.shelves[i - 1] + t, 6);
+      expect(tops[i] - (at.dz + d.drawer.H.v)).toBeCloseTo(c, 6);
+    });
+    expect(polyArea(shelfOutline(d))).toBeCloseTo((W - 2 * t) * (D - t) + 2 * t * (d.tab[1] - d.tab[0]), 6);
+    for (const s of shelfSlots(d)) if (s.kind === "poly") expect(polyArea(s.points)).toBeCloseTo(t * (d.tab[1] - d.tab[0]), 6);
+    expect(d.pull.a[1] + d.pull.w / 2).toBeLessThan(d.drawer.H.v);
+    expect(d.pull.a[0] - d.pull.w / 2).toBeGreaterThan(t);
+    expect(problems("drawer-box", { drawers: 6, height: 150 })[0]).toMatch(/drawers would be only/);
+    expect(problems("drawer-box", { drawers: 2 })).toEqual([]);
+    // The case's sides have a slot per shelf; each drawer front its pull slot (two half circles).
+    const made = make("drawer-box");
+    expect(itemOutlines(made.items.find((i) => i.name === "Box with drawers: left side")!)).toHaveLength(1 + d.shelves.length);
+    const front = itemOutlines(made.items.find((i) => i.name === "Box with drawers: drawer 1 front")!);
+    expect(front).toHaveLength(2);
+    expect(front[1].segments.filter((s) => s.kind === "arc")).toHaveLength(2);
+    expect(made.items).toHaveLength(5 + 2 + 15);
+    expect(made.notes.join(" ")).toMatch(/don't all fit on the bed/);
+  });
+
+  it("desk pot, sunburst, book stand, coaster holder and tissue cover keep JuraCAD's numbers", () => {
+    const pv = values("pen-holder");
+    const dv = penDividers(pv);
+    expect(dv.length).toBeCloseTo(90 - 6 - DIVIDER_ROOM, 9);
+    expect(polyArea(dv.plates[0])).toBeCloseTo(dv.length * dv.height - (3 * dv.height) / 2, 6);
+    expect(penHoles(pv).length).toBeGreaterThan(10);
+    expect(penHoles(pv).every((h) => h.kind === "poly" && h.points.length === 6)).toBe(true);
+    expect(make("pen-holder", { dividers: false }).items).toHaveLength(5);
+
+    const s = sunburst(values("sunburst-mirror"));
+    expect(s.sun).toHaveLength(32);
+    expect(s.window).toBe(140);
+    expect(s.ringHole).toBe(150 + 2 * MIRROR_ROOM);
+    expect(s.disc).toBeGreaterThan(s.ringHole);
+    expect(s.disc / 2).toBeLessThan(s.body);
+    expect(s.tip).toBeGreaterThan(MIN_TIP);
+    expect(sunburst(values("sunburst-mirror", { mirrorThickness: 4 })).rings).toBe(2);
+    const pocket = pocketSlot(s.hang);
+    if (pocket.kind !== "slot") throw new Error("slot");
+    expect(pocket.a[1] - pocket.w / 2).toBeGreaterThanOrEqual(s.ringHole / 2 + HANG.web - 1e-9);
+    expect(pocket.b[1] + pocket.w / 2).toBeLessThanOrEqual(s.disc / 2 - HANG.web + 1e-9);
+    const key = keyholeOutline(s.hang);
+    const [x0, , x1, y1] = boxOf(key);
+    expect(x1 - x0).toBeCloseTo(HANG.head, 6);
+    expect(y1 - (s.hang[1] - HANG.head / 2)).toBeCloseTo(HANG.head / 2 + HANG.travel + HANG.shank / 2, 6);
+    expect(problems("sunburst-mirror", { rays: 15 })[0]).toMatch(/even number/);
+    expect(problems("sunburst-mirror", { rays: 60, size: 290 })[0]).toMatch(/too sharp/);
+    expect(problems("sunburst-mirror", { rays: 15, alternate: false })).toEqual([]);
+    // The back and rings are true circles.
+    const back = make("sunburst-mirror").items.find((i) => i.name === "Sunburst: back")!;
+    expect(itemOutlines(back)[0].segments[0].kind).toBe("circle");
+
+    for (const lean of [10, 20, 35]) {
+      const b = bookStand(values("book-stand", { lean }));
+      const [base, lip, rest] = b.a.pieces;
+      expect(rest.angle).toBe(90 - lean);
+      expect(b.restFoot[0] - (lip.centre[0] + b.a.t / 2)).toBeCloseTo(20, 6);
+      expect(base.centre[0] + base.length / 2).toBeGreaterThan(Math.max(...sectionOfPiece(rest, b.a.t).map((p) => p[0])));
+    }
+
+    const coaster = defaultValues(design("coasters"), DEFAULT_MATERIAL);
+    const cv = values("coaster-holder");
+    expect([cv.shape, cv.size, cv.count]).toEqual([coaster.shape, coaster.size, coaster.count]);
+    const h = coasterHolder(cv);
+    expect(h.a.width).toBeCloseTo(4 * 3 + 2 * 1.5, 9);
+    const [base, left, right] = h.a.pieces;
+    expect(right.centre[0] - left.centre[0] - h.a.t).toBeCloseTo(95 + 3, 6);
+    expect(base.length).toBeCloseTo(95 + 3 + 6, 6);
+    expect(coasterStanding("hexagon", 95).w).toBeCloseTo((2 * 95) / Math.sqrt(3), 5);
+    expect(coasterHolder(values("coaster-holder", { shape: "hexagon" })).a.pieces[1].length).toBeCloseTo(95 * HEX_WALL_SHARE, 6);
+    expect(left.length).toBeCloseTo(95 * WALL_SHARE, 6);
+
+    const c = tissueCover(values("tissue-box", { boxWidth: 240, boxDepth: 120, boxHeight: 85 }));
+    expect([c.b.W.v, c.b.D.v, c.b.H.v]).toEqual([250, 130, 90]);
+    expect(c.slot.a[1]).toBe(c.slot.b[1]);
+    expect(c.slot.b[0] - c.slot.a[0]).toBeCloseTo(80 - 30, 9);
+    expect(problems("tissue-box", { slotLength: 200 })[0]).toMatch(/too big for the top/);
+  });
+
+  it("are under JuraCAD's headings and found by search", () => {
+    const groups = Object.fromEntries(groupDesigns().map((g) => [g.group, g.designs.map((d) => d.id)]));
+    expect(groups.Garden).toEqual(["bird-box"]);
+    expect(groups.Desk).toEqual(["pen-holder", "book-stand"]);
+    for (const id of ["earring-stand", "sunburst-mirror", "coaster-holder"]) expect(groups.Home).toContain(id);
+    for (const id of ["drawer-box", "tissue-box"]) expect(groups["Boxes and stands"]).toContain(id);
+    const first = (q: string) => searchDesigns(q)[0].id;
+    expect([first("bird"), first("sparrow"), first("drawers"), first("earring"), first("sunburst"), first("tissue"), first("honeycomb"), first("coaster holder")]).toEqual([
+      "bird-box", "bird-box", "drawer-box", "earring-stand", "sunburst-mirror", "tissue-box", "pen-holder", "coaster-holder",
+    ]);
   });
 });
