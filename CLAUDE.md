@@ -131,6 +131,15 @@
   next outline score, names as one engrave shape from `textOutline`), group ids start `MOUNTAIN_GROUP`; the dialog's "Bed
   n" buttons call `store.replaceItems` (drops earlier mountain shapes, adds, selects, fits — one undo step). The dialog's
   Height (mm) sets the sheet count (≤ `MAX_SHEETS` 100) and shows the stretch; sheet 3 or 5 mm; defaults 150 mm wide, 200 mm, 30 mm pieces. Tests: tests/mountain.test.ts.
+  OpenStreetMap files: source "An OpenStreetMap file" + "From the map" (area / water / all). `src/terrain/osm.ts` and
+  `latLonToGrid` in osGrid.ts are JuraCAD's (keep identical; tests/support/osmSample.ts too). `src/terrain/contourMarks.ts`
+  (pure, `sheetMarks`): heights read as the contours are (bilinear on the puzzle's samples); a sheet's band = floor((h −
+  low) / band); lines clipped to the puzzle, sampled 0.4 mm, split halfway where the band changes, each stretch scored on
+  its sheet (`thinStraight`); water/buildings clipped (Sutherland–Hodgman) and engraved on their lowest vertex's sheet;
+  names (`NAME_SIZE` 3.5, `nameWidth`) at their place or the nearest spot ≤ `NAME_REACH` clear of water and other names,
+  engraved on EVERY sheet their box crosses (bands on a slope are 1–3 mm, so no name fits on one); piece names keep off
+  them (`labelPlaces(…, keepOff)`, `nameBox`). `ContourLayer.marks`; contourItems adds "paths and rivers" (score),
+  "lochs and buildings" and "map names" (engrave). Tests: tests/osm.test.ts.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

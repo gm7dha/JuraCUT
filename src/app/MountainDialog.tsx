@@ -10,11 +10,19 @@ import { areaProblem, heightAt, readHeights, type HeightGrid } from "../terrain/
 import { bedItems, bedSheets, MOUNTAIN_GROUP } from "../terrain/contourItems";
 import { contourChecks, CONTOUR_DEFAULTS, makeContourPuzzle, MAX_SHEETS, smallestPiece, type ContourPuzzle, type ContourSpec } from "../terrain/contourPuzzle";
 import { formatGridRef, parseGridRef, type GridPoint } from "../terrain/osGrid";
+import { featuresOnGrid, featureSummary, NO_FEATURES, osmArea, OsmError, readOsm, type MapFeatures, type OsmData, type OsmDetail } from "../terrain/osm";
 import { PEAKS } from "../terrain/peaks";
 import { Modal } from "./Modal";
 import { loadTerrainTile } from "./mountainTiles";
 
-type Source = "peak" | "ref" | "picture";
+type Source = "peak" | "ref" | "picture" | "osm";
+
+/** What the three map choices put on the sheets. */
+const DETAILS: [OsmDetail, string][] = [
+  ["area", "Just the area"],
+  ["water", "Paths, rivers and lochs"],
+  ["all", "Everything: roads, buildings and names"],
+];
 
 interface Area {
   sw: GridPoint;
@@ -24,7 +32,13 @@ interface Area {
 }
 
 /** The area the choices describe, or a plain-English reason why not (as JuraCAD's Mountain puzzle). */
-function areaFrom(source: Source, peakId: string, ref: string, km: [number, number], corners: [string, string]): Area | string {
+function areaFrom(source: Source, peakId: string, ref: string, km: [number, number], corners: [string, string], osm: { name: string; data: OsmData } | null): Area | string {
+  if (source === "osm") {
+    if (!osm) return "Choose an OpenStreetMap file (.osm): on openstreetmap.org, zoom to the mountain, press Export and save the file.";
+    const a = osmArea(osm.data);
+    if (typeof a === "string") return a;
+    return areaProblem(a.sw, a.width, a.height) ?? { ...a, name: osm.name };
+  }
   if (source === "picture") {
     const a = parseGridRef(corners[0]);
     const b = parseGridRef(corners[1]);
@@ -66,6 +80,9 @@ export function MountainDialog() {
   const [ref, setRef] = useState("NN 166 712");
   const [km, setKm] = useState<[number, number]>([5, 5]);
   const [corners, setCorners] = useState<[string, string]>(["", ""]);
+  const [osm, setOsm] = useState<{ name: string; data: OsmData } | null>(null);
+  const [osmError, setOsmError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<OsmDetail>("water");
 
   const [spec, setSpec] = useState<ContourSpec>(() => ({ ...CONTOUR_DEFAULTS, thickness: material.thickness === 5 ? 5 : 3 }));
   /** How tall the finished mountain is (mm): this sets the number of sheets. */
@@ -78,7 +95,19 @@ export function MountainDialog() {
   const [buildError, setBuildError] = useState<string | null>(null);
   const [shown, setShown] = useState(0);
 
-  const area = areaFrom(source, peakId, ref, km, corners);
+  const area = areaFrom(source, peakId, ref, km, corners, osm);
+  const features: MapFeatures = useMemo(() => (source === "osm" && osm ? featuresOnGrid(osm.data, detail) : NO_FEATURES), [source, osm, detail]);
+  const chooseOsm = (file: File | undefined) => {
+    if (!file) return;
+    setOsmError(null);
+    file
+      .text()
+      .then((text) => setOsm({ name: file.name.replace(/\.osm$/i, "").replace(/^map$/i, "My map") || "My map", data: readOsm(text) }))
+      .catch((e) => {
+        setOsm(null);
+        setOsmError(e instanceof OsmError ? e.message : "That file couldn't be read as an OpenStreetMap file.");
+      });
+  };
   const fresh = typeof area !== "string" && sameArea(loaded?.area ?? null, area);
   const set = <K extends keyof ContourSpec>(key: K, value: ContourSpec[K]) => setSpec((s) => ({ ...s, [key]: value }));
 
@@ -113,7 +142,7 @@ export function MountainDialog() {
     setWorking(true);
     const timer = setTimeout(() => {
       try {
-        setPuzzle(makeContourPuzzle(loaded.grid, loaded.area.width, loaded.area.height, full, loaded.area.sw));
+        setPuzzle(makeContourPuzzle(loaded.grid, loaded.area.width, loaded.area.height, full, loaded.area.sw, features));
         setBuildError(null);
       } catch (e) {
         setPuzzle(null);
@@ -124,7 +153,7 @@ export function MountainDialog() {
     }, 350);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, key]);
+  }, [loaded, key, features]);
 
   const sheets = useMemo(() => (puzzle ? bedSheets(puzzle, bed) : []), [puzzle, bed[0], bed[1]]);
   const layer = puzzle?.layers[Math.min(shown, puzzle.layers.length - 1)];
@@ -154,6 +183,7 @@ export function MountainDialog() {
                 ["peak", "A famous mountain"],
                 ["ref", "A grid reference"],
                 ["picture", "My OS map's corners"],
+                ["osm", "An OpenStreetMap file"],
               ] as [Source, string][]
             ).map(([id, label]) => (
               <label key={id}>
@@ -179,7 +209,36 @@ export function MountainDialog() {
               <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="NN 166 712" />
             </label>
           )}
-          {source !== "picture" ? (
+          {source === "osm" ? (
+            <>
+              <label className="mountain-row">
+                <span>Map file</span>
+                <input type="file" accept=".osm,.xml,application/xml,text/xml" onChange={(e) => chooseOsm(e.target.files?.[0])} />
+              </label>
+              <p className="muted small">
+                On openstreetmap.org, zoom to the mountain, press <strong>Export</strong> and save the .osm file (up to about 5 km
+                across). The heights still come from the height data; the map adds what's on the ground.
+              </p>
+              {osmError && <p className="error-text small">{osmError}</p>}
+              <label className="mountain-row">
+                <span>From the map</span>
+                <select value={detail} onChange={(e) => setDetail(e.target.value as OsmDetail)}>
+                  {DETAILS.map(([id, label]) => (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {osm && (
+                <p className="muted small">
+                  {detail === "area"
+                    ? "Just the area the map covers."
+                    : `${featureSummary(features)[0].toUpperCase()}${featureSummary(features).slice(1)}: lines are scored on the sheet they cross, lochs${detail === "all" ? ", buildings and names" : ""} engraved.`}
+                </p>
+              )}
+            </>
+          ) : source !== "picture" ? (
             <div className="mountain-row">
               <span>Area</span>
               <span>
@@ -332,6 +391,15 @@ function SheetPreview({ puzzle, at }: { puzzle: ContourPuzzle; at: number }) {
       ))}
       {L.cuts.map((c, i) => (
         <polyline key={`c${i}`} points={c.map(pt).join(" ")} fill="none" stroke="#e03030" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+      ))}
+      {L.marks.fills.length > 0 && <path d={L.marks.fills.map((l) => `M${l.map(pt).join("L")}Z`).join("")} fill="#333" fillOpacity={0.55} fillRule="evenodd" stroke="none" />}
+      {L.marks.lines.map((c, i) => (
+        <polyline key={`m${i}`} points={c.map(pt).join(" ")} fill="none" stroke="#18a018" strokeWidth={0.8} strokeDasharray="2 1.2" vectorEffect="non-scaling-stroke" />
+      ))}
+      {L.marks.names.map((l, i) => (
+        <text key={`n${i}`} x={l.at[0]} y={H - l.at[1] + 1.3} fontSize={3.5} fontWeight={700} textAnchor="middle" fill="#111">
+          {l.text}
+        </text>
       ))}
       {L.labels.map((l, i) => (
         <text key={`t${i}`} x={l.at[0]} y={H - l.at[1] + 1.1} fontSize={3} textAnchor="middle" fill="#222">
