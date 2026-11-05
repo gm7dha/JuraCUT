@@ -66,6 +66,10 @@ export function Toolbar() {
           <Icons.Library size={20} />
           <span>Library</span>
         </button>
+        <button type="button" className="tool-button" onClick={() => s().openDialog("mountain")} title="Mountain puzzle: a real mountain as stacked sheets, each cut into jigsaw pieces">
+          <Icons.Mountain size={20} />
+          <span>Mountain</span>
+        </button>
       </div>
       <div className="tool-divider" />
       <div className="tool-group">

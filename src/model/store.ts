@@ -14,7 +14,7 @@ import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout 
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
 
 export type Tool = "select" | "rect" | "circle" | "line" | "text";
-export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
+export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | "mountain" | null;
 
 export interface Toast {
   id: number;
@@ -69,6 +69,8 @@ export interface State {
 
   // Shapes.
   addItems(items: Item[], opts?: { select?: boolean; focus?: boolean }): void;
+  /** Take away the shapes `drop` picks and put `items` on the bed instead (one undo step), selected and fitted. */
+  replaceItems(drop: (item: Item) => boolean, items: Item[]): void;
   updateItem(id: string, change: (item: Item) => Item): void;
   updateSelected(change: (item: Item) => Item): void;
   setOp(ids: string[], op: Op): void;
@@ -199,6 +201,12 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...doc, items: [...doc.items, ...items] });
     if (opts.select !== false) set({ selection: items.map((i) => i.id) });
     if (opts.focus) set({ focusItem: items[0].id });
+  },
+  replaceItems(drop, items) {
+    const doc = get().history.present;
+    get().commit({ ...doc, items: [...doc.items.filter((i) => !drop(i)), ...items] });
+    set({ selection: items.map((i) => i.id) });
+    get().requestFit();
   },
   updateItem(id, change) {
     const doc = get().history.present;

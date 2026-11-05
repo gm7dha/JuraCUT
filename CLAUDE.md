@@ -106,6 +106,23 @@
   `store.packAll(gap, turns)` builds pieces like Arrange (`bedPieces`: groups and shapes inside others together),
   turns them with `rotatedItemAbout`, and puts what doesn't fit beside the bed. UI: `src/app/ArrangeMenu.tsx` (the
   toolbar's Arrange opens Pack tightly / In rows, gap and "may be turned", kept in localStorage `juracut.arrange`).
+- Mountain puzzle (toolbar "Mountain", dialog "mountain", `src/app/MountainDialog.tsx`): a real mountain as stacked
+  sheets, each cut into jigsaw pieces. `src/terrain/osGrid.ts`, `elevation.ts`, `peaks.ts` and `src/app/mountainTiles.ts`
+  are JuraCAD's files unchanged (its 3D printed cube puzzle uses them; keep them in step; tests there). Pure
+  `contourPuzzle.ts`: heights sampled ~0.4–1.2 mm apart over the puzzle; sheet 0 = the rectangle, sheet L = where
+  height ≥ low + L·(relief / layers) (`contourLoops`: marching squares, padded with low ground so loops close along the
+  edge, saddles by the cell's middle, anticlockwise outsides; `simplifyLoop` 0.05 mm; islands < `SMALL_ISLAND` and holes
+  < `SMALL_HOLE` dropped). Joins: `makePuzzle` (tab `TAB` 0.25, neck ≥ max(2, thickness) → `smallestPiece`), every other
+  sheet's pattern one piece bigger and shifted half a piece (stagger); each edge clipped to the sheet (`Region`: bucketed
+  edges, ray-cast inside, distances), cut straight where the tab isn't wholly inside by max(2, 1.5t), dropped where it meets
+  the edge at < `MIN_CROSSING`; ends on the puzzle's border stretched 0.5 mm so they cross cleanly. `mergeSmall`: the sheet
+  rasterised (row fill), cuts drawn as 8-connected lines, pieces flood-filled 4-connected; each piece < `smallPiece` drops
+  the cut it touches most (all at once per pass), then `withoutDeadEnds` (a join's inside grid corner must meet another).
+  Names "sheet-piece" (rows from the back) at the roomiest spot hidden under the next sheet (`chamfer` distances), else
+  the roomiest; `LABEL_SIZE` 3. `contourItems.ts`: `bedSheets` (rows of sheets per bed), `sheetItems` (outline + cuts cut,
+  next outline score, names as one engrave shape from `textOutline`), group ids start `MOUNTAIN_GROUP`; the dialog's "Bed
+  n" buttons call `store.replaceItems` (drops earlier mountain shapes, adds, selects, fits — one undo step). Height stretch
+  in the dialog sets the sheet count. Tests: tests/mountain.test.ts.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

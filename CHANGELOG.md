@@ -6,6 +6,19 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
+## v0.8 — Mountain puzzles
+
+- **Mountain puzzle** (toolbar, next to Library): turn a real mountain into a layered laser-cut puzzle. Pick a famous
+  peak, type an OS grid reference, or type the corners of your OS map, and the heights come free from open height data
+  (the same as JuraCAD's Mountain puzzle). Each sheet is one band of height, and each sheet is cut into jigsaw pieces;
+  every other sheet's joins are offset by half a piece, like brickwork, so the sheet above bridges the joins below.
+- **Sturdy pieces:** tabs are only cut where they fit inside the sheet, joins that would meet the edge at a slant are
+  left out, tiny pieces are joined to a neighbour, and piece sizes too small for the sheet's thickness are refused.
+- **Easy to put together:** each sheet has the next sheet's outline scored on it, and every piece has its name
+  engraved (sheet-piece, like 3-7), hidden under the sheet above wherever there's room.
+- Choose the width, sheet thickness, height stretch (which sets the number of sheets) and piece size, look through the
+  sheets one by one, then put each bed's worth of sheets on the bed in turn to export and cut.
+
 ## v0.7 — Send designs to and from JuraCAD
 
 - **Send to JuraCAD** (Export for laser): the outlines open in JuraCAD as a new sketch on the Top plane, ready to
