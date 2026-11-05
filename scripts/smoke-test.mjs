@@ -312,6 +312,48 @@ try {
   });
   expect(outside > 0, "shapes still there after packing");
 
+  step = "the link with JuraCAD";
+  // A pretend JuraCAD tab on the same site's channel: it finds JuraCUT's tab, sends it a design, and answers
+  // what JuraCUT sends back.
+  await page.evaluate(() => {
+    const cad = { inbox: [], cutTab: null, channel: new BroadcastChannel("jura-link.v1") };
+    window.fakeJuraCAD = cad;
+    cad.channel.onmessage = (e) => {
+      const m = e.data;
+      cad.inbox.push(m);
+      if (m.type === "here" && m.app === "juracut") cad.cutTab = m.tab;
+      if (m.type === "who") cad.channel.postMessage({ type: "here", app: "juracad", tab: "cad-tab" });
+      if (m.type === "parcel" && m.tab === "cad-tab") cad.channel.postMessage({ type: "got", tab: "cad-tab", id: m.parcel.id, ok: true, message: "It's a new sketch in JuraCAD." });
+    };
+    cad.channel.postMessage({ type: "who", from: "juracad", tab: "cad-tab" });
+  });
+  await page.waitForFunction(() => window.fakeJuraCAD.cutTab);
+  const beforeLink = await store(() => window.juracutStore.getState().history.present.items.length);
+  await page.evaluate(() => {
+    const cad = window.fakeJuraCAD;
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="30mm" viewBox="0 0 40 30"><g id="cut-outer"><path d="M0 0H40V30H0Z" fill="none" stroke="#ff0000"/></g><g id="cut-inner"><circle cx="20" cy="15" r="4" fill="none" stroke="#0000ff"/></g></svg>';
+    cad.channel.postMessage({ type: "parcel", tab: cad.cutTab, parcel: { id: "from-cad-1", from: "juracad", to: "juracut", name: "Bracket", kind: "svg", content: svg } });
+  });
+  await page.waitForFunction(() => window.fakeJuraCAD.inbox.some((m) => m.type === "got" && m.id === "from-cad-1"));
+  const got = await store(() => window.fakeJuraCAD.inbox.find((m) => m.type === "got"));
+  const linked = await store(() => {
+    const st = window.juracutStore.getState();
+    return st.history.present.items.filter((i) => st.selection.includes(i.id)).map((i) => i.name);
+  });
+  expect(got.ok && linked.length === 1 && linked[0] === "Bracket", `JuraCAD's design is on the bed (${JSON.stringify(got)} ${JSON.stringify(linked)})`);
+  expect((await store(() => window.juracutStore.getState().history.present.items.length)) === beforeLink + 1, "one shape came in");
+  // And back: Export › Send to JuraCAD goes to the open JuraCAD tab, as a DXF.
+  await page.click(".primary-button:has-text('Export for laser')");
+  await page.waitForSelector(".export-preview svg");
+  await page.click(".modal button:has-text('Send to JuraCAD')");
+  await page.waitForFunction(() => window.fakeJuraCAD.inbox.some((m) => m.type === "parcel" && m.parcel.to === "juracad"));
+  const parcel = await store(() => window.fakeJuraCAD.inbox.find((m) => m.type === "parcel" && m.parcel.to === "juracad").parcel);
+  expect(parcel.kind === "dxf" && parcel.content.includes("ENTITIES") && parcel.from === "juracut", "a DXF went to JuraCAD");
+  await page.waitForSelector(".toast:has-text('Sent to JuraCAD')");
+  // Sent: the Export window closes by itself.
+  await page.waitForSelector(".modal", { state: "detached" });
+  await page.evaluate(() => window.fakeJuraCAD.channel.close());
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

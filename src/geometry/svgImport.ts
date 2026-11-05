@@ -415,12 +415,23 @@ function rectSegments(x: number, y: number, w: number, h: number, rx: number, ry
   ];
 }
 
+/** How much the transform scales a circle, when it keeps circles round (turns, flips, even scaling); else null. */
+function roundScale(m: M): number | null {
+  const [a, b, c, d] = m;
+  const k = Math.hypot(a, b);
+  if (k < 1e-12 || Math.abs(Math.hypot(c, d) - k) > 1e-9 * k || Math.abs(a * c + b * d) > 1e-9 * k * k) return null;
+  return k;
+}
+
 function moveSeg(s: Segment, m: M): Segment {
   switch (s.kind) {
     case "line":
       return { kind: "line", from: ap(m, s.from), to: ap(m, s.to) };
     case "bezier":
       return { kind: "bezier", from: ap(m, s.from), c1: ap(m, s.c1), c2: ap(m, s.c2), to: ap(m, s.to) };
+    case "circle":
+      // Only made when the transform keeps circles round (see `roundScale`).
+      return { kind: "circle", center: ap(m, s.center), radius: s.radius * (roundScale(m) ?? 1) };
     default:
       return s; // (never made here)
   }
@@ -548,7 +559,8 @@ export function svgOutlines(text: string): SvgImport {
       }
       case "circle": {
         const r = numAttr(a.r);
-        if (r > 0) add(ellipseBeziers(numAttr(a.cx), numAttr(a.cy), r, r), true);
+        // A true circle where it stays round, so it's cut (and written to DXF) as one; else four Bézier quarters.
+        if (r > 0) add(roundScale(mm) ? [{ kind: "circle", center: [numAttr(a.cx), numAttr(a.cy)], radius: r }] : ellipseBeziers(numAttr(a.cx), numAttr(a.cy), r, r), true);
         break;
       }
       case "ellipse": {

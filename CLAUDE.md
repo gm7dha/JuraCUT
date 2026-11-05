@@ -48,6 +48,13 @@
   bed), `centredOnBed` (the selection moved as it is), `distributed` (equal gaps, outside two fixed — or a set gap),
   `turnedPieces`/`mirroredPieces` (groups turn/flip about their middle). Arrange treats groups (and shapes inside a
   grouped shape) as one piece. Duplicating a group makes a new group.
+- The link with JuraCAD (send a flat design either way): `src/link/juraLink.ts` (pure, the SAME file in JuraCAD — keep them
+  identical): both apps are pages of gm7dha.github.io, so their tabs talk over a BroadcastChannel ("jura-link.v1"); each
+  tab's `LinkEnd` says here/who/bye, `send` posts a `Parcel` to the other app's newest tab or opens it (`siblingUrl`,
+  `?link=<id>`, within the click) and hands it over when that tab says "ready"; the receiver answers "got" with what it did.
+  App side `src/app/juraLinkApp.ts` (`startLink` in App, after the kept design is back; `receiveParcel` → `importDrawing` of
+  JuraCAD's SVG → addItems, selected, fitted; `sendToJuraCAD` — Export's "Send to JuraCAD", a DXF of the chosen shapes, no
+  kerf, not mirrored; JuraCAD makes it a sketch on Top). Tests: tests/juraLink; the smoke test plays a JuraCAD tab both ways.
 - **The laser library must stay in step with JuraCAD's** (the owner's standing wish): every laser design in JuraCAD
   (`src/library/designs/` with `category: "laser"`, and its finger-joint box and flat-pack stand) has a JuraCUT twin
   with the same id (`name-tag` is `tag`, `coaster` is `coasters`), name, heading, icon, inputs and maths. When JuraCAD
@@ -129,7 +136,7 @@
   `window.juracutStore`): draws a rectangle, a circle, a scored line and words → Arrange → exports SVG and DXF →
   imports the SVG → saves and opens a .juracut → puts a stencil and a box on the bed from the Library → groups,
   ungroups, lines up and spaces the panels, lines them up against the key shape from the Align menu (it stays put) and
-  centres them with Alt+C → traces a PNG it makes itself (a ring and a bar) → engraves it as a photo (bed, SVG image, PNG with pHYs, style
+  centres them with Alt+C → takes a design from a pretend JuraCAD tab and sends one back → traces a PNG it makes itself (a ring and a bar) → engraves it as a photo (bed, SVG image, PNG with pHYs, style
   changed in the panel) → packs tightly → picks a material and exports with the kerf → undo/redo, dark mode, help. The browser's own file pickers are turned off
   for it. `SMOKE_DIST` points it at a build somewhere else; `SMOKE_SCREENSHOT=1` saves smoke.png.
 - If the npm registry is unreachable from your environment: the pure code can be typechecked and tested with
