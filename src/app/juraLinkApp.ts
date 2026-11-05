@@ -5,7 +5,7 @@
  */
 import { importDrawing } from "../model/importFile";
 import { useStore } from "../model/store";
-import { APP_LABEL, LINK_CHANNEL, LinkEnd, siblingUrl, type Parcel, type Received } from "../link/juraLink";
+import { APP_LABEL, LINK_CHANNEL, LinkEnd, siblingUrl, type ChannelLike, type Parcel, type Received } from "../link/juraLink";
 
 let link: LinkEnd | null = null;
 let opened: string | null | undefined;
@@ -42,6 +42,18 @@ export function receiveParcel(p: Parcel): Received {
   return { ok: true, message: `"${p.name}" is on JuraCUT's bed.` };
 }
 
+/** The site's BroadcastChannel, in the shape the link uses. */
+function browserChannel(): ChannelLike {
+  const bc = new BroadcastChannel(LINK_CHANNEL);
+  const channel: ChannelLike = {
+    onmessage: null,
+    postMessage: (m) => bc.postMessage(m),
+    close: () => bc.close(),
+  };
+  bc.onmessage = (e: MessageEvent) => channel.onmessage?.({ data: e.data });
+  return channel;
+}
+
 /** Open the link (once). Does nothing where the browser has no BroadcastChannel. */
 export function startLink(): () => void {
   if (link || typeof BroadcastChannel === "undefined") return () => undefined;
@@ -51,7 +63,7 @@ export function startLink(): () => void {
     waitingFor,
     receive: receiveParcel,
     env: {
-      channel: new BroadcastChannel(LINK_CHANNEL),
+      channel: browserChannel(),
       now: () => Date.now(),
       setTimer: (fn, ms) => window.setTimeout(fn, ms),
       clearTimer: (t) => window.clearTimeout(t as number),
