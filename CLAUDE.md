@@ -61,7 +61,10 @@
   `designs.ts` — finger-joint box, name tag, coasters (round, square, six-sided), stencil, and `LIBRARY` (with
   `stands.ts`: flat-pack phone stand, rubber stamp; `workshop.ts`: living hinge, gear, picture frame, ruler;
   `boxes3.ts`: sliding-lid box, tray with dividers, bookend; `laserHome3.ts`: clock face, cord winders, tealight holder;
-  `toys3.ts`: jigsaw — `puzzle.ts` is JuraCAD's unchanged, cuts between pieces one open run each — and ornament);
+  `toys3.ts`: jigsaw — `puzzle.ts` is JuraCAD's unchanged, cuts between pieces one open run each — and ornament;
+  `laserSet4.ts`: living-hinge box, card deck box, business card holder, spice rack, tealight lantern, key rack, dice
+  tower, name puzzle — over JuraCAD's pure `outlines.ts` and `patterns.ts` (copied unchanged) and `sidePanels.ts`
+  (JuraCAD's maths for pieces held between two slotted sides; `assemblyItems` lays them out flat));
   `cleanValues`, `makeDesign`. `browse.ts` — `groupDesigns` (headings in `GROUP_ORDER`: Boxes and stands, Signs and
   stamps, Home, Workshop, Toys and gifts) and `searchDesigns` (as JuraCAD's). `fingers.ts` is JuraCAD's
   finger maths unchanged, over a numbers-only `ex.ts` (JuraCUT's boxes have no kerf allowance of their own — Export's

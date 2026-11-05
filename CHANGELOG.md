@@ -6,7 +6,15 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.6 — An Align menu
+## v0.6.1 — Eight more laser designs from JuraCAD
+
+- **Boxes and stands:** a **living-hinge box** (round corners; the four walls are one strip that bends round them), a
+  **card deck box** sized from your cards (thumb notches, lift-off lid) and a **business card holder**.
+- **Home:** a **spice or bottle rack** sized from your jars, a **tealight lantern** with circles, diamonds, a honeycomb
+  or stars cut in its walls, and a **key rack** with engraved words and slot-in hooks.
+- **Toys and gifts:** a **dice tower** and a child's **name puzzle** (each letter a piece that drops into its own hole).
+
+## v0.6 — An Align menu · commit `a1d3167`
 
 - **Align** (toolbar, beside Arrange): line the selected shapes up — left edges, middles, right edges, tops, middles
   or bottoms — against **each other**, a **key shape** (the one you picked first: it stays put and is outlined on the
