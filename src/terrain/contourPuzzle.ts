@@ -15,7 +15,9 @@
  * sheet above will hide it if there's room.
  */
 import { edgePolyline, makePuzzle, MIN_NECK, NECK, SIZE_SPREAD, TAB_RISE, type P2 } from "../library/puzzle";
+import { nameBox, sheetMarks, type SheetMarks } from "./contourMarks";
 import { heightAt, type HeightGrid } from "./elevation";
+import { NO_FEATURES, type MapFeatures } from "./osm";
 
 export interface ContourSpec {
   /** The finished puzzle's width (mm); its depth follows the area. */
@@ -89,6 +91,8 @@ export interface ContourLayer {
   /** The next sheet's outline, to score. */
   guide: P2[][];
   labels: { text: string; at: P2 }[];
+  /** Things from a map on this sheet: lines to score, lochs and buildings to engrave, names. */
+  marks: SheetMarks;
   pieces: number;
   /** [x0, y0, x1, y1] of the sheet, mm. */
   box: [number, number, number, number];
@@ -510,9 +514,13 @@ function chamfer(mask: (c: number) => boolean, gx: number, gy: number): Float32A
 }
 
 /** Where to engrave each piece's name: hidden under the next sheet if there's room there, else the roomiest spot. */
-function labelPlaces(g: Raster, next: Uint8Array | null, need: number): (P2 | null)[] {
+function labelPlaces(g: Raster, next: Uint8Array | null, need: number, keepOff: [number, number, number, number][] = []): (P2 | null)[] {
   const { gx, gy, r, piece } = g;
-  const room = chamfer((c) => piece[c] >= 0, gx, gy);
+  const off = (c: number) => {
+    const [x, y] = [((c % gx) + 0.5) * r, (Math.floor(c / gx) + 0.5) * r];
+    return keepOff.some((b) => x > b[0] && x < b[2] && y > b[1] && y < b[3]);
+  };
+  const room = chamfer((c) => piece[c] >= 0 && !off(c), gx, gy);
   const under = next ? chamfer((c) => next[c] === 1, gx, gy) : null;
   const best: { score: number; c: number }[] = g.areas.map(() => ({ score: -1, c: -1 }));
   for (let c = 0; c < room.length; c++) {
@@ -529,7 +537,7 @@ function labelPlaces(g: Raster, next: Uint8Array | null, need: number): (P2 | nu
 // ---------------------------------------------------------------------------------------------------------------
 
 /** The whole puzzle from the heights of an area `areaWidth` × `areaHeight` m (south-west corner at the grid's). */
-export function makeContourPuzzle(grid: HeightGrid, areaWidth: number, areaHeight: number, spec: ContourSpec, sw = { e: grid.e0, n: grid.n0 }): ContourPuzzle {
+export function makeContourPuzzle(grid: HeightGrid, areaWidth: number, areaHeight: number, spec: ContourSpec, sw = { e: grid.e0, n: grid.n0 }, features: MapFeatures = NO_FEATURES): ContourPuzzle {
   const checks = contourChecks(spec);
   if (checks.problems.length) throw new Error(checks.problems[0]);
   const W = spec.width;
@@ -575,6 +583,16 @@ export function makeContourPuzzle(grid: HeightGrid, areaWidth: number, areaHeigh
           ]
         : tidy(contourLoops(samples, low + L * band)),
     );
+  // Map features, each on the sheet whose band of height it lies in (heights read as the contours are).
+  const heightHere = (x: number, y: number) => {
+    const fx = Math.max(0, Math.min(nx - 1.000001, x / sx));
+    const fy = Math.max(0, Math.min(ny - 1.000001, y / sy));
+    const [i, j] = [Math.floor(fx), Math.floor(fy)];
+    const [u, w] = [fx - i, fy - j];
+    const c = j * nx + i;
+    return (v[c] * (1 - u) + v[c + 1] * u) * (1 - w) + (v[c + nx] * (1 - u) + v[c + nx + 1] * u) * w;
+  };
+  const marks = sheetMarks(features, sw, k, W, H, heightHere, low, band, spec.layers);
   const r = Math.min(0.8, Math.max(0.35, spec.piece / 50));
   const least = smallPiece(spec.piece);
   const layers: ContourLayer[] = [];
@@ -607,7 +625,7 @@ export function makeContourPuzzle(grid: HeightGrid, areaWidth: number, areaHeigh
     const labels: { text: string; at: P2 }[] = [];
     if (spec.labels) {
       const widest = `${spec.layers}-${order.length}`.length * LABEL_SIZE * 0.68;
-      const places = labelPlaces(g, next, widest / 2 + 0.8);
+      const places = labelPlaces(g, next, widest / 2 + 0.8, marks.sheets[L].names.map(nameBox));
       order.forEach((o, i) => {
         const at = places[o.id];
         if (at) labels.push({ text: `${L + 1}-${i + 1}`, at });
@@ -623,10 +641,12 @@ export function makeContourPuzzle(grid: HeightGrid, areaWidth: number, areaHeigh
       cuts: kept.flatMap((j) => j.parts),
       guide: spec.guides ? nextLoops : [],
       labels,
+      marks: marks.sheets[L],
       pieces: g.areas.length,
       box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
     });
   }
+  if (marks.unplaced) warnings.push(`${marks.unplaced} map ${marks.unplaced === 1 ? "name has" : "names have"} no room near ${marks.unplaced === 1 ? "its" : "their"} place, so ${marks.unplaced === 1 ? "it's" : "they're"} left off.`);
   if (unnamed) warnings.push(`${unnamed} small ${unnamed === 1 ? "piece has" : "pieces have"} no room for a name.`);
   if (empty) warnings.push(`${empty} top ${empty === 1 ? "sheet has" : "sheets have"} nothing on ${empty === 1 ? "it" : "them"} — use fewer sheets.`);
   return { spec, width: W, height: H, k, low, high, metresPerLayer: band, stretch: spec.thickness / (band * k), layers, warnings };

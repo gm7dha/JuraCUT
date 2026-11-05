@@ -7,6 +7,7 @@ import type { Segment } from "../geometry/segments";
 import { take } from "../library/kit";
 import { makeShape, moveOutlines, translation } from "../model/shapes";
 import type { Item, Outline } from "../model/types";
+import { NAME_SIZE } from "./contourMarks";
 import { LABEL_SIZE, type ContourLayer, type ContourPuzzle } from "./contourPuzzle";
 import type { P2 } from "../library/puzzle";
 
@@ -60,6 +61,23 @@ export function sheetItems(layer: ContourLayer, move: [number, number], ids: Set
   const items: Item[] = [{ ...makeShape(take(ids), `${name} outline`, moveOutlines(layer.loops.map((l) => lines(l, true)), m)), group }];
   if (layer.cuts.length) items.push({ ...makeShape(take(ids), `${name} cuts`, moveOutlines(layer.cuts.map((c) => lines(c, false)), m)), group });
   if (layer.guide.length) items.push({ ...makeShape(take(ids), `${name} next sheet`, moveOutlines(layer.guide.map((l) => lines(l, true)), m)), op: "score", group });
+  const { lines: mapLines, fills, names } = layer.marks;
+  if (mapLines.length) items.push({ ...makeShape(take(ids), `${name} paths and rivers`, moveOutlines(mapLines.map((l) => lines(l, false)), m)), op: "score", group });
+  if (fills.length) items.push({ ...makeShape(take(ids), `${name} lochs and buildings`, moveOutlines(fills.map((l) => lines(l, true)), m)), op: "engrave", group });
+  const words = (list: { text: string; at: P2 }[], size: number): Outline[] => {
+    const outlines: Outline[] = [];
+    for (const { text, at } of list) {
+      const t = textOutline(FONTS["inter-bold"], text, size, "centre");
+      if (!t.box) continue;
+      const [cx, cy] = [(t.box[0] + t.box[2]) / 2, (t.box[1] + t.box[3]) / 2];
+      outlines.push(...moveOutlines(t.loops.map((segments) => ({ segments, closed: true })), translation(at[0] - cx + move[0], at[1] - cy + move[1])));
+    }
+    return outlines;
+  };
+  if (names.length) {
+    const outlines = words(names, NAME_SIZE);
+    if (outlines.length) items.push({ ...makeShape(take(ids), `${name} map names`, outlines), op: "engrave", group });
+  }
   if (layer.labels.length) {
     const outlines: Outline[] = [];
     for (const { text, at } of layer.labels) {

@@ -6,7 +6,21 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.10 — Bird box and seven more designs
+## v0.11 — Mountain puzzle: OpenStreetMap files
+
+- **Mountain puzzle:** a new way to choose the mountain, **An OpenStreetMap file**. On openstreetmap.org, zoom to the
+  mountain, press Export and save the .osm file; the puzzle takes its area from the file. The heights still come from the
+  height data (OpenStreetMap has none).
+- **From the map** chooses how much of the map goes onto the sheets:
+  - **Just the area**;
+  - **Paths, rivers and lochs:** footpaths, tracks, rivers and streams are scored, each stretch on the sheet it crosses
+    (so a path climbs the mountain sheet by sheet), and lochs are engraved on the sheet of their shore;
+  - **Everything:** roads (scored), buildings (engraved) and names — summits with their heights, huts, lochs and places —
+    engraved too. On a hillside a name crosses several sheets: it's engraved on each of them in the same place, so it
+    reads whole from above. Pieces' own names keep clear of map names.
+- The sheet preview shows the map's lines (green dashes), lochs and names.
+
+## v0.10 — Bird box and seven more designs · commit `1cdfa48`
 
 - Eight more designs in the **Library**, the same as JuraCAD's newest laser designs:
   - **Bird box** (under a new **Garden** heading): a nest box for blue tits, great tits or house sparrows, following the
@@ -23,7 +37,7 @@ The point in the history for each version is the commit shown (see https://githu
   - **Tissue box cover**: drops over a box of tissues, with a rounded slot in the top.
 - As with the other boxes, tick "Allow for the kerf" when you export so the joints fit snugly.
 
-## v0.9 — Mountain puzzle sizes
+## v0.9 — Mountain puzzle sizes · commit `fafc153`
 
 - **Mountain puzzle:** choose the finished **height** in mm (it works out the number of sheets and shows how much the
   heights are stretched), and **3 mm or 5 mm** sheet. Up to 100 sheets.
@@ -31,7 +45,7 @@ The point in the history for each version is the commit shown (see https://githu
   thickness).
 - Starts at 150 mm wide, 200 mm tall, with 30 mm pieces, over a 5 × 5 km area.
 
-## v0.8 — Mountain puzzles
+## v0.8 — Mountain puzzles · commit `247108b`
 
 - **Mountain puzzle** (toolbar, next to Library): turn a real mountain into a layered laser-cut puzzle. Pick a famous
   peak, type an OS grid reference, or type the corners of your OS map, and the heights come free from open height data
