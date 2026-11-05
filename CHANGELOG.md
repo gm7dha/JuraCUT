@@ -6,6 +6,14 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
+## v0.9 — Mountain puzzle sizes
+
+- **Mountain puzzle:** choose the finished **height** in mm (it works out the number of sheets and shows how much the
+  heights are stretched), and **3 mm or 5 mm** sheet. Up to 100 sheets.
+- Smaller pieces: 30 mm pieces now work in both 3 mm and 5 mm sheet (tab necks are kept at least 3 mm wide, whatever the
+  thickness).
+- Starts at 150 mm wide, 200 mm tall, with 30 mm pieces, over a 5 × 5 km area.
+
 ## v0.8 — Mountain puzzles
 
 - **Mountain puzzle** (toolbar, next to Library): turn a real mountain into a layered laser-cut puzzle. Pick a famous

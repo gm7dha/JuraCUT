@@ -112,7 +112,7 @@
   `contourPuzzle.ts`: heights sampled ~0.4–1.2 mm apart over the puzzle; sheet 0 = the rectangle, sheet L = where
   height ≥ low + L·(relief / layers) (`contourLoops`: marching squares, padded with low ground so loops close along the
   edge, saddles by the cell's middle, anticlockwise outsides; `simplifyLoop` 0.05 mm; islands < `SMALL_ISLAND` and holes
-  < `SMALL_HOLE` dropped). Joins: `makePuzzle` (tab `TAB` 0.25, neck ≥ max(2, thickness) → `smallestPiece`), every other
+  < `SMALL_HOLE` dropped). Joins: `makePuzzle` (tab `TAB` 0.25, neck ≥ `LEAST_NECK` 3 mm for any sheet → `smallestPiece` 27 mm), every other
   sheet's pattern one piece bigger and shifted half a piece (stagger); each edge clipped to the sheet (`Region`: bucketed
   edges, ray-cast inside, distances), cut straight where the tab isn't wholly inside by max(2, 1.5t), dropped where it meets
   the edge at < `MIN_CROSSING`; ends on the puzzle's border stretched 0.5 mm so they cross cleanly. `mergeSmall`: the sheet
@@ -121,8 +121,8 @@
   Names "sheet-piece" (rows from the back) at the roomiest spot hidden under the next sheet (`chamfer` distances), else
   the roomiest; `LABEL_SIZE` 3. `contourItems.ts`: `bedSheets` (rows of sheets per bed), `sheetItems` (outline + cuts cut,
   next outline score, names as one engrave shape from `textOutline`), group ids start `MOUNTAIN_GROUP`; the dialog's "Bed
-  n" buttons call `store.replaceItems` (drops earlier mountain shapes, adds, selects, fits — one undo step). Height stretch
-  in the dialog sets the sheet count. Tests: tests/mountain.test.ts.
+  n" buttons call `store.replaceItems` (drops earlier mountain shapes, adds, selects, fits — one undo step). The dialog's
+  Height (mm) sets the sheet count (≤ `MAX_SHEETS` 100) and shows the stretch; sheet 3 or 5 mm; defaults 150 mm wide, 200 mm, 30 mm pieces. Tests: tests/mountain.test.ts.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

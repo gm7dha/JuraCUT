@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useStore } from "../model/store";
 import { areaProblem, heightAt, readHeights, type HeightGrid } from "../terrain/elevation";
 import { bedItems, bedSheets, MOUNTAIN_GROUP } from "../terrain/contourItems";
-import { contourChecks, CONTOUR_DEFAULTS, makeContourPuzzle, smallestPiece, type ContourPuzzle, type ContourSpec } from "../terrain/contourPuzzle";
+import { contourChecks, CONTOUR_DEFAULTS, makeContourPuzzle, MAX_SHEETS, smallestPiece, type ContourPuzzle, type ContourSpec } from "../terrain/contourPuzzle";
 import { formatGridRef, parseGridRef, type GridPoint } from "../terrain/osGrid";
 import { PEAKS } from "../terrain/peaks";
 import { Modal } from "./Modal";
@@ -64,11 +64,12 @@ export function MountainDialog() {
   const [source, setSource] = useState<Source>("peak");
   const [peakId, setPeakId] = useState(PEAKS[0].id);
   const [ref, setRef] = useState("NN 166 712");
-  const [km, setKm] = useState<[number, number]>([5, 4]);
+  const [km, setKm] = useState<[number, number]>([5, 5]);
   const [corners, setCorners] = useState<[string, string]>(["", ""]);
 
-  const [spec, setSpec] = useState<ContourSpec>(() => ({ ...CONTOUR_DEFAULTS, thickness: material.thickness || CONTOUR_DEFAULTS.thickness }));
-  const [stretch, setStretch] = useState(1.5);
+  const [spec, setSpec] = useState<ContourSpec>(() => ({ ...CONTOUR_DEFAULTS, thickness: material.thickness === 5 ? 5 : 3 }));
+  /** How tall the finished mountain is (mm): this sets the number of sheets. */
+  const [tall, setTall] = useState(200);
   const [loaded, setLoaded] = useState<{ area: Area; grid: HeightGrid; relief: [number, number] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +82,10 @@ export function MountainDialog() {
   const fresh = typeof area !== "string" && sameArea(loaded?.area ?? null, area);
   const set = <K extends keyof ContourSpec>(key: K, value: ContourSpec[K]) => setSpec((s) => ({ ...s, [key]: value }));
 
-  // Sheets from the height stretch: each sheet is `thickness` mm of the stretched mountain.
-  const layers = loaded ? Math.min(60, Math.max(2, Math.round(((loaded.relief[1] - loaded.relief[0]) * (spec.width / loaded.area.width) * stretch) / spec.thickness) + 1)) : spec.layers;
+  // Sheets from the height: each sheet is `thickness` mm of it.
+  const layers = Math.min(MAX_SHEETS, Math.max(2, Math.round(tall / spec.thickness)));
+  // How much that stretches the real heights (1× = true to life).
+  const stretch = loaded ? (layers * spec.thickness) / Math.max(1, (loaded.relief[1] - loaded.relief[0]) * (spec.width / loaded.area.width)) : null;
   const full: ContourSpec = { ...spec, layers };
   const checks = contourChecks(full);
 
@@ -92,9 +95,6 @@ export function MountainDialog() {
     setError(null);
     try {
       const grid = await readHeights(loadTerrainTile, area.sw, area.width, area.height);
-      // The base sheet fills the bed (less a margin) to start with.
-      const width = Math.floor(Math.min(bed[0] - 20, ((bed[1] - 20) * area.width) / area.height));
-      set("width", Math.max(60, width));
       setLoaded({ area, grid, relief: relief(grid, area) });
       setShown(0);
     } catch (e) {
@@ -214,15 +214,21 @@ export function MountainDialog() {
             <span>Width</span>
             {numberBox(spec.width, (v) => set("width", v), 10, 60, 1000, "mm (the base sheet)")}
           </div>
-          <div className="mountain-row">
+          <label className="mountain-row">
             <span>Sheet</span>
-            {numberBox(spec.thickness, (v) => set("thickness", v), 0.5, 1, 12, "mm thick")}
-          </div>
+            <select value={spec.thickness} onChange={(e) => set("thickness", Number(e.target.value))}>
+              <option value={3}>3 mm</option>
+              <option value={5}>5 mm</option>
+            </select>
+          </label>
           <div className="mountain-row">
-            <span>Height stretch</span>
+            <span>Height</span>
             <span>
-              {numberBox(stretch, setStretch, 0.25, 0.25, 6, "×")}
-              <span className="muted small"> → {layers} sheets</span>
+              {numberBox(tall, setTall, 10, 10, 400, "mm")}
+              <span className="muted small">
+                {" "}
+                → {layers} sheets{stretch !== null && `, heights × ${stretch.toFixed(1)}`}
+              </span>
             </span>
           </div>
           <div className="mountain-row">
