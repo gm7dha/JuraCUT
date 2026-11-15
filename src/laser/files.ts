@@ -82,7 +82,8 @@ export function svgPathData(path: LaserPath, H: number | null): string {
         const b: Pt = [s.center[0] - s.rx * c, s.center[1] - s.rx * sn];
         const deg = n(((H === null ? s.angle : -s.angle) * 180) / Math.PI);
         moveTo(a);
-        out.push(`A${n(s.rx)} ${n(s.ry)} ${deg} 0 0 ${ccw} ${P(b)}`, `A${n(s.rx)} ${n(s.ry)} ${deg} 0 0 ${ccw} ${P(a)}`);
+        // A rx ry turn large-arc sweep x y: two half ellipses.
+        out.push(`A${n(s.rx)} ${n(s.ry)} ${deg} 0 ${ccw} ${P(b)}`, `A${n(s.rx)} ${n(s.ry)} ${deg} 0 ${ccw} ${P(a)}`);
         at = a;
         break;
       }

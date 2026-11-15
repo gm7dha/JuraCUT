@@ -15,9 +15,11 @@ import { brokenApart } from "./breakApart";
 import { namedCopies } from "./names";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
-import { baseOf, boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
+import { baseOf, boxCentre, itemBox, itemOutlines, makeCircle, makeRect, makeShape, movedItem, pictureSize, pieceOf, rotatedItemAbout } from "./shapes";
+import { ROUNDED_SHARE } from "../geometry/photo";
+import { pathOf, placedOnPath } from "./textPath";
 import { editable, type NodeRef } from "./nodes";
-import type { Item, JuraCUTDocument, Material, Op, Outline } from "./types";
+import type { Item, JuraCUTDocument, Material, Op, Outline, TextItem } from "./types";
 
 export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text" | "qr" | "measure";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
@@ -97,6 +99,10 @@ export interface State {
   repeatRoundSelected(count: number, radius: number, turn: boolean): void;
   /** A copy of the selection for each name (its words become the name), `cols` across, `gap` apart. */
   nameCopiesSelected(names: string[], cols: number, gap: number, shrink: boolean): void;
+  /** The selected words run along the other selected shape's outline. */
+  putTextOnPath(): void;
+  /** A cut shape the photo's shape (rectangle, rounded or oval) round it, behind it. */
+  addCutRoundPicture(id: string): void;
   /** Start editing a shape's points (it becomes a free shape of lines and curves, one undo step). */
   editPoints(id: string): void;
   stopEditingPoints(): void;
@@ -361,6 +367,36 @@ export const useStore = create<State>((set, get) => ({
     set({ selection: [...selection, ...made.map((it) => it.id)] });
     const copies = names.length - 1;
     if (copies) get().showToast(`Made ${copies} ${copies === 1 ? "copy" : "copies"}: ${names.length} in all, each with its own words.`, "info");
+  },
+  putTextOnPath() {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    const words = picked.filter((it): it is TextItem => it.kind === "text");
+    const others = picked.filter((it) => it.kind !== "text");
+    const path = others.length === 1 ? pathOf(others[0]) : null;
+    if (words.length !== 1 || !path) {
+      get().showToast("Pick some words and one other shape (a line, a circle, any outline) for them to run along.", "info");
+      return;
+    }
+    const placed = placedOnPath(words[0], path);
+    get().commit({ ...doc, items: doc.items.map((it) => (it.id === placed.id ? placed : it)) });
+    set({ selection: [placed.id] });
+  },
+  addCutRoundPicture(id) {
+    const doc = get().history.present;
+    const at = doc.items.findIndex((i) => i.id === id);
+    const p = doc.items[at];
+    if (!p || p.kind !== "picture") return;
+    const [W, H] = pictureSize(p);
+    const nid = newId(doc.items.map((i) => i.id));
+    let cut: Item;
+    if (p.mask === "round") cut = W === H ? { ...makeCircle(nid, p.cx, p.cy, W / 2), name: "Photo's edge" } : { ...makeShape(nid, "Photo's edge", [{ closed: true, segments: [{ kind: "ellipse", center: [p.cx, p.cy], rx: W / 2, ry: H / 2, angle: 0 }] }]) };
+    else cut = { ...makeRect(nid, p.cx - W / 2, p.cy - H / 2, W, H), radius: p.mask === "rounded" ? ROUNDED_SHARE * Math.min(W, H) : 0, name: "Photo's edge" };
+    const items = [...doc.items];
+    items.splice(at, 0, cut);
+    get().commit({ ...doc, items });
+    set({ selection: [nid] });
   },
   editPoints(id) {
     const doc = get().history.present;

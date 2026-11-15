@@ -144,6 +144,39 @@ function lineAdvance(font: OutlineFont, line: string): number {
   return w;
 }
 
+/**
+ * A path for words to run along (bed mm): its points (a closed path's first point not repeated), whether it's closed,
+ * where along it the words' anchor sits (mm from its start), and `flip` to run the other way, letters on its other side.
+ */
+export interface AlongPath {
+  points: Pt[];
+  closed: boolean;
+  at: number;
+  flip?: boolean;
+}
+
+/** A function from distance along the words (0 at their anchor) to a point on the path and its direction there. */
+function pathWalker(path: AlongPath): (s: number) => [Pt, number] {
+  let pts = path.closed && path.points.length ? [...path.points, path.points[0]] : [...path.points];
+  if (path.flip) pts = pts.reverse();
+  const along: number[] = [0];
+  for (let i = 1; i < pts.length; i++) along.push(along[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = along[along.length - 1] || 1;
+  const start = path.flip ? total - path.at : path.at;
+  return (s: number): [Pt, number] => {
+    let d = start + s;
+    if (path.closed) d = ((d % total) + total) % total;
+    // Past an open path's ends, carry straight on.
+    let i = 1;
+    while (i < pts.length - 1 && along[i] < d) i++;
+    const a = pts[i - 1];
+    const b = pts[i];
+    const len = along[i] - along[i - 1] || 1e-9;
+    const t = (d - along[i - 1]) / len;
+    return [[a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], Math.atan2(b[1] - a[1], b[0] - a[0])];
+  };
+}
+
 /** The smallest radius words may be bent round (mm). */
 export const MIN_CURVE = 1;
 
@@ -157,8 +190,9 @@ export const MIN_CURVE = 1;
  * middle (as on the bottom of a badge). Each letter is turned as a whole, so its curves stay exact; distances along
  * the baseline are kept.
  */
-export function textOutline(font: OutlineFont, text: string, capHeight: number, align: TextAlign = "left", curve = 0): TextOutline {
+export function textOutline(font: OutlineFont, text: string, capHeight: number, align: TextAlign = "left", curve = 0, along?: AlongPath): TextOutline {
   const R = Math.abs(curve) < MIN_CURVE ? 0 : curve;
+  const walk = along ? pathWalker(along) : null;
   const scale = capHeight / (font.capHeight || font.unitsPerEm * 0.7);
   const lineHeight = (font.ascender - font.descender) * scale;
   const loops: Segment[][] = [];
@@ -178,7 +212,16 @@ export function textOutline(font: OutlineFont, text: string, capHeight: number, 
       }
       if (glyph.o) {
         const before = loops.length;
-        if (!R) loops.push(...glyphLoops(glyph.o, scale, x, y));
+        if (walk) {
+          // On a path: the letter's middle at its distance along it, turned to the path's direction there.
+          const mid = x + (glyph.a * scale) / 2;
+          const [p, angle] = walk(mid);
+          const c = Math.cos(angle);
+          const s = Math.sin(angle);
+          // p' = P + turn(angle) · (u, v), with u = px - mid, v = py.
+          const m: [number, number, number, number, number, number] = [c, s, -s, c, p[0] - c * mid, p[1] - s * mid];
+          for (const loop of glyphLoops(glyph.o, scale, x, y)) loops.push(loop.map((seg) => moveSegment(seg, m)));
+        } else if (!R) loops.push(...glyphLoops(glyph.o, scale, x, y));
         else {
           // Drawn about its own middle, then turned onto the circle.
           const mid = x + (glyph.a * scale) / 2;

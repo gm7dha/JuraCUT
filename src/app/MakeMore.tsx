@@ -218,6 +218,14 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           </button>
         </>
       )}
+      {items.length === 2 && items.filter((it) => it.kind === "text").length === 1 && items.some((it) => it.kind !== "text" && it.kind !== "qr" && it.kind !== "picture") && (
+        <>
+          <div className="field-label">Words along a path</div>
+          <button type="button" className="text-button make-button wide" onClick={() => useStore.getState().putTextOnPath()} title="The words follow the other shape's outline (its longest), centred on its top or its middle. The shape stays where it is: hide it, or score it, if it's only a guide.">
+            Put the words along the shape
+          </button>
+        </>
+      )}
       {items.some((it) => it.kind === "text" || (it.kind === "qr" && it.text.includes("#"))) && <NamedCopies cols={s.cols} gap={s.gap} />}
       {items.some((it) => it.kind === "shape" || it.kind === "text") && (
         <button type="button" className="text-button make-button wide" onClick={() => st().breakApartSelected()} title="Split shapes made of separate pieces (a traced picture, an imported drawing, words) into one shape per piece">

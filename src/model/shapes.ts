@@ -2,7 +2,7 @@
  * Shapes as outlines, and the pure edits on them: where a shape is, moving it,
  * turning it, and whether a click lands on it. Nothing here touches React.
  */
-import { FONTS, textOutline } from "../geometry/text";
+import { FONTS, textOutline, type AlongPath } from "../geometry/text";
 import { movePaths, pathPoints, pathsBox, segmentPoints, type Affine, type LaserPath, type Pt, type Segment } from "../geometry/segments";
 import type { CircleItem, Item, LineItem, Outline, PictureItem, PolygonItem, QrItem, RectItem, ShapeItem, TextItem } from "./types";
 import { qrLoops } from "../geometry/qr";
@@ -78,8 +78,10 @@ export function itemOutlines(item: Item): Outline[] {
     case "line":
       return [{ closed: false, segments: [{ kind: "line", from: [item.x1, item.y1], to: [item.x2, item.y2] }] }];
     case "text": {
-      const loops = item.weld ? weldedText(item) : textOutline(FONTS[item.font], item.text, Math.max(item.size, 0.1), item.align, item.curve ?? 0).loops;
+      const loops = item.weld ? weldedText(item) : textOutline(FONTS[item.font], item.text, Math.max(item.size, 0.1), item.align, item.curve ?? 0, alongOf(item)).loops;
       const outlines = loops.map((segments): Outline => ({ segments, closed: true }));
+      // Along a path, the letters are already on the bed.
+      if (item.path) return outlines;
       let m: Affine = translation(item.x, item.y);
       if (item.angle) m = compose(rotation(item.angle, [item.x, item.y]), m);
       return moveOutlines(outlines, m);
@@ -97,17 +99,30 @@ export function itemOutlines(item: Item): Outline[] {
   }
 }
 
+/** The path words run along, as the text maths wants it (undefined for words on a straight line or a circle). */
+function alongOf(t: TextItem): AlongPath | undefined {
+  if (!t.path) return undefined;
+  return { points: pathPoints(t.path.segments, t.path.closed, 0.02), closed: t.path.closed, at: t.pathAt ?? 0, flip: t.pathFlip };
+}
+
 const welded = new Map<string, Segment[][]>();
+const weldedOnPaths = new WeakMap<Outline, Map<string, Segment[][]>>();
 
 /**
  * Words with their letters joined into one shape (where they touch or overlap), before being placed: worked out once
  * for each set of words, font, size, lining up and curve.
  */
 function weldedText(t: TextItem): Segment[][] {
-  const key = `${t.font}|${t.size}|${t.align}|${t.curve ?? 0}|${t.text}`;
-  const kept = welded.get(key);
+  const key = `${t.font}|${t.size}|${t.align}|${t.curve ?? 0}|${t.pathAt ?? 0}|${t.pathFlip ?? false}|${t.text}`;
+  // Words on a path are kept with their path (a moved path is a new one).
+  let cache = welded;
+  if (t.path) {
+    cache = weldedOnPaths.get(t.path) ?? new Map();
+    weldedOnPaths.set(t.path, cache);
+  }
+  const kept = cache.get(key);
   if (kept) return kept;
-  const { loops, letterLoops } = textOutline(FONTS[t.font], t.text, Math.max(t.size, 0.1), t.align, t.curve ?? 0);
+  const { loops, letterLoops } = textOutline(FONTS[t.font], t.text, Math.max(t.size, 0.1), t.align, t.curve ?? 0, alongOf(t));
   // Each letter's own outlines are filled even–odd; letters are then joined together.
   const sets: Pt[][][] = [];
   let k = 0;
@@ -116,8 +131,8 @@ function weldedText(t: TextItem): Segment[][] {
     k += n;
   }
   const out = ringsToLoops(unionOfSets(sets));
-  if (welded.size > 200) welded.clear();
-  welded.set(key, out);
+  if (cache.size > 200) cache.clear();
+  cache.set(key, out);
   return out;
 }
 
@@ -186,6 +201,7 @@ export function movedItem(item: Item, dx: number, dy: number): Item {
     case "line":
       return { ...item, x1: item.x1 + dx, y1: item.y1 + dy, x2: item.x2 + dx, y2: item.y2 + dy };
     case "text":
+      return { ...item, x: item.x + dx, y: item.y + dy, ...(item.path ? { path: moveOutlines([item.path], translation(dx, dy))[0] } : {}) };
     case "qr":
       return { ...item, x: item.x + dx, y: item.y + dy };
     case "shape":
@@ -247,8 +263,9 @@ export function rotatedItem(item: Item, angle: number): Item {
     case "rect":
       return { ...item, angle: norm(item.angle + angle) };
     case "text": {
-      // Turn about the words' middle: the anchor moves round it.
+      // Turn about the words' middle: the anchor moves round it (words on a path: the path turns).
       const anchor = applyAffine(rotation(angle, centre), [item.x, item.y]);
+      if (item.path) return { ...item, x: anchor[0], y: anchor[1], path: moveOutlines([item.path], rotation(angle, centre))[0] };
       return { ...item, x: anchor[0], y: anchor[1], angle: norm(item.angle + angle) };
     }
     case "polygon": {

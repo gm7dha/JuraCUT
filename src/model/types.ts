@@ -6,6 +6,7 @@
 import type { FontId, TextAlign } from "../geometry/text";
 import type { Segment } from "../geometry/segments";
 import type { QrEcc } from "../geometry/qr";
+import type { PhotoMask } from "../geometry/photo";
 
 /** What the laser does with a shape. */
 export type Op = "cut" | "score" | "engrave";
@@ -118,6 +119,11 @@ export interface TextItem extends ItemBase {
   angle: number;
   /** Bent round a circle of this radius (mm): + over the top, − under the bottom. Missing or 0 = straight. */
   curve?: number;
+  /** Words running along a path (a copy of another shape's outline, on the bed): they start `pathAt` mm along it. */
+  path?: Outline;
+  pathAt?: number;
+  /** Along the path the other way, letters on its other side. */
+  pathFlip?: boolean;
   /** Letters joined into one shape where they touch or overlap (script fonts), so they engrave and cut as one. */
   weld?: boolean;
 }
@@ -148,6 +154,10 @@ export interface PictureItem extends ItemBase {
   invert: boolean;
   /** Engraving resolution: dots (lines) per mm. */
   dpm: number;
+  /** The part of the picture kept, as shares of its width and height from its top-left corner [x0, y0, x1, y1]. */
+  crop?: [number, number, number, number];
+  /** Only an oval (round) or a rounded rectangle of it is engraved; outside that is left. */
+  mask?: PhotoMask;
 }
 
 export type Item = RectItem | CircleItem | PolygonItem | LineItem | TextItem | QrItem | ShapeItem | PictureItem;

@@ -6,7 +6,20 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.20 — Nine more fonts, and joined letters
+## v0.21 — Words along any shape, photo shapes and crops
+
+- **Words along a shape** (like LightBurn's Apply Path to Text): pick some words and one other shape — a curve, a
+  wave, a circle, any outline — and press **Put the words along the shape** (in the panel or the right-click menu). The
+  words centre on the shape's top (or a line's middle) and read left to right; **Slide along it** moves them, **Other
+  side** puts them on the other side. They move, turn and resize with their path; the shape itself stays as it was
+  (hide it or score it if it's only a guide). **Back to a straight line** undoes it.
+- **Photo shapes**: a photo can be a **Rectangle**, **Rounded** or **Round** (an oval filling its frame) — only that
+  part is engraved. **Crop off** trims a share from each side, keeping the photo's scale. **Add a cut line round it**
+  adds a cut outline the same shape — a photo coaster in two clicks.
+- Fixed: ellipses (from imported drawings, or the new round photos' cut lines) were written with one number too many
+  in the SVG files and on the bed, so they could go missing. A test now checks every arc.
+
+## v0.20 — Nine more fonts, and joined letters · commit `0f30881`
 
 - **New fonts** for signs, gifts and weddings: **Great Vibes**, **Allura** and **Pacifico** (scripts), **Caveat**
   (handwriting), **Amatic SC** (hand-drawn capitals), **Bebas Neue** and **Anton** (tall, bold capitals), **DM Serif

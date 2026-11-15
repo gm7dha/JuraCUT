@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 
 import { greyscale } from "../geometry/trace";
-import { processPhoto, withPngDpi } from "../geometry/photo";
+import { masked, processPhoto, withPngDpi } from "../geometry/photo";
 import { pictureSize } from "../model/shapes";
 import type { PictureItem } from "../model/types";
 
@@ -63,9 +63,13 @@ export async function renderPicture(item: PictureItem, dpm: number, mirrored = f
   ctx.rotate((-item.turns * Math.PI) / 2);
   const w = item.w * k;
   const h = item.h * k;
-  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  // Only the cropped part of the picture is drawn (filling the frame).
+  const [c0, c1, c2, c3] = item.crop ?? [0, 0, 1, 1];
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  ctx.drawImage(img, c0 * iw, c1 * ih, (c2 - c0) * iw, (c3 - c1) * ih, -w / 2, -h / 2, w, h);
   const data = ctx.getImageData(0, 0, width, height);
-  const ready = processPhoto(greyscale(data.data, width, height), width, height, item);
+  const ready = masked(processPhoto(greyscale(data.data, width, height), width, height, item), width, height, item.mask);
   for (let i = 0; i < ready.length; i++) {
     data.data[4 * i] = data.data[4 * i + 1] = data.data[4 * i + 2] = ready[i];
     data.data[4 * i + 3] = 255;
@@ -80,7 +84,7 @@ export async function renderPicture(item: PictureItem, dpm: number, mirrored = f
 }
 
 const previews = new Map<string, string>();
-const keyOf = (p: PictureItem, dpm: number) => `${p.src.length}:${p.src.slice(-48)}|${p.w}|${p.h}|${p.turns}|${p.flip}|${p.mode}|${p.brightness}|${p.contrast}|${p.invert}|${dpm}`;
+const keyOf = (p: PictureItem, dpm: number) => `${p.src.length}:${p.src.slice(-48)}|${p.w}|${p.h}|${p.turns}|${p.flip}|${p.mode}|${p.brightness}|${p.contrast}|${p.invert}|${p.crop?.join(",") ?? ""}|${p.mask ?? ""}|${dpm}`;
 
 /** A small version of the picture as it'll engrave, for the bed (null while it's being made). */
 export function usePicturePreview(p: PictureItem | null): string | null {
