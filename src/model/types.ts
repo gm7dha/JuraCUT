@@ -69,6 +69,21 @@ export interface LineItem extends ItemBase {
   y2: number;
 }
 
+/**
+ * A regular polygon or star: centre (cx, cy), `r` from the middle to a corner, `sides` corners (3–100), the first
+ * corner `angle` degrees anticlockwise from straight right. A star (`star` 0.05–0.95) has as many inner corners
+ * between them, that share of `r` out.
+ */
+export interface PolygonItem extends ItemBase {
+  kind: "polygon";
+  cx: number;
+  cy: number;
+  r: number;
+  sides: number;
+  angle: number;
+  star?: number;
+}
+
 /** Words: `x`, `y` is where the first line's baseline starts (its left end, middle or right end by `align`). */
 export interface TextItem extends ItemBase {
   kind: "text";
@@ -112,7 +127,7 @@ export interface PictureItem extends ItemBase {
   dpm: number;
 }
 
-export type Item = RectItem | CircleItem | LineItem | TextItem | ShapeItem | PictureItem;
+export type Item = RectItem | CircleItem | PolygonItem | LineItem | TextItem | ShapeItem | PictureItem;
 export type ItemKind = Item["kind"];
 
 /** The material on the bed (saved with the design; sizes in mm). */

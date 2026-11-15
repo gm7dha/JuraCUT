@@ -4,7 +4,7 @@
  */
 import { FONTS, textOutline } from "../geometry/text";
 import { movePaths, pathPoints, pathsBox, segmentPoints, type Affine, type LaserPath, type Pt, type Segment } from "../geometry/segments";
-import type { CircleItem, Item, LineItem, Outline, PictureItem, RectItem, ShapeItem, TextItem } from "./types";
+import type { CircleItem, Item, LineItem, Outline, PictureItem, PolygonItem, RectItem, ShapeItem, TextItem } from "./types";
 
 const deg = (a: number) => (a * Math.PI) / 180;
 
@@ -67,6 +67,10 @@ export function itemOutlines(item: Item): Outline[] {
     }
     case "circle":
       return [{ closed: true, segments: [{ kind: "circle", center: [item.cx, item.cy], radius: Math.max(item.r, 1e-6) }] }];
+    case "polygon": {
+      const pts = polygonPoints(item);
+      return [{ closed: true, segments: pts.map((p, i): Segment => ({ kind: "line", from: p, to: pts[(i + 1) % pts.length] })) }];
+    }
     case "line":
       return [{ closed: false, segments: [{ kind: "line", from: [item.x1, item.y1], to: [item.x2, item.y2] }] }];
     case "text": {
@@ -87,6 +91,22 @@ export function itemOutlines(item: Item): Outline[] {
       return [{ closed: true, segments: [{ kind: "line", from: a, to: b }, { kind: "line", from: b, to: c }, { kind: "line", from: c, to: d }, { kind: "line", from: d, to: a }] }];
     }
   }
+}
+
+/** A polygon's (or star's) corners, anticlockwise from its first. */
+export function polygonPoints(p: PolygonItem): Pt[] {
+  const n = Math.round(Math.min(100, Math.max(3, p.sides)));
+  const a0 = (p.angle * Math.PI) / 180;
+  const pts: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (2 * Math.PI * i) / n;
+    pts.push([p.cx + p.r * Math.cos(a), p.cy + p.r * Math.sin(a)]);
+    if (p.star) {
+      const b = a + Math.PI / n;
+      pts.push([p.cx + p.r * p.star * Math.cos(b), p.cy + p.r * p.star * Math.sin(b)]);
+    }
+  }
+  return pts;
 }
 
 /** A picture's size on the bed (mm): across and up, after its quarter turns. */
@@ -133,6 +153,7 @@ export function movedItem(item: Item, dx: number, dy: number): Item {
     case "rect":
       return { ...item, x: item.x + dx, y: item.y + dy };
     case "circle":
+    case "polygon":
       return { ...item, cx: item.cx + dx, cy: item.cy + dy };
     case "line":
       return { ...item, x1: item.x1 + dx, y1: item.y1 + dy, x2: item.x2 + dx, y2: item.y2 + dy };
@@ -186,6 +207,10 @@ export function rotatedItem(item: Item, angle: number): Item {
       // Turn about the words' middle: the anchor moves round it.
       const anchor = applyAffine(rotation(angle, centre), [item.x, item.y]);
       return { ...item, x: anchor[0], y: anchor[1], angle: norm(item.angle + angle) };
+    }
+    case "polygon": {
+      const c = applyAffine(rotation(angle, centre), [item.cx, item.cy]);
+      return { ...item, cx: c[0], cy: c[1], angle: norm(item.angle + angle) };
     }
     case "circle":
       return item;
@@ -247,6 +272,8 @@ export function mirroredItem(item: Item): Item {
   if (!box) return item;
   const m = mirrorX(boxCentre(box)[0]);
   if (item.kind === "picture") return { ...item, flip: !item.flip };
+  // A polygon flipped is the same polygon with its first corner the other side.
+  if (item.kind === "polygon") return { ...item, cx: 2 * boxCentre(box)[0] - item.cx, angle: norm(180 - item.angle) };
   return item.kind === "circle" ? item : transformedItem(item, m);
 }
 
@@ -331,6 +358,14 @@ export const makeLine = (id: string, x1: number, y1: number, x2: number, y2: num
 export const makeText = (id: string, x: number, y: number, text = "Hello", size = 20): TextItem => ({ id, name: "Text", op: "engrave", kind: "text", text, x, y, size, font: "inter-regular", align: "left", angle: 0 });
 export const makeShape = (id: string, name: string, outlines: Outline[]): ShapeItem => ({ id, name, op: "cut", kind: "shape", outlines });
 
+/** What a regular polygon of so many sides is called. */
+export function polygonName(sides: number): string {
+  const names: Record<number, string> = { 3: "triangle", 4: "square", 5: "pentagon", 6: "hexagon", 7: "heptagon", 8: "octagon", 10: "decagon", 12: "dodecagon" };
+  return names[sides] ?? `${sides}-sided`;
+}
+
+export const makePolygon = (id: string, cx: number, cy: number, r: number, sides = 6, angle = 90, star?: number): PolygonItem => ({ id, name: star ? "Star" : "Polygon", op: "cut", kind: "polygon", cx, cy, r, sides, angle, ...(star ? { star } : {}) });
+
 /** A short description for the list and the properties panel. */
 export function describeItem(item: Item): string {
   const n = (v: number) => String(Math.round(v * 100) / 100);
@@ -339,6 +374,8 @@ export function describeItem(item: Item): string {
       return `${n(item.w)} × ${n(item.h)} mm`;
     case "circle":
       return `⌀ ${n(item.r * 2)} mm`;
+    case "polygon":
+      return `${item.star ? `${item.sides}-point star` : polygonName(item.sides)} ⌀ ${n(item.r * 2)} mm`;
     case "line":
       return `${n(Math.hypot(item.x2 - item.x1, item.y2 - item.y1))} mm long`;
     case "text":

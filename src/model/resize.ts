@@ -108,6 +108,11 @@ export function scaledItem(item: Item, sx: number, sy: number, about: Pt): Item 
       const c = P([item.cx, item.cy]);
       return { ...item, cx: c[0], cy: c[1], r: Math.max(MIN_SIZE / 2, item.r * sx) };
     }
+    case "polygon": {
+      if (!uniform) break;
+      const c = P([item.cx, item.cy]);
+      return { ...item, cx: c[0], cy: c[1], r: Math.max(MIN_SIZE / 2, item.r * sx) };
+    }
     case "line": {
       const a = P([item.x1, item.y1]);
       const b = P([item.x2, item.y2]);

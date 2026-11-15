@@ -12,6 +12,8 @@ import { useDocument, useSelection, useStore } from "../model/store";
 import { OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { AlignControls } from "./AlignControls";
 import { MakeMore } from "./MakeMore";
+import { areaText, itemArea, itemLength, lengthText } from "../model/measure";
+import { keepPolygonStyle } from "./polygonStyle";
 import { Icons } from "./icons";
 
 /** One chip per colour on the bed: click it to select every shape of that colour, the eye to hide or show them all. */
@@ -175,6 +177,7 @@ function ItemProperties({ item }: { item: Item }) {
           </div>
         </>
       )}
+      {item.kind === "polygon" && <PolygonFields item={item} />}
       {item.kind === "line" && (
         <>
           <div className="field-label">Ends</div>
@@ -188,11 +191,53 @@ function ItemProperties({ item }: { item: Item }) {
           </div>
         </>
       )}
+      {item.kind !== "picture" && <Measures item={item} />}
       {item.kind === "shape" && box && (
         <p className="dialog-hint">
           {describeItem(item)}, {item.outlines.length} {item.outlines.length === 1 ? "outline" : "outlines"}. Use the toolbar to turn or flip it.
         </p>
       )}
+    </>
+  );
+}
+
+/** How long the shape's lines are and the area it covers (worked out only when it changes). */
+function Measures({ item }: { item: Item }) {
+  const [len, area] = useMemo(() => [itemLength(item), itemArea(item)], [item]);
+  return (
+    <p className="measures muted small" title="Line length: how far the laser travels along this shape's lines. Area: what it covers (holes left out).">
+      Line length {lengthText(len)}
+      {area > 0 ? ` · area ${areaText(area)}` : ""}
+    </p>
+  );
+}
+
+/** A polygon's or star's settings: corners, star or not (and how deep), size, angle. */
+function PolygonFields({ item }: { item: Extract<Item, { kind: "polygon" }> }) {
+  const updateItem = useStore((s) => s.updateItem);
+  const change = (patch: Partial<typeof item>) => {
+    const next = { ...item, ...patch };
+    keepPolygonStyle({ sides: next.sides, star: next.star ?? 0 });
+    updateItem(item.id, (it) => ({ ...it, ...patch }) as Item);
+  };
+  return (
+    <>
+      <div className="segmented two" role="radiogroup" aria-label="Polygon or star">
+        <button type="button" role="radio" aria-checked={!item.star} className={!item.star ? "selected" : ""} onClick={() => change({ star: undefined, name: item.name === "Star" ? "Polygon" : item.name })}>
+          <Icons.Polygon size={16} /> Polygon
+        </button>
+        <button type="button" role="radio" aria-checked={!!item.star} className={item.star ? "selected" : ""} onClick={() => change({ star: item.star ?? 0.5, name: item.name === "Polygon" ? "Star" : item.name })}>
+          <Icons.Star size={16} /> Star
+        </button>
+      </div>
+      <div className="field-row">
+        <NumberBox label={item.star ? "Points" : "Sides"} value={item.sides} unit="" min={3} onCommit={(v) => change({ sides: Math.round(Math.min(100, v)) })} />
+        <NumberBox label="Across the corners" value={item.r * 2} unit="mm" min={0.01} onCommit={(d) => change({ r: d / 2 })} />
+      </div>
+      <div className="field-row">
+        {!!item.star && <NumberBox label="Inner corners (% of the size)" value={Math.round(item.star * 100)} unit="%" min={5} onCommit={(v) => change({ star: Math.min(95, Math.max(5, v)) / 100 })} />}
+        <NumberBox label="Angle" value={item.angle} unit="°" onCommit={(angle) => change({ angle })} />
+      </div>
     </>
   );
 }
