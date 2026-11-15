@@ -12,7 +12,7 @@ import { copiesOf } from "./clipboard";
 import { combinedRings, insetRings, outlineRings, ringsShape, type CombineHow } from "./combine";
 import { MOST_COPIES, repeatedItems, roundItems } from "./repeat";
 import { brokenApart } from "./breakApart";
-import { namedCopies } from "./names";
+import { hasPlace, namedCopies, type NameEntry } from "./names";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { baseOf, boxCentre, itemBox, itemOutlines, makeCircle, makeRect, makeShape, movedItem, pictureSize, pieceOf, rotatedItemAbout } from "./shapes";
@@ -21,7 +21,7 @@ import { pathOf, placedOnPath } from "./textPath";
 import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline, TextItem } from "./types";
 
-export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text" | "qr" | "measure";
+export type Tool = "select" | "rect" | "circle" | "ellipse" | "polygon" | "line" | "text" | "qr" | "measure";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
 
 export interface Toast {
@@ -98,7 +98,7 @@ export interface State {
   /** Copies of the selection round a circle (`count` in all), turned with it or not. */
   repeatRoundSelected(count: number, radius: number, turn: boolean): void;
   /** A copy of the selection for each name (its words become the name), `cols` across, `gap` apart. */
-  nameCopiesSelected(names: string[], cols: number, gap: number, shrink: boolean): void;
+  nameCopiesSelected(names: (string | NameEntry)[], cols: number, gap: number, shrink: boolean): void;
   /** The selected words run along the other selected shape's outline. */
   putTextOnPath(): void;
   /** A cut shape the photo's shape (rectangle, rounded or oval) round it, behind it. */
@@ -356,7 +356,7 @@ export const useStore = create<State>((set, get) => ({
     const { history, selection } = get();
     const doc = history.present;
     const picked = doc.items.filter((it) => selection.includes(it.id));
-    if (!picked.some((it) => it.kind === "text" || (it.kind === "qr" && it.text.includes("#")))) {
+    if (!picked.some((it) => it.kind === "text" || (it.kind === "qr" && hasPlace(it.text)))) {
       get().showToast("Pick some words (and anything that goes with them, like a tag) first.", "info");
       return;
     }

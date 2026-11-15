@@ -32,6 +32,7 @@ export function shapePoints(item: Item): [number, number][] {
     }
   }
   if (item.kind === "polygon") out.push([item.cx, item.cy]);
+  if (item.kind === "ellipse") out.push([item.cx, item.cy]);
   return out;
 }
 

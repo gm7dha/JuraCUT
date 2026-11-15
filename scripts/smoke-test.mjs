@@ -707,6 +707,29 @@ try {
   const edge = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.name === "Photo's edge"));
   expect(edge && edge.op === "cut", "a cut line goes round the photo");
 
+  step = "the Oval tool, and names from a spreadsheet";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.setTool("select");
+  });
+  await page.keyboard.press("e");
+  await page.keyboard.down("Shift");
+  await drag([100, 100], [160, 130]);
+  await page.keyboard.up("Shift");
+  const oval = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "ellipse"));
+  expect(oval && Math.abs(oval.rx - 30) < 0.2 && Math.abs(oval.ry - 15) < 0.2, "the Oval tool drew a 60 × 30 oval");
+  await page.keyboard.press("v");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([{ id: "cw", name: "Card", op: "engrave", kind: "text", text: "{Name} - table {Table}", x: 200, y: 200, size: 5, font: "inter-regular", align: "left", angle: 0 }]);
+  });
+  await page.fill("textarea[aria-label='Names, one per line']", "Name,Table\nAmy,3\nBen,5\nCara,7");
+  expect((await page.textContent(".make-more")).includes("{Name} {Table}"), "the panel lists the spreadsheet's columns");
+  await page.click(".make-more button:has-text('Make 2 named copies')");
+  const cards = await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.kind === "text").map((i) => i.text));
+  expect(["Amy - table 3", "Ben - table 5", "Cara - table 7"].every((t) => cards.includes(t)), `each card has its row (${cards.join(" / ")})`);
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

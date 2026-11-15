@@ -1710,8 +1710,13 @@ kbd {
     padding: 2px 4px;
     font-size: 10.5px;
   }
-  .tool-button.icon-only {
+  .tool-button.icon-only,
+  .tool-button.squeeze {
     min-width: 34px;
+  }
+  /* The edit buttons show just their icons here (their tooltips say what they do). */
+  .tool-button.squeeze span {
+    display: none;
   }
 }
 .tab-mark {
@@ -1766,4 +1771,9 @@ kbd {
   stroke: var(--accent);
   fill: var(--panel);
   pointer-events: none;
+}
+.file-button {
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 6px;
 }

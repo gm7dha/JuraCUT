@@ -14,7 +14,7 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 
 - **The bed**: the R1's 600 × 300 mm work area to scale, with a millimetre grid. Zoom with the wheel or a pinch;
   pan with the middle button, right button, Space, or two fingers.
-- **Draw** rectangles (with rounded corners), circles, polygons and stars, lines and **words** in fourteen fonts
+- **Draw** rectangles (with rounded corners), circles, ovals, polygons and stars, lines and **words** in fourteen fonts
   (scripts, handwriting, bold capitals, serifs and a stencil font; script letters joined into one shape), sized by the height of a
   capital letter — straight, or bent **round a circle** for badges. Everything snaps to the millimetre (hold Shift not to).
 - **Import** SVG and DXF drawings at true size — from JuraCAD's *Export for laser*, Inkscape, or anywhere else. Their
@@ -39,8 +39,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 - **Pack tightly**: pieces fitted together by their real shapes to save material.
 - **Edit points**: reshape any shape by dragging its points and curve handles, adding and taking out points.
 - **QR codes** for web addresses or words, to engrave on signs, tags and labels.
-- **Holding tabs** on cut pieces, and **copies with different words** — a name tag for everyone on a list, or numbered
-  keyrings.
+- **Holding tabs** on cut pieces, and **copies with different words** — a name tag for everyone on a list (or a row of
+  a spreadsheet), or numbered keyrings.
 - **Outline** shapes (a border round words), **combine** them (join, cut one out of another, keep the overlap) and
   **step and repeat** them in a grid or round a circle; **break apart** shapes made of separate pieces; see each
   shape's line length and area.

@@ -4,7 +4,7 @@
  */
 import { FONTS, textOutline, type AlongPath } from "../geometry/text";
 import { movePaths, pathPoints, pathsBox, segmentPoints, type Affine, type LaserPath, type Pt, type Segment } from "../geometry/segments";
-import type { CircleItem, Item, LineItem, Outline, PictureItem, PolygonItem, QrItem, RectItem, ShapeItem, TextItem } from "./types";
+import type { CircleItem, EllipseItem, Item, LineItem, Outline, PictureItem, PolygonItem, QrItem, RectItem, ShapeItem, TextItem } from "./types";
 import { qrLoops } from "../geometry/qr";
 import { loopsToRings, ringsToLoops, unionOfSets } from "../geometry/boolean";
 
@@ -69,6 +69,8 @@ export function itemOutlines(item: Item): Outline[] {
     }
     case "circle":
       return [{ closed: true, segments: [{ kind: "circle", center: [item.cx, item.cy], radius: Math.max(item.r, 1e-6) }] }];
+    case "ellipse":
+      return [{ closed: true, segments: [{ kind: "ellipse", center: [item.cx, item.cy], rx: Math.max(item.rx, 1e-6), ry: Math.max(item.ry, 1e-6), angle: (item.angle * Math.PI) / 180 }] }];
     case "polygon": {
       const pts = polygonPoints(item);
       return [{ closed: true, segments: pts.map((p, i): Segment => ({ kind: "line", from: p, to: pts[(i + 1) % pts.length] })) }];
@@ -196,6 +198,7 @@ export function movedItem(item: Item, dx: number, dy: number): Item {
     case "rect":
       return { ...item, x: item.x + dx, y: item.y + dy };
     case "circle":
+    case "ellipse":
     case "polygon":
       return { ...item, cx: item.cx + dx, cy: item.cy + dy };
     case "line":
@@ -268,6 +271,7 @@ export function rotatedItem(item: Item, angle: number): Item {
       if (item.path) return { ...item, x: anchor[0], y: anchor[1], path: moveOutlines([item.path], rotation(angle, centre))[0] };
       return { ...item, x: anchor[0], y: anchor[1], angle: norm(item.angle + angle) };
     }
+    case "ellipse":
     case "polygon": {
       const c = applyAffine(rotation(angle, centre), [item.cx, item.cy]);
       return { ...item, cx: c[0], cy: c[1], angle: norm(item.angle + angle) };
@@ -334,6 +338,7 @@ export function mirroredItem(item: Item): Item {
   if (item.kind === "picture") return { ...item, flip: !item.flip };
   // A polygon flipped is the same polygon with its first corner the other side.
   if (item.kind === "polygon") return { ...item, cx: 2 * boxCentre(box)[0] - item.cx, angle: norm(180 - item.angle) };
+  if (item.kind === "ellipse") return { ...item, cx: 2 * boxCentre(box)[0] - item.cx, angle: norm(-item.angle) };
   return item.kind === "circle" ? item : transformedItem(item, m);
 }
 
@@ -424,6 +429,8 @@ export function polygonName(sides: number): string {
   return names[sides] ?? `${sides}-sided`;
 }
 
+export const makeEllipse = (id: string, cx: number, cy: number, rx: number, ry: number): EllipseItem => ({ id, name: "Oval", op: "cut", kind: "ellipse", cx, cy, rx, ry, angle: 0 });
+
 export const makeQr = (id: string, x: number, y: number, text = "https://", size = 30): QrItem => ({ id, name: "QR code", op: "engrave", kind: "qr", x, y, size, text, ecc: "M" });
 
 export const makePolygon = (id: string, cx: number, cy: number, r: number, sides = 6, angle = 90, star?: number): PolygonItem => ({ id, name: star ? "Star" : "Polygon", op: "cut", kind: "polygon", cx, cy, r, sides, angle, ...(star ? { star } : {}) });
@@ -438,6 +445,8 @@ export function describeItem(item: Item): string {
       return `⌀ ${n(item.r * 2)} mm`;
     case "qr":
       return `QR code ${n(item.size)} mm`;
+    case "ellipse":
+      return `oval ${n(item.rx * 2)} × ${n(item.ry * 2)} mm`;
     case "polygon":
       return `${item.star ? `${item.sides}-point star` : polygonName(item.sides)} ⌀ ${n(item.r * 2)} mm`;
     case "line":

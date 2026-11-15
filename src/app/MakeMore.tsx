@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 
 import { canCombine } from "../model/combine";
-import { namesFrom, numberNames } from "../model/names";
+import { entriesFrom, hasPlace, numberNames } from "../model/names";
 import { useStore } from "../model/store";
 import type { Item } from "../model/types";
 
@@ -86,7 +86,7 @@ const NAMES_KEY = "juracut.names";
  * Copies with different words: a list of names (or numbers), one copy each, laid out like Step and repeat's grid
  * (its "Across" and "Gap"). "#" in the words is replaced by the name; else the words become the name.
  */
-function NamedCopies({ cols, gap }: { cols: number; gap: number }) {
+function NamedCopies({ cols, gap, table }: { cols: number; gap: number; table: boolean }) {
   const [text, setText] = useState(() => {
     try {
       return localStorage.getItem(NAMES_KEY) ?? "";
@@ -105,13 +105,30 @@ function NamedCopies({ cols, gap }: { cols: number; gap: number }) {
       // Not kept; fine.
     }
   };
-  const names = namesFrom(text);
+  const { entries: names, headings } = entriesFrom(text, table);
+  const openCsv = (f: File | undefined) => {
+    if (!f) return;
+    if (f.size > 2_000_000) return useStore.getState().showToast("That file is too big for a list of names.", "info");
+    void f.text().then(keepText);
+  };
   return (
     <>
       <div className="field-label" title="One copy of the selection for each name: name tags, numbered keyrings, labels">
         Copies with different words
       </div>
-      <textarea className="text-box names-box" rows={4} value={text} placeholder={"One per line, e.g.\nAmy\nBen\nCharlotte"} aria-label="Names, one per line" onChange={(e) => keepText(e.target.value)} />
+      <textarea
+        className="text-box names-box"
+        rows={4}
+        value={text}
+        placeholder={table ? "A spreadsheet: headings first, e.g.\nName,Table\nAmy,3\nBen,5" : "One per line, e.g.\nAmy\nBen\nCharlotte"}
+        aria-label="Names, one per line"
+        onChange={(e) => keepText(e.target.value)}
+      />
+      <label className="text-button make-button wide file-button" title="A .csv file saved from Excel, Numbers or Google Sheets: first row the headings">
+        Open a spreadsheet (.csv)…
+        <input type="file" accept=".csv,.txt,text/csv,text/plain" hidden onChange={(e) => openCsv(e.target.files?.[0])} />
+      </label>
+      {headings.length > 0 && <p className="dialog-hint">Columns: {headings.map((h) => `{${h}}`).join(" ")} — put these in the words.</p>}
       <div className="field-row">
         <Num label="Numbers from" value={from} min={-99999} max={99999} whole onChange={setFrom} />
         <Num label="to" value={to} min={-99999} max={99999} whole onChange={setTo} />
@@ -123,7 +140,9 @@ function NamedCopies({ cols, gap }: { cols: number; gap: number }) {
         <input type="checkbox" checked={shrink} onChange={(e) => setShrink(e.target.checked)} />
         Make long words smaller to fit
       </label>
-      <p className="dialog-hint">The first name goes on the shapes you picked. Put # in the words to keep the rest (e.g. "Table #").</p>
+      <p className="dialog-hint">
+        The first name goes on the shapes you picked. Put # in the words to keep the rest (e.g. "Table #"), or {"{Heading}"} for a spreadsheet's column (e.g. "{"{Name}"} — table {"{Table}"}").
+      </p>
       <button type="button" className="text-button make-button wide" disabled={names.length < 1} onClick={() => useStore.getState().nameCopiesSelected(names, cols, gap, shrink)}>
         {names.length > 1 ? `Make ${names.length - 1} named ${names.length === 2 ? "copy" : "copies"}` : names.length === 1 ? "Change the words" : "Type some names first"}
       </button>
@@ -226,7 +245,9 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           </button>
         </>
       )}
-      {items.some((it) => it.kind === "text" || (it.kind === "qr" && it.text.includes("#"))) && <NamedCopies cols={s.cols} gap={s.gap} />}
+      {items.some((it) => it.kind === "text" || (it.kind === "qr" && hasPlace(it.text))) && (
+        <NamedCopies cols={s.cols} gap={s.gap} table={items.some((it) => (it.kind === "text" || it.kind === "qr") && /\{[^{}]{1,40}\}/.test(it.text))} />
+      )}
       {items.some((it) => it.kind === "shape" || it.kind === "text") && (
         <button type="button" className="text-button make-button wide" onClick={() => st().breakApartSelected()} title="Split shapes made of separate pieces (a traced picture, an imported drawing, words) into one shape per piece">
           Break apart

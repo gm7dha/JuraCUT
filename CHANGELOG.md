@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.21 — Words along any shape, photo shapes and crops
+## v0.22 — Ovals, and names from a spreadsheet
+
+- **Oval tool** (E): drag a box and the oval fills it. Set its width, height and angle in the panel; it stays an oval
+  when turned, flipped or stretched square to the bed.
+- **Names from a spreadsheet** (like LightBurn's CSV merge): put **{Heading}** places in the words — say
+  "{Name} – table {Table}" — then paste a spreadsheet (headings on the first line) into Copies with different words, or
+  **Open a spreadsheet (.csv)** saved from Excel, Numbers or Google Sheets. Each row makes one copy with its own words;
+  QR codes can have {Heading} places too. Plain lists of names work as before (commas in them are fine).
+- On screens narrower than 1440 pixels the Turn, Flip, Group, Ungroup, Copy and Delete buttons show just their icons, so
+  the toolbar has room to grow (hover for their names).
+
+## v0.21 — Words along any shape, photo shapes and crops · commit `9d77879`
 
 - **Words along a shape** (like LightBurn's Apply Path to Text): pick some words and one other shape — a curve, a
   wave, a circle, any outline — and press **Put the words along the shape** (in the panel or the right-click menu). The

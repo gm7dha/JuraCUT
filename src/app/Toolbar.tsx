@@ -30,6 +30,7 @@ const TOOLS: { tool: Tool; label: string; key: string; icon: (p: { size?: number
   { tool: "select", label: "Select", key: "V", icon: Icons.Select, hint: "Click a shape to select it, drag to move it, drag on empty bed to select several" },
   { tool: "rect", label: "Rectangle", key: "R", icon: Icons.Rectangle, hint: "Drag a box on the bed. Round its corners in the panel afterwards" },
   { tool: "circle", label: "Circle", key: "C", icon: Icons.Circle, hint: "Drag from the centre out to the edge" },
+  { tool: "ellipse", label: "Oval", key: "E", icon: Icons.Ellipse, hint: "Drag a box: the oval fills it" },
   { tool: "polygon", label: "Polygon", key: "P", icon: Icons.Polygon, hint: "Drag from the centre out to a corner. Change the number of sides, or make it a star, in the panel" },
   { tool: "line", label: "Line", key: "L", icon: Icons.Line, hint: "Drag from one end to the other (cut or score it)" },
   { tool: "text", label: "Text", key: "T", icon: Icons.Text, hint: "Click where the words start, then type them in the panel" },
@@ -92,27 +93,27 @@ export function Toolbar() {
       </div>
       <div className="tool-divider" />
       <div className="tool-group">
-        <button type="button" className="tool-button" disabled={!any} onClick={() => s().rotateSelected(90)} title={`Turn ${word} a quarter turn anticlockwise`}>
+        <button type="button" className="tool-button squeeze" aria-label="Turn 90°" disabled={!any} onClick={() => s().rotateSelected(90)} title={`Turn ${word} a quarter turn anticlockwise`}>
           <Icons.Rotate size={20} />
           <span>Turn 90°</span>
         </button>
-        <button type="button" className="tool-button" disabled={!any} onClick={() => s().mirrorSelected()} title={`Flip ${word} left to right (for engraving on the back)`}>
+        <button type="button" className="tool-button squeeze" aria-label="Flip" disabled={!any} onClick={() => s().mirrorSelected()} title={`Flip ${word} left to right (for engraving on the back)`}>
           <Icons.Mirror size={20} />
           <span>Flip</span>
         </button>
-        <button type="button" className="tool-button" disabled={selection.length < 2 || grouped} onClick={() => s().groupSelected()} title={`Group the selected shapes, so they're picked, moved and turned together (${shortcut(platform, "G")})`}>
+        <button type="button" className="tool-button squeeze" aria-label="Group" disabled={selection.length < 2 || grouped} onClick={() => s().groupSelected()} title={`Group the selected shapes, so they're picked, moved and turned together (${shortcut(platform, "G")})`}>
           <Icons.Group size={20} />
           <span>Group</span>
         </button>
-        <button type="button" className="tool-button" disabled={!inGroup} onClick={() => s().ungroupSelected()} title={`Ungroup, so each shape can be picked on its own (${shortcut(platform, "G", { shift: true })})`}>
+        <button type="button" className="tool-button squeeze" aria-label="Ungroup" disabled={!inGroup} onClick={() => s().ungroupSelected()} title={`Ungroup, so each shape can be picked on its own (${shortcut(platform, "G", { shift: true })})`}>
           <Icons.Ungroup size={20} />
           <span>Ungroup</span>
         </button>
-        <button type="button" className="tool-button" disabled={!any} onClick={() => s().duplicateSelected()} title={`Make a copy of ${word} (${shortcut(platform, "D")})`}>
+        <button type="button" className="tool-button squeeze" aria-label="Copy" disabled={!any} onClick={() => s().duplicateSelected()} title={`Make a copy of ${word} (${shortcut(platform, "D")})`}>
           <Icons.Duplicate size={20} />
           <span>Copy</span>
         </button>
-        <button type="button" className="tool-button" disabled={!any} onClick={() => s().deleteSelected()} title={`Delete ${word} (Delete)`}>
+        <button type="button" className="tool-button squeeze" aria-label="Delete" disabled={!any} onClick={() => s().deleteSelected()} title={`Delete ${word} (Delete)`}>
           <Icons.Trash size={20} />
           <span>Delete</span>
         </button>

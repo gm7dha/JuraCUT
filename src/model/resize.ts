@@ -74,6 +74,7 @@ export function scaledOutlines(outlines: Outline[], sx: number, sy: number, abou
 export function keepsKindStretched(item: Item): boolean {
   switch (item.kind) {
     case "rect":
+    case "ellipse":
       return quarter(item.angle);
     case "line":
     case "shape":
@@ -112,6 +113,13 @@ export function scaledItem(item: Item, sx: number, sy: number, about: Pt): Item 
       if (!uniform) break;
       const a = P([item.x, item.y]);
       return { ...item, x: a[0], y: a[1], size: Math.max(1, item.size * sx) };
+    }
+    case "ellipse": {
+      // Square to the bed (or scaled evenly), an oval stays an oval.
+      if (!uniform && !quarter(item.angle)) break;
+      const c = P([item.cx, item.cy]);
+      const [kx, ky] = sideways(item.angle) ? [sy, sx] : [sx, sy];
+      return { ...item, cx: c[0], cy: c[1], rx: Math.max(MIN_SIZE / 2, item.rx * kx), ry: Math.max(MIN_SIZE / 2, item.ry * ky) };
     }
     case "polygon": {
       if (!uniform) break;
