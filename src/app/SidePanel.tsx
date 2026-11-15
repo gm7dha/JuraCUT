@@ -196,6 +196,18 @@ function ItemProperties({ item }: { item: Item }) {
         </>
       )}
       {item.kind === "polygon" && <PolygonFields item={item} />}
+      {item.kind === "ellipse" && (
+        <>
+          <div className="field-label">Size</div>
+          <div className="field-row">
+            <NumberBox label="Width" value={item.rx * 2} unit="mm" min={0.01} onCommit={(w) => change({ rx: w / 2 })} />
+            <NumberBox label="Height" value={item.ry * 2} unit="mm" min={0.01} onCommit={(h) => change({ ry: h / 2 })} />
+          </div>
+          <div className="field-row">
+            <NumberBox label="Angle" value={item.angle} unit="°" onCommit={(angle) => change({ angle })} />
+          </div>
+        </>
+      )}
       {item.kind === "qr" && <QrFields item={item} focus={focusItem === item.id} />}
       {item.kind === "line" && (
         <>

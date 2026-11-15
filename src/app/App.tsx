@@ -164,6 +164,7 @@ function useShortcuts() {
           else if (k === "c") s.setTool("circle");
           else if (k === "l") s.setTool("line");
           else if (k === "p") s.setTool("polygon");
+          else if (k === "e") s.setTool("ellipse");
           else if (k === "q") s.setTool("qr");
           else if (k === "m") s.setTool("measure");
           else if (k === "t") s.setTool("text");

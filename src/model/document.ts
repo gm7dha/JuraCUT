@@ -113,6 +113,8 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
       return { ...base, kind: "rect", x: num(it.x), y: num(it.y), w: Math.max(num(it.w, 10), 0.01), h: Math.max(num(it.h, 10), 0.01), radius: Math.max(num(it.radius), 0), angle: num(it.angle) };
     case "circle":
       return { ...base, kind: "circle", cx: num(it.cx), cy: num(it.cy), r: Math.max(num(it.r, 5), 0.005) };
+    case "ellipse":
+      return { ...base, kind: "ellipse", cx: num(it.cx), cy: num(it.cy), rx: Math.max(num(it.rx, 10), 0.005), ry: Math.max(num(it.ry, 5), 0.005), angle: num(it.angle) };
     case "polygon": {
       const star = num(it.star);
       return {

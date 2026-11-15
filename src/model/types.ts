@@ -95,6 +95,16 @@ export interface PolygonItem extends ItemBase {
   star?: number;
 }
 
+/** An ellipse (oval): centre (cx, cy), half-widths `rx` across and `ry` up before turning `angle` degrees anticlockwise. */
+export interface EllipseItem extends ItemBase {
+  kind: "ellipse";
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  angle: number;
+}
+
 /** A QR code: `text` (a web address or any words) as a square `size` mm across, bottom-left corner at (x, y). */
 export interface QrItem extends ItemBase {
   kind: "qr";
@@ -160,7 +170,7 @@ export interface PictureItem extends ItemBase {
   mask?: PhotoMask;
 }
 
-export type Item = RectItem | CircleItem | PolygonItem | LineItem | TextItem | QrItem | ShapeItem | PictureItem;
+export type Item = RectItem | CircleItem | EllipseItem | PolygonItem | LineItem | TextItem | QrItem | ShapeItem | PictureItem;
 export type ItemKind = Item["kind"];
 
 /** The material on the bed (saved with the design; sizes in mm). */

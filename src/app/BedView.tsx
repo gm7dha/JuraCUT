@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import { svgPathData } from "../laser/files";
 import { keyPiece } from "../model/arrange";
-import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makePolygon, makeQr, makeRect, makeText, movedItem } from "../model/shapes";
+import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeEllipse, makeLine, makePolygon, makeQr, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
 import { rulerStep, shapePoints, snapBoxMove, snapLines, snapPoint, snapPointsMove, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
@@ -838,6 +838,12 @@ function drawnItem(g: Extract<Gesture, { kind: "draw" }>, taken: string[], previ
       if (!preview && r < 0.25) return null;
       return makeCircle(id, x0, y0, Math.max(r, 0.01));
     }
+    case "ellipse": {
+      const w = Math.abs(x1 - x0);
+      const h = Math.abs(y1 - y0);
+      if (!preview && (w < 0.5 || h < 0.5)) return null;
+      return makeEllipse(id, (x0 + x1) / 2, (y0 + y1) / 2, Math.max(w, 0.02) / 2, Math.max(h, 0.02) / 2);
+    }
     case "polygon": {
       const r = Math.hypot(x1 - x0, y1 - y0);
       if (!preview && r < 0.25) return null;
@@ -860,6 +866,7 @@ function draftSize(g: Extract<Gesture, { kind: "draw" }>): string {
   const n = (v: number) => (Math.round(v * 10) / 10).toString();
   switch (g.tool) {
     case "rect":
+    case "ellipse":
       return `${n(Math.abs(x1 - x0))} × ${n(Math.abs(y1 - y0))} mm`;
     case "circle":
     case "polygon":

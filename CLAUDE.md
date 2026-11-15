@@ -191,6 +191,12 @@
   `PictureItem.crop` [x0, y0, x1, y1] shares of the source from its top-left, `mask` "round" | "rounded" (photo.ts
   `insideMask`, `masked` after processing, `ROUNDED_SHARE`); pictures.ts draws only the crop; the panel's `PhotoShape`
   (crop keeps the scale), store `addCutRoundPicture`. files.ts ellipse arcs: `A rx ry turn 0 sweep x y` (tests/svgArcs).
+- v0.22: `EllipseItem` (kind "ellipse": cx, cy, rx, ry, angle°; an "ellipse" segment; keeps its kind when turned, flipped
+  — angle −a — or stretched at quarter turns, `keepsKindStretched`), tool "ellipse" (E, drag a box), SidePanel width/height/
+  angle. names.ts: `NameEntry` {name, fields by lower-case heading}, `csvCells`, `entriesFrom(text, table)` (a CSV only
+  when the words have {Heading} places — `table` — and the first line has , ; or tab), `filledWords` ({Heading}, then
+  "#", else the whole words), `hasPlace`; `namedCopies` takes strings or entries. MakeMore's `NamedCopies` opens .csv files.
+  Toolbar `.squeeze` buttons (Turn…Delete) are icon-only under 1440 px (aria-labels).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;
