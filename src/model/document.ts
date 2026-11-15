@@ -4,7 +4,7 @@
  */
 import { isFontId } from "../geometry/text";
 import { R1_BED, type Pt, type Segment } from "../geometry/segments";
-import { isOp, type Item, type JuraCUTDocument, type Material, type Outline } from "./types";
+import { isOp, MOST_TABS, type Item, type JuraCUTDocument, type Material, type Outline } from "./types";
 
 export const FILE_EXTENSION = ".juracut";
 export const FILE_MIME = "application/x-juracut+json";
@@ -93,6 +93,8 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
     op: isOp(it.op) ? it.op : ("cut" as const),
     ...(it.hidden === true ? { hidden: true } : {}),
     ...(typeof it.group === "string" && it.group ? { group: it.group.slice(0, 40) } : {}),
+    ...(num(it.tabs) >= 1 ? { tabs: Math.round(Math.min(MOST_TABS, num(it.tabs))) } : {}),
+    ...(num(it.tabWidth) > 0 ? { tabWidth: Math.min(20, num(it.tabWidth)) } : {}),
   };
   taken.add(base.id);
   switch (it.kind) {

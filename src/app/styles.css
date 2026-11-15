@@ -1709,3 +1709,11 @@ kbd {
     min-width: 34px;
   }
 }
+.tab-mark {
+  fill: var(--panel);
+}
+.names-box {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 4px;
+}

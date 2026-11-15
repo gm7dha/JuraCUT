@@ -145,6 +145,14 @@
   centre `radius` below, turned or moved) → `repeatRoundSelected`. `src/model/measure.ts` (`pathLength`, `itemLength`,
   `itemArea`, text helpers): SidePanel `Measures`, Export's line length per layer. Undo/Redo `.icon-only`; under 1440 px
   the toolbar's buttons close up — the smoke test checks it fits at 1280 px.
+- v0.16: holding tabs — `Item.tabs`/`tabWidth` (base fields, saved, kept by `baseOf` in shapes.ts whenever a shape
+  becomes an outline), `src/laser/tabs.ts` (pure: `tabPlaces` — evenly spaced, slid off corners turning > 20°;
+  `withTabs` → the open runs between them, flattened). `laserPaths` keeps a Map by segments array through `sortLoops`,
+  kerf one-for-one (`kerfEach`), and swaps a tabbed loop for its runs (same layer, same place in the order; gap = width +
+  kerf). BedView draws `.tab-mark` circles; SidePanel `TabFields` (one or several). Copies with different words —
+  `src/model/names.ts` (`namesFrom`, `numberNames`, `namedText` — "#" replaced else the whole words, shrunk to the
+  original's width keeping its middle — `namedCopies` in Step and repeat's grid); store `nameCopiesSelected`; MakeMore's
+  `NamedCopies` (list kept in localStorage `juracut.names`).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

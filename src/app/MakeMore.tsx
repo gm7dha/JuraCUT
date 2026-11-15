@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 
 import { canCombine } from "../model/combine";
+import { namesFrom, numberNames } from "../model/names";
 import { useStore } from "../model/store";
 import type { Item } from "../model/types";
 
@@ -76,6 +77,57 @@ function Num({ label, value, unit, min, max, whole, onChange }: { label: string;
         {unit && <span className="unit">{unit}</span>}
       </span>
     </label>
+  );
+}
+
+const NAMES_KEY = "juracut.names";
+
+/**
+ * Copies with different words: a list of names (or numbers), one copy each, laid out like Step and repeat's grid
+ * (its "Across" and "Gap"). "#" in the words is replaced by the name; else the words become the name.
+ */
+function NamedCopies({ cols, gap }: { cols: number; gap: number }) {
+  const [text, setText] = useState(() => {
+    try {
+      return localStorage.getItem(NAMES_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [from, setFrom] = useState(1);
+  const [to, setTo] = useState(10);
+  const [shrink, setShrink] = useState(true);
+  const keepText = (t: string) => {
+    setText(t);
+    try {
+      localStorage.setItem(NAMES_KEY, t.slice(0, 20000));
+    } catch {
+      // Not kept; fine.
+    }
+  };
+  const names = namesFrom(text);
+  return (
+    <>
+      <div className="field-label" title="One copy of the selection for each name: name tags, numbered keyrings, labels">
+        Copies with different words
+      </div>
+      <textarea className="text-box names-box" rows={4} value={text} placeholder={"One per line, e.g.\nAmy\nBen\nCharlotte"} aria-label="Names, one per line" onChange={(e) => keepText(e.target.value)} />
+      <div className="field-row">
+        <Num label="Numbers from" value={from} min={-99999} max={99999} whole onChange={setFrom} />
+        <Num label="to" value={to} min={-99999} max={99999} whole onChange={setTo} />
+        <button type="button" className="text-button make-button" onClick={() => keepText(numberNames(from, to).join("\n"))} title="Fill the list with these numbers">
+          Fill
+        </button>
+      </div>
+      <label className="check-row">
+        <input type="checkbox" checked={shrink} onChange={(e) => setShrink(e.target.checked)} />
+        Make long words smaller to fit
+      </label>
+      <p className="dialog-hint">The first name goes on the shapes you picked. Put # in the words to keep the rest (e.g. "Table #").</p>
+      <button type="button" className="text-button make-button wide" disabled={names.length < 1} onClick={() => useStore.getState().nameCopiesSelected(names, cols, gap, shrink)}>
+        {names.length > 1 ? `Make ${names.length - 1} named ${names.length === 2 ? "copy" : "copies"}` : names.length === 1 ? "Change the words" : "Type some names first"}
+      </button>
+    </>
   );
 }
 
@@ -166,6 +218,7 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           </button>
         </>
       )}
+      {items.some((it) => it.kind === "text") && <NamedCopies cols={s.cols} gap={s.gap} />}
       {items.some((it) => it.kind === "shape" || it.kind === "text") && (
         <button type="button" className="text-button make-button wide" onClick={() => st().breakApartSelected()} title="Split shapes made of separate pieces (a traced picture, an imported drawing, words) into one shape per piece">
           Break apart

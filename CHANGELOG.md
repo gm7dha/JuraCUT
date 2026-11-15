@@ -6,7 +6,17 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.15 — Polygons and stars, break apart, more ways to repeat
+## v0.16 — Holding tabs and copies with different words
+
+- **Holding tabs**: a cut shape can have small uncut gaps in its outline (set how many and how wide in the panel, for
+  one shape or several). Pieces stay held in the sheet until you snap them out, so they can't drop through the
+  honeycomb or tip up into the head. Tabs are spread evenly and kept off sharp corners, and show as small circles on
+  the bed. With the kerf on, the gaps widen by the kerf so the bridge left is still the width you set.
+- **Copies with different words** (like LightBurn's variable text): pick a name tag (the words and the tag), type a
+  list of names — or fill it with numbers — and get one tag per name, laid out in a grid. Put **#** in the words to
+  keep the rest ("Table #" → "Table 1", "Table 2"…). Long names can be made smaller so they still fit.
+
+## v0.15 — Polygons and stars, break apart, more ways to repeat · commit `117b251`
 
 - **Polygon tool** (P): drag from the middle out to a corner. In the panel choose how many sides, or make it a
   **star** (with how deep its points go), its size across the corners and its angle. The tool remembers your last

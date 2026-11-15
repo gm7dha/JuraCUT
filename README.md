@@ -35,6 +35,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 - **Send designs to and from JuraCAD**: JuraCAD's outlines straight onto the bed, and back as a sketch to extrude.
 - **Trace pictures** (PNG, JPG…) into outlines to engrave, cut or score.
 - **Pack tightly**: pieces fitted together by their real shapes to save material.
+- **Holding tabs** on cut pieces, and **copies with different words** — a name tag for everyone on a list, or numbered
+  keyrings.
 - **Outline** shapes (a border round words), **combine** them (join, cut one out of another, keep the overlap) and
   **step and repeat** them in a grid or round a circle; **break apart** shapes made of separate pieces; see each
   shape's line length and area.

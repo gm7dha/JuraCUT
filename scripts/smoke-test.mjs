@@ -531,6 +531,31 @@ try {
     s.deleteSelected();
   });
 
+  step = "holding tabs and copies with different words";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([
+      { id: "nt", name: "Tag", op: "cut", kind: "rect", x: 400, y: 200, w: 50, h: 20, radius: 3, angle: 0 },
+      { id: "nw", name: "Name", op: "engrave", kind: "text", text: "Name", x: 425, y: 207, size: 6, font: "inter-bold", align: "centre", angle: 0 },
+    ]);
+    s.select(["nt", "nw"]);
+  });
+  await page.fill("label:has-text('Tabs on each outline') input", "3");
+  await page.keyboard.press("Enter");
+  expect(await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "nt").tabs === 3), "the tag has 3 holding tabs");
+  await page.fill("textarea[aria-label='Names, one per line']", "Amy\nBen\nCharlotte");
+  const before16 = (await shapesNow()).length;
+  await page.click(".make-more button:has-text('Make 2 named copies')");
+  all = await shapesNow();
+  expect(all.length === before16 + 4, "two more tags, each with its name");
+  expect(["Amy", "Ben", "Charlotte"].every((n) => all.some((i) => i.kind === "text" && i.text === n)), "each name is on a tag");
+  expect(all.filter((i) => i.name === "Tag").every((i) => i.tabs === 3), "the copies keep their tabs");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.select(s.history.present.items.filter((i) => i.name === "Tag" || i.name === "Name").map((i) => i.id));
+    s.deleteSelected();
+  });
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

@@ -12,6 +12,7 @@ import { copiesOf } from "./clipboard";
 import { combinedRings, insetRings, outlineRings, ringsShape, type CombineHow } from "./combine";
 import { MOST_COPIES, repeatedItems, roundItems } from "./repeat";
 import { brokenApart } from "./breakApart";
+import { namedCopies } from "./names";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
@@ -90,6 +91,8 @@ export interface State {
   repeatSelected(cols: number, rows: number, gapX: number, gapY: number): void;
   /** Copies of the selection round a circle (`count` in all), turned with it or not. */
   repeatRoundSelected(count: number, radius: number, turn: boolean): void;
+  /** A copy of the selection for each name (its words become the name), `cols` across, `gap` apart. */
+  nameCopiesSelected(names: string[], cols: number, gap: number, shrink: boolean): void;
   /** Shapes made of separate pieces split into one shape per piece. */
   breakApartSelected(): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
@@ -330,6 +333,22 @@ export const useStore = create<State>((set, get) => ({
     if (!made.length) return;
     get().commit({ ...doc, items: [...doc.items, ...made] });
     set({ selection: [...selection, ...made.map((it) => it.id)] });
+  },
+  nameCopiesSelected(names, cols, gap, shrink) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    if (!picked.some((it) => it.kind === "text")) {
+      get().showToast("Pick some words (and anything that goes with them, like a tag) first.", "info");
+      return;
+    }
+    if (!names.length) return;
+    const { renamed, made } = namedCopies(doc.items, picked, names, cols, gap, shrink);
+    const byId = new Map(renamed.map((it) => [it.id, it]));
+    get().commit({ ...doc, items: [...doc.items.map((it) => byId.get(it.id) ?? it), ...made] });
+    set({ selection: [...selection, ...made.map((it) => it.id)] });
+    const copies = names.length - 1;
+    if (copies) get().showToast(`Made ${copies} ${copies === 1 ? "copy" : "copies"}: ${names.length} in all, each with its own words.`, "info");
   },
   breakApartSelected() {
     const { history, selection } = get();
