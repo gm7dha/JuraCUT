@@ -197,6 +197,10 @@
   when the words have {Heading} places — `table` — and the first line has , ; or tab), `filledWords` ({Heading}, then
   "#", else the whole words), `hasPlace`; `namedCopies` takes strings or entries. MakeMore's `NamedCopies` opens .csv files.
   Toolbar `.squeeze` buttons (Turn…Delete) are icon-only under 1440 px (aria-labels).
+- v0.23 Trim: `src/model/trim.ts` (pure: outlines flattened at 0.01; `crossings` with other shapes' and the shape's own
+  lines — itself too, not at neighbouring pieces —; `trimmed(item, outline, point, others)` takes out the stretch between
+  the nearest crossings either side (closed: needs ≥ 2, else the same item back; open: back to the ends), null when
+  nothing's left; `outlineNear`). Store `trimAt`; tool "trim" (X): the topmost shape with a line within reach.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

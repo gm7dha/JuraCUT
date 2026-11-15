@@ -17,6 +17,7 @@ import { rulerStep, shapePoints, snapBoxMove, snapLines, snapPoint, snapPointsMo
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
 import { DEFAULT_TAB_WIDTH, OP_INFO, type Item, type PictureItem } from "../model/types";
 import { tabPlaces } from "../laser/tabs";
+import { outlineNear } from "../model/trim";
 import { usePicturePreview } from "./pictures";
 import { anchorOf, canStretch, dragScale, handlePoint, resizedItems, type Handle } from "../model/resize";
 import { addedNode, handlesOf, movedHandle, movedNode, nodesOf, pieceAt, type HandleRef, type NodeRef } from "../model/nodes";
@@ -329,6 +330,23 @@ export function BedView() {
         if (!additive) s.clearSelection();
         setGestureBoth({ kind: "box", start: mm, end: mm });
       }
+      return;
+    }
+    if (tool === "trim") {
+      // The topmost shape with a line within reach of the click (lines only, not the inside of shapes).
+      const reach = REACH_PX / viewRef.current.scale;
+      let best: { id: string; index: number } | null = null;
+      for (const it of [...pickable].reverse()) {
+        if (it.hidden || it.kind === "picture" || it.kind === "text" || it.kind === "qr") continue;
+        const b = itemBox(it);
+        if (!b || mm[0] < b[0] - reach || mm[0] > b[2] + reach || mm[1] < b[1] - reach || mm[1] > b[3] + reach) continue;
+        const index = outlineNear(it, mm, reach);
+        if (index !== null) {
+          best = { id: it.id, index };
+          break;
+        }
+      }
+      if (best) s.trimAt(best.id, best.index, mm);
       return;
     }
     if (tool === "qr") {

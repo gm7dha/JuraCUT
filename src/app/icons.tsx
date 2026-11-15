@@ -180,6 +180,13 @@ export const Icons = {
       <path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" />
     </Svg>
   ),
+  Trim: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M8.5 7.8 20 16M8.5 16.2 20 8" />
+    </Svg>
+  ),
   Ellipse: (p: IconProps) => (
     <Svg {...p}>
       <ellipse cx="12" cy="12" rx="9" ry="6" />
