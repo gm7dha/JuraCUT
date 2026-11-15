@@ -245,6 +245,14 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           </button>
         </>
       )}
+      {items.length === 2 && items.some((it) => it.kind === "picture") && items.some((it) => it.kind !== "picture" && it.kind !== "line") && (
+        <>
+          <div className="field-label">Photo mask</div>
+          <button type="button" className="text-button make-button wide" onClick={() => useStore.getState().maskPictureWithShape()} title="Engrave only the part of the photo inside the shape (a heart, a star, any outline)">
+            Engrave the photo only inside the shape
+          </button>
+        </>
+      )}
       {items.some((it) => it.kind === "text" || (it.kind === "qr" && hasPlace(it.text))) && (
         <NamedCopies cols={s.cols} gap={s.gap} table={items.some((it) => (it.kind === "text" || it.kind === "qr") && /\{[^{}]{1,40}\}/.test(it.text))} />
       )}

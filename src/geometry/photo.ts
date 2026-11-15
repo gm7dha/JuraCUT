@@ -46,6 +46,31 @@ export function masked(processed: Uint8Array, width: number, height: number, mas
   return out;
 }
 
+/**
+ * Processed greys with everything outside some outlines left white: `rings` (mm from the picture's middle, y up,
+ * filled even–odd) over a `width` × `height` pixel picture at `k` pixels per mm; `mirrored` when the picture is drawn
+ * flipped left to right (a mirrored sheet).
+ */
+export function clipped(processed: Uint8Array, width: number, height: number, k: number, rings: [number, number][][], mirrored = false): Uint8Array {
+  const out = processed.slice();
+  for (let y = 0; y < height; y++) {
+    const my = height / (2 * k) - (y + 0.5) / k;
+    for (let x = 0; x < width; x++) {
+      let mx = (x + 0.5) / k - width / (2 * k);
+      if (mirrored) mx = -mx;
+      let inside = false;
+      for (const r of rings)
+        for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+          const [xi, yi] = r[i];
+          const [xj, yj] = r[j];
+          if (yi > my !== yj > my && mx < ((xj - xi) * (my - yi)) / (yj - yi) + xi) inside = !inside;
+        }
+      if (!inside) out[y * width + x] = 255;
+    }
+  }
+  return out;
+}
+
 export const DEFAULT_PHOTO: PhotoSettings = { mode: "dots", brightness: 0, contrast: 0, invert: false };
 
 /** Brightness, contrast and inverting applied to greys (0 = black … 255 = white). */

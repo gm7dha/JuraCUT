@@ -754,6 +754,30 @@ try {
   expect((await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.kind === "circle").length)) === 1, "undo puts one trim back");
   await page.keyboard.press("v");
 
+  step = "the cut order, and a photo masked by a star";
+  await page.evaluate((src) => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.addItems([
+      { id: "op", name: "Plate", op: "cut", kind: "rect", x: 20, y: 20, w: 60, h: 40, radius: 0, angle: 0 },
+      { id: "oh", name: "Hole", op: "cut", kind: "circle", cx: 50, cy: 40, r: 8 },
+      { id: "mp", name: "Photo", op: "engrave", kind: "picture", src, cx: 150, cy: 150, w: 60, h: 60, turns: 0, flip: false, mode: "dots", brightness: 0, contrast: 0, invert: false, dpm: 10 },
+      { id: "ms", name: "Star", op: "cut", kind: "polygon", cx: 150, cy: 150, r: 28, sides: 5, angle: 90, star: 0.5 },
+    ], { select: false });
+    s.select(["mp", "ms"]);
+  }, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADqUlEQVR4nJXX4WfUARzH8R+NRqOjo9FoNBodjY5Go9Ho6Gg0Go1Go9FoNDoaOxodHR0dHY1Go6PR0ehodDQ6OjoaHR2NjkZHR6Ojo/6C14N9Hr+fvB59fYN/WH9//8DAwODgYCQSGRoaikajw8PDIyMj6qenp2dmZmZnZ+fm5ubn5xcWFhKJxOLiovrV1dW1tbV8Pr++vl4oFDY2NorF4ubmpvqdnZ1Go7G7u9tsNlut1t7eXrvd7nQ6wV9MAPUCqBdAPQF/MAHUC6BeAPUE/MYEUC+AegHUE/ALE0C9AOoFUE/AT0wA9QKoF0A9AT8wAdQLoF4A9QR8xwRQL4B6AdQTEARBV1dXd3d3T09PKBQKh8O9vb19fX3fsNHR0bGxsVgsFo/Hx8fHJyYmJicnp6am1CeTyeXl5VQqlU6nM5lMNpvN5XIrKyvqS6XS1tZWuVyuVCrVanV7e7tWq9XrdfUEfMUEUC+AegHUE/AFE0C9AOoFUE/AZ0wA9QKoF0A9AZ8wAdQLoF4A9QR8xARQL4B6AdQT8AETQL0A6gVQT8B7TAD1AqgXQH3wDtMhU69Dpl6HTD0P2VtMAPUCqBdAPQFvMAHUC6BeAPUEvMYEUC+AegHUE/AKE0C9AOoFUE/AS0wA9QKoF0A9AS8wAdQLoF4A9QQ8xwRQL4B6AdTv+x94humQqdchU69Dpp6Ap5gA6gVQL4B6Ap5gAqgXQL0A6gl4jAmgXgD1Aqgn4BEmgHoB1AugnoCHmADqBVAvgHoCHmACqBdAvQDqCbiPCaBeAPUCqA+WMB0y9Tpk6nXI1POQ3cMEUC+AegHUE3AXE0C9AOoFUE/AHUwA9QKoF0A9AbcxAdQLoF4A9QTcwgRQL4B6AdQTcBMTQL0A6gVQT8ANTAD1AqgXQP2+/4HrmA6Zeh0y9Tpk6gm4hgmgXgD1Aqgn4ComgHoB1AugnoArmADqBVAvgHoCLmMCqBdAvQDqCbiECaBeAPUCqCfgIiaAegHUC6CegAuYAOoFUC+A+uA8pkOmXodMvQ6Zeh6yc5gA6gVQL4B6As5iAqgXQL0A6gk4gwmgXgD1Aqgn4DQmgHoB1AugnoBTmADqBVAvgHoCTmICqBdAvQDqCTiBCaBeAPUCqN/3P3Ac0yFTr0OmXodMPQHHMAHUC6BeAPUEHMUEUC+AegHUE3AEE0C9AOoFUE/AYUwA9QKoF0A9AYcwAdQLoF4A9QQcxARQL4B6AdQTcAATQL0A6gVQ/x/jKulaiHLPtQAAAABJRU5ErkJggg==");
+  await page.click(".make-more button:has-text('Engrave the photo only inside the shape')");
+  expect(await store(() => !!window.juracutStore.getState().history.present.items.find((i) => i.id === "mp").clip), "the photo has the star as its mask");
+  await store(() => window.juracutStore.getState().clearSelection());
+  await page.click(".primary-button:has-text('Export for laser')");
+  await page.waitForSelector(".export-preview svg");
+  await page.click("button:has-text('Show the cut order')");
+  await page.waitForSelector(".cut-order-svg");
+  await page.fill(".cut-order-controls input", "0.5");
+  const said16 = await page.textContent(".cut-order");
+  expect(said16.includes("Step 1 of 3: a hole"), `the first step is the hole (${said16})`);
+  await page.keyboard.press("Escape");
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

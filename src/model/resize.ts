@@ -146,7 +146,7 @@ export function scaledItem(item: Item, sx: number, sy: number, about: Pt): Item 
     case "picture": {
       const c = P([item.cx, item.cy]);
       const [kw, kh] = item.turns % 2 ? [sy, sx] : [sx, sy];
-      return { ...item, cx: c[0], cy: c[1], w: Math.max(MIN_SIZE, item.w * kw), h: Math.max(MIN_SIZE, item.h * kh) };
+      return { ...item, cx: c[0], cy: c[1], w: Math.max(MIN_SIZE, item.w * kw), h: Math.max(MIN_SIZE, item.h * kh), ...(item.clip ? { clip: scaledOutlines(item.clip, sx, sy, [0, 0]) } : {}) };
     }
     case "shape":
       return { ...item, outlines: scaledOutlines(item.outlines, sx, sy, about) };

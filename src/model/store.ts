@@ -6,7 +6,7 @@
  */
 import { create } from "zustand";
 
-import { arrangeOnBed } from "../geometry/segments";
+import { arrangeOnBed, movePaths } from "../geometry/segments";
 import { newDocument, newId } from "./document";
 import { copiesOf } from "./clipboard";
 import { combinedRings, insetRings, outlineRings, ringsShape, type CombineHow } from "./combine";
@@ -20,7 +20,7 @@ import { ROUNDED_SHARE } from "../geometry/photo";
 import { pathOf, placedOnPath } from "./textPath";
 import { trimmed } from "./trim";
 import { editable, type NodeRef } from "./nodes";
-import type { Item, JuraCUTDocument, Material, Op, Outline, TextItem } from "./types";
+import type { Item, JuraCUTDocument, Material, Op, Outline, PictureItem, TextItem } from "./types";
 
 export type Tool = "select" | "trim" | "rect" | "circle" | "ellipse" | "polygon" | "line" | "text" | "qr" | "measure";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
@@ -104,6 +104,8 @@ export interface State {
   putTextOnPath(): void;
   /** The stretch of a shape's line at `at` between its nearest crossings taken out (Trim). */
   trimAt(id: string, outline: number, at: [number, number]): void;
+  /** The selected photo engraved only inside the other selected shape (its mask; the shape stays). */
+  maskPictureWithShape(): void;
   /** A cut shape the photo's shape (rectangle, rounded or oval) round it, behind it. */
   addCutRoundPicture(id: string): void;
   /** Start editing a shape's points (it becomes a free shape of lines and curves, one undo step). */
@@ -398,6 +400,21 @@ export const useStore = create<State>((set, get) => ({
     }
     get().commit({ ...doc, items: tidyGroups(result ? doc.items.map((i) => (i.id === id ? result : i)) : doc.items.filter((i) => i.id !== id)) });
     if (!result) set({ selection: get().selection.filter((s) => s !== id) });
+  },
+  maskPictureWithShape() {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    const pic = picked.find((it): it is PictureItem => it.kind === "picture");
+    const others = picked.filter((it) => it.kind !== "picture");
+    const outlines = others.length === 1 ? itemOutlines(others[0]).filter((o) => o.closed) : [];
+    if (!pic || !outlines.length) {
+      get().showToast("Pick a photo and one closed shape (a heart, a star, any outline) to mask it with.", "info");
+      return;
+    }
+    const clip = outlines.map((o) => ({ ...o, segments: movePaths([{ layer: "outer", segments: o.segments, closed: true }], [1, 0, 0, 1, -pic.cx, -pic.cy])[0].segments }));
+    get().commit({ ...doc, items: doc.items.map((it) => (it.id === pic.id ? { ...pic, clip } : it)) });
+    get().showToast("Only the part of the photo inside the shape will be engraved. The shape is still there: cut round it, or delete it.", "info");
   },
   addCutRoundPicture(id) {
     const doc = get().history.present;

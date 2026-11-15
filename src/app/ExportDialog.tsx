@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { layerCounts, LASER_LAYERS, LAYER_ORDER } from "../geometry/segments";
 import { lengthText, pathLength } from "../model/measure";
 import { colourKey, laserDxf, laserSvg } from "../laser/files";
+import { CutOrder } from "./CutOrder";
 import { sendToJuraCAD } from "./juraLinkApp";
 import { makeSheet, offBed } from "../laser/sheet";
 import { useDocument, useSelection, useStore } from "../model/store";
@@ -22,6 +23,7 @@ export function ExportDialog() {
   const [what, setWhat] = useState<"all" | "selected">(selection.length ? "selected" : "all");
   const [mirror, setMirror] = useState(false);
   const [wholeBed, setWholeBed] = useState(false);
+  const [showOrder, setShowOrder] = useState(false);
   const kerf = doc.material.kerf;
   const [useKerf, setUseKerf] = useState(kerf > 0);
   // Kept the same between redraws, so the sheet (and the photos drawn from it) only change when something does.
@@ -80,7 +82,18 @@ export function ExportDialog() {
     <Modal title="Export for laser" onClose={() => openDialog(null)} width={640}>
       <div className="export-layout">
         <div className="export-preview" aria-label="Preview of the exported sheet">
-          {empty ? <p className="muted">Nothing to export: every shape is hidden, or there are none.</p> : <div className="preview-svg" dangerouslySetInnerHTML={{ __html: preview }} />}
+          {empty ? (
+            <p className="muted">Nothing to export: every shape is hidden, or there are none.</p>
+          ) : showOrder ? (
+            <CutOrder sheet={sheet} />
+          ) : (
+            <div className="preview-svg" dangerouslySetInnerHTML={{ __html: preview }} />
+          )}
+          {!empty && sheet.paths.length > 0 && (
+            <button type="button" className="text-button order-toggle" onClick={() => setShowOrder(!showOrder)} title="Watch the lines go in the order they're cut">
+              {showOrder ? "Back to the preview" : "Show the cut order"}
+            </button>
+          )}
         </div>
         <div className="export-side">
           {selection.length > 0 && (

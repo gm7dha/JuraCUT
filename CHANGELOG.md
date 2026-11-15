@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.23 — Trim
+## v0.24 — Cut order, and photos masked by any shape
+
+- **Show the cut order** (in Export for laser), like LightBurn's Preview: press Play, or drag the slider, to watch the
+  lines go in the order they're in the file — engraving, scoring, then holes before the outlines round them — with what
+  each step is, how long, and dashed lines where the head moves with the laser off. It totals the line length and the
+  travel too.
+- **Engrave a photo only inside a shape** (like LightBurn's Apply Mask to Image): pick a photo and any closed shape — a
+  heart, a star, words — and press the button (in the panel or the right-click menu). The mask moves, turns and flips
+  with the photo; **Take the mask shape off** in the photo's panel undoes it. Keep the shape to cut round it.
+- Fixed: the Export window's settings column could be pushed partly out of sight.
+
+## v0.23 — Trim · commit `3da10ea`
 
 - **Trim tool** (X), like LightBurn's Trim Shapes: click a stretch of line between two places where it crosses other
   lines (or itself) and it's taken away; a line nothing crosses goes altogether. Handy for tidying overlapping shapes

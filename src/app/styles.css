@@ -957,13 +957,14 @@ kbd {
 /* Export dialog */
 .export-layout {
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: minmax(0, 1fr) 240px;
   gap: 16px;
 }
 
 .export-preview {
   min-height: 220px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--subtle);
@@ -1776,4 +1777,34 @@ kbd {
   justify-content: center;
   cursor: pointer;
   margin-bottom: 6px;
+}
+
+/* Export's cut order. */
+.cut-order {
+  width: 100%;
+}
+.cut-order-svg {
+  width: 100%;
+  max-height: 340px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.cut-order .travel {
+  stroke: var(--ink-3);
+}
+.cut-order .head {
+  fill: var(--accent);
+}
+.cut-order-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+.cut-order-controls input[type="range"] {
+  flex: 1;
+}
+.order-toggle {
+  margin-top: 8px;
 }

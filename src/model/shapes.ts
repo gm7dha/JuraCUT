@@ -236,7 +236,10 @@ export function transformedItem(item: Item, m: Affine): Item {
       const q = Math.round(angle / (Math.PI / 2));
       let p: PictureItem = { ...item, cx: c[0], cy: c[1] };
       if (flipped) p = { ...p, flip: !p.flip };
-      return Math.abs(angle - q * (Math.PI / 2)) < 1e-6 ? turnedPicture(p, flipped ? -q : q) : p;
+      const quarter = Math.abs(angle - q * (Math.PI / 2)) < 1e-6;
+      // Its mask shape goes the way the picture does (turned, or just flipped).
+      if (p.clip) p = { ...p, clip: moveOutlines(p.clip, quarter ? [m[0], m[1], m[2], m[3], 0, 0] : flipped ? [-1, 0, 0, 1, 0, 0] : [1, 0, 0, 1, 0, 0]) };
+      return quarter ? turnedPicture(p, flipped ? -q : q) : p;
     }
     default:
       return { ...baseOf(item), kind: "shape", outlines: moveOutlines(itemOutlines(item), m) };
@@ -279,7 +282,7 @@ export function rotatedItem(item: Item, angle: number): Item {
     case "circle":
       return item;
     case "picture":
-      return angle % 90 === 0 ? turnedPicture(item, angle / 90) : item;
+      return angle % 90 === 0 ? { ...turnedPicture(item, angle / 90), ...(item.clip ? { clip: moveOutlines(item.clip, rotation(angle, [0, 0])) } : {}) } : item;
     default:
       return transformedItem(item, rotation(angle, centre));
   }
@@ -335,7 +338,7 @@ export function mirroredItem(item: Item): Item {
   const box = itemBox(item);
   if (!box) return item;
   const m = mirrorX(boxCentre(box)[0]);
-  if (item.kind === "picture") return { ...item, flip: !item.flip };
+  if (item.kind === "picture") return { ...item, flip: !item.flip, ...(item.clip ? { clip: moveOutlines(item.clip, [-1, 0, 0, 1, 0, 0]) } : {}) };
   // A polygon flipped is the same polygon with its first corner the other side.
   if (item.kind === "polygon") return { ...item, cx: 2 * boxCentre(box)[0] - item.cx, angle: norm(180 - item.angle) };
   if (item.kind === "ellipse") return { ...item, cx: 2 * boxCentre(box)[0] - item.cx, angle: norm(-item.angle) };
