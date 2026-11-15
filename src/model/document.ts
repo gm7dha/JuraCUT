@@ -85,6 +85,15 @@ function parseOutline(v: unknown): Outline | null {
   return segments.length ? { segments, closed: o.closed === true } : null;
 }
 
+/** A picture's crop, if it's a sensible one (each share 0…1, at least 2% kept each way). */
+function cropOf(v: unknown): { crop?: [number, number, number, number] } {
+  if (!Array.isArray(v) || v.length !== 4 || !v.every((x) => typeof x === "number" && Number.isFinite(x))) return {};
+  const [x0, y0, x1, y1] = (v as number[]).map((x) => Math.min(1, Math.max(0, x)));
+  if (x1 - x0 < 0.02 || y1 - y0 < 0.02) return {};
+  if (x0 === 0 && y0 === 0 && x1 === 1 && y1 === 1) return {};
+  return { crop: [x0, y0, x1, y1] };
+}
+
 function parseItem(v: unknown, taken: Set<string>): Item | null {
   if (!v || typeof v !== "object") return null;
   const it = v as Record<string, unknown>;
@@ -141,6 +150,10 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         align: it.align === "centre" || it.align === "right" ? it.align : "left",
         angle: num(it.angle),
         ...(it.weld === true ? { weld: true } : {}),
+        ...(() => {
+          const path = parseOutline(it.path);
+          return path && path.segments.length ? { path, ...(num(it.pathAt) ? { pathAt: num(it.pathAt) } : {}), ...(it.pathFlip === true ? { pathFlip: true } : {}) } : {};
+        })(),
         ...(typeof it.curve === "number" && Number.isFinite(it.curve) && Math.abs(it.curve) >= 1 ? { curve: Math.max(-100000, Math.min(100000, it.curve)) } : {}),
       };
     case "picture": {
@@ -162,6 +175,8 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         contrast: Math.max(-100, Math.min(100, num(it.contrast))),
         invert: it.invert === true,
         dpm: Math.max(2, Math.min(25, num(it.dpm, 10))),
+        ...cropOf(it.crop),
+        ...(it.mask === "round" || it.mask === "rounded" ? { mask: it.mask } : {}),
       };
     }
     case "shape": {

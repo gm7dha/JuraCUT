@@ -126,7 +126,14 @@ export function scaledItem(item: Item, sx: number, sy: number, about: Pt): Item 
     case "text": {
       if (!uniform) break;
       const a = P([item.x, item.y]);
-      return { ...item, x: a[0], y: a[1], size: Math.max(MIN_SIZE, item.size * sx), ...(item.curve ? { curve: item.curve * sx } : {}) };
+      return {
+        ...item,
+        x: a[0],
+        y: a[1],
+        size: Math.max(MIN_SIZE, item.size * sx),
+        ...(item.curve ? { curve: item.curve * sx } : {}),
+        ...(item.path ? { path: scaledOutlines([item.path], sx, sx, about)[0], pathAt: (item.pathAt ?? 0) * sx } : {}),
+      };
     }
     case "picture": {
       const c = P([item.cx, item.cy]);

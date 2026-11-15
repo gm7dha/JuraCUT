@@ -13,6 +13,7 @@ import { DEFAULT_TAB_WIDTH, MOST_TABS, OPS, OP_INFO, type Item, type Op, type Pi
 import { AlignControls } from "./AlignControls";
 import { MakeMore } from "./MakeMore";
 import { curved, straightened } from "../model/nodes";
+import { offPath } from "../model/textPath";
 import { MOST_QR_TEXT, qrModules } from "../geometry/qr";
 import { areaText, itemArea, itemLength, lengthText } from "../model/measure";
 import { keepPolygonStyle } from "./polygonStyle";
@@ -435,6 +436,21 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
         </label>
         <NumberBox label="Angle" value={item.angle} unit="°" onCommit={(angle) => change({ angle })} />
       </div>
+      {item.path ? (
+        <>
+          <div className="field-label">Along a path</div>
+          <div className="field-row">
+            <NumberBox label="Slide along it" value={item.pathAt ?? 0} unit="mm" onCommit={(pathAt) => change({ pathAt })} />
+            <button type="button" className="text-button make-button" onClick={() => change({ pathFlip: !item.pathFlip || undefined })} title="Run the other way round the path, the letters on its other side">
+              Other side
+            </button>
+          </div>
+          <button type="button" className="text-button make-button wide" onClick={() => updateItem(item.id, (it) => offPath(it as Extract<Item, { kind: "text" }>))}>
+            Back to a straight line
+          </button>
+        </>
+      ) : (
+        <>
       <div className="field-label">Round a circle</div>
       <div className="segmented three" role="radiogroup" aria-label="Round a circle">
         {(
@@ -470,6 +486,8 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
         <div className="field-row">
           <NumberBox label="Circle's radius (to the line under the letters)" value={Math.abs(item.curve)} unit="mm" min={1} onCommit={(r) => change({ curve: Math.sign(item.curve ?? 1) * Math.max(1, r) })} />
         </div>
+      )}
+        </>
       )}
     </>
   );
@@ -518,6 +536,66 @@ function PictureFields({ item }: { item: PictureItem }) {
           {!RESOLUTIONS.some(([v]) => v === item.dpm) && <option value={item.dpm}>{item.dpm} per mm</option>}
         </select>
       </label>
+      <PhotoShape item={item} />
+    </>
+  );
+}
+
+/** A photo's shape (rectangle, rounded, round), how much is cropped off each side, and a cut line round it. */
+function PhotoShape({ item }: { item: PictureItem }) {
+  const updateItem = useStore((s) => s.updateItem);
+  const change = (patch: Partial<PictureItem>) => updateItem(item.id, (it) => ({ ...it, ...patch }) as Item);
+  const crop = item.crop ?? [0, 0, 1, 1];
+  // Cropping keeps the picture's scale: the frame shrinks or grows with the part kept.
+  const setCrop = (next: [number, number, number, number]) => {
+    const sx = (next[2] - next[0]) / (crop[2] - crop[0]);
+    const sy = (next[3] - next[1]) / (crop[3] - crop[1]);
+    const whole = next[0] === 0 && next[1] === 0 && next[2] === 1 && next[3] === 1;
+    updateItem(item.id, (it) => {
+      const p: PictureItem = { ...(it as PictureItem), w: (it as PictureItem).w * sx, h: (it as PictureItem).h * sy, crop: next };
+      if (whole) delete p.crop;
+      return p;
+    });
+  };
+  const pct = (v: number) => Math.round(v * 1000) / 10;
+  const side = (i: 0 | 1 | 2 | 3, v: number) => {
+    const next = [...crop] as [number, number, number, number];
+    const share = Math.min(0.98, Math.max(0, v / 100));
+    next[i] = i < 2 ? share : 1 - share;
+    // At least 2% kept each way.
+    if (next[2] - next[0] < 0.02 || next[3] - next[1] < 0.02) return;
+    setCrop(next);
+  };
+  return (
+    <>
+      <div className="field-label">Shape</div>
+      <div className="segmented three" role="radiogroup" aria-label="Photo's shape">
+        {(
+          [
+            [undefined, "Rectangle"],
+            ["rounded", "Rounded"],
+            ["round", "Round"],
+          ] as const
+        ).map(([m, label]) => (
+          <button key={label} type="button" role="radio" aria-checked={item.mask === m} className={item.mask === m ? "selected" : ""} onClick={() => change({ mask: m })}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="field-label" title="As the picture was brought in (before turning or flipping)">
+        Crop off (% of the picture)
+      </div>
+      <div className="field-row">
+        <NumberBox label="Left" value={pct(crop[0])} unit="%" min={0} onCommit={(v) => side(0, v)} />
+        <NumberBox label="Right" value={pct(1 - crop[2])} unit="%" min={0} onCommit={(v) => side(2, v)} />
+      </div>
+      <div className="field-row">
+        <NumberBox label="Top" value={pct(crop[1])} unit="%" min={0} onCommit={(v) => side(1, v)} />
+        <NumberBox label="Bottom" value={pct(1 - crop[3])} unit="%" min={0} onCommit={(v) => side(3, v)} />
+      </div>
+      <button type="button" className="text-button make-button wide" onClick={() => useStore.getState().addCutRoundPicture(item.id)} title="A cut line the same shape as the photo, round its edge — for a coaster or a tag with the photo on it">
+        Add a cut line round it
+      </button>
     </>
   );
 }

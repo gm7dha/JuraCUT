@@ -21,6 +21,31 @@ export interface PhotoSettings {
   invert: boolean;
 }
 
+/** A photo's shape: an oval filling its frame, or its frame with rounded corners (missing = the whole rectangle). */
+export type PhotoMask = "round" | "rounded";
+
+/** The corner radius of a "rounded" photo, as a share of its shorter side. */
+export const ROUNDED_SHARE = 0.15;
+
+/** Is a pixel's middle inside the shape of a `width` × `height` picture? */
+export function insideMask(mask: PhotoMask, x: number, y: number, width: number, height: number): boolean {
+  const px = x + 0.5 - width / 2;
+  const py = y + 0.5 - height / 2;
+  if (mask === "round") return (px / (width / 2)) ** 2 + (py / (height / 2)) ** 2 <= 1;
+  const r = ROUNDED_SHARE * Math.min(width, height);
+  const dx = Math.max(0, Math.abs(px) - (width / 2 - r));
+  const dy = Math.max(0, Math.abs(py) - (height / 2 - r));
+  return dx * dx + dy * dy <= r * r;
+}
+
+/** Processed greys with everything outside the shape left white (not engraved). */
+export function masked(processed: Uint8Array, width: number, height: number, mask: PhotoMask | undefined): Uint8Array {
+  if (!mask) return processed;
+  const out = processed.slice();
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (!insideMask(mask, x, y, width, height)) out[y * width + x] = 255;
+  return out;
+}
+
 export const DEFAULT_PHOTO: PhotoSettings = { mode: "dots", brightness: 0, contrast: 0, invert: false };
 
 /** Brightness, contrast and inverting applied to greys (0 = black … 255 = white). */

@@ -32,7 +32,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
   deck box, tray with dividers, bookend, phone stand, business card holder, name tags, stencils (with bridges), rubber
   stamps, coasters, clock face, cord winders, tealight holder and lantern, spice rack, key rack, picture frame, living
   hinge, gear, ruler, jigsaw puzzle, name puzzle, dice tower and ornaments.
-- **Engrave photos**: dots, black & white or greys, at true size.
+- **Engrave photos**: dots, black & white or greys, at true size; round or rounded, cropped, with a cut line round them.
+- **Words along any shape**: round a circle, along a wave or any outline.
 - **Send designs to and from JuraCAD**: JuraCAD's outlines straight onto the bed, and back as a sketch to extrude.
 - **Trace pictures** (PNG, JPG…) into outlines to engrave, cut or score.
 - **Pack tightly**: pieces fitted together by their real shapes to save material.

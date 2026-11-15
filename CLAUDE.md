@@ -182,6 +182,15 @@
   `textOutline` returns `letterLoops` (loops per letter); `weldedText` (shapes.ts, cached) = `unionOfSets` of each
   letter's even–odd rings. boolean.ts `combineSets` is the general maths (`booleanRings` and `unionOfSets` over it);
   combine.ts's `unionAll` uses `unionOfSets`. Script capitals may reach below the baseline (tests/text allows it).
+- v0.21: words on a path — `TextItem.path` (an Outline copy on the bed), `pathAt` (mm along it), `pathFlip`; `textOutline(…,
+  along: AlongPath)` (`pathWalker`: each letter's middle at its distance, turned to the direction there; open paths carry
+  straight on past their ends) — such words' outlines are already on the bed (no x/y/angle). movedItem/rotatedItem/
+  scaledItem move the path; `weldedText` caches per path object (WeakMap). `src/model/textPath.ts` (`pathOf` — the longest
+  outline; `placedOnPath` — top of a closed shape / middle of an open one, flipped to read left to right; `offPath`);
+  store `putTextOnPath`; MakeMore/BedMenu "Put the words along the shape"; SidePanel "Along a path". Photos —
+  `PictureItem.crop` [x0, y0, x1, y1] shares of the source from its top-left, `mask` "round" | "rounded" (photo.ts
+  `insideMask`, `masked` after processing, `ROUNDED_SHARE`); pictures.ts draws only the crop; the panel's `PhotoShape`
+  (crop keeps the scale), store `addCutRoundPicture`. files.ts ellipse arcs: `A rx ry turn 0 sweep x y` (tests/svgArcs).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;
