@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { FONTS, FONT_IDS } from "../geometry/text";
+import { FONTS, FONT_IDS, JOINED_FONTS } from "../geometry/text";
 import { boxOf, piecesOf } from "../model/arrange";
 import { describeItem, itemBox, pictureSize, placedAt } from "../model/shapes";
 import { PHOTO_MODES, RESOLUTIONS } from "./PhotoTab";
@@ -403,7 +403,14 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
       <div className="field-row">
         <label className="field">
           <span>Font</span>
-          <select value={item.font} onChange={(e) => change({ font: e.target.value as typeof item.font })}>
+          <select
+            value={item.font}
+            onChange={(e) => {
+              const font = e.target.value as typeof item.font;
+              // Script fonts' letters overlap: join them (as one shape) unless asked not to.
+              change(JOINED_FONTS.includes(font) && !JOINED_FONTS.includes(item.font) ? { font, weld: true } : { font });
+            }}
+          >
             {FONT_IDS.map((id) => (
               <option key={id} value={id}>
                 {FONTS[id].label}
@@ -413,6 +420,10 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
         </label>
         <NumberBox label="Letter height" value={item.size} unit="mm" min={0.5} onCommit={(size) => change({ size })} />
       </div>
+      <label className="check-row" title="Letters that touch or overlap (in a script font, say) become one shape, so they engrave solid and cut as one piece">
+        <input type="checkbox" checked={!!item.weld} onChange={(e) => change({ weld: e.target.checked || undefined })} />
+        Join the letters into one shape
+      </label>
       <div className="field-row">
         <label className="field">
           <span>Lines</span>

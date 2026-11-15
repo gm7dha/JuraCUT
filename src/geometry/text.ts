@@ -9,6 +9,15 @@ import interBold from "./fonts/inter-bold.json";
 import poppinsRegular from "./fonts/poppins-regular.json";
 import poppinsBold from "./fonts/poppins-bold.json";
 import loraRegular from "./fonts/lora-regular.json";
+import greatVibes from "./fonts/great-vibes.json";
+import pacifico from "./fonts/pacifico.json";
+import allura from "./fonts/allura.json";
+import caveat from "./fonts/caveat.json";
+import amaticSc from "./fonts/amatic-sc.json";
+import bebasNeue from "./fonts/bebas-neue.json";
+import anton from "./fonts/anton.json";
+import dmSerifDisplay from "./fonts/dm-serif-display.json";
+import sairaStencil from "./fonts/saira-stencil.json";
 import { moveSegment, pathsBox, type Pt, type Segment } from "./segments";
 
 export interface OutlineFont {
@@ -23,7 +32,21 @@ export interface OutlineFont {
   glyphs: Record<string, { a: number; o: string }>;
 }
 
-export type FontId = "inter-regular" | "inter-bold" | "poppins-regular" | "poppins-bold" | "lora-regular";
+export type FontId =
+  | "inter-regular"
+  | "inter-bold"
+  | "poppins-regular"
+  | "poppins-bold"
+  | "lora-regular"
+  | "dm-serif-display"
+  | "bebas-neue"
+  | "anton"
+  | "great-vibes"
+  | "allura"
+  | "pacifico"
+  | "caveat"
+  | "amatic-sc"
+  | "saira-stencil";
 
 /** The fonts, in the order the app lists them. */
 export const FONTS: Record<FontId, OutlineFont> = {
@@ -32,7 +55,19 @@ export const FONTS: Record<FontId, OutlineFont> = {
   "poppins-regular": poppinsRegular as OutlineFont,
   "poppins-bold": poppinsBold as OutlineFont,
   "lora-regular": loraRegular as OutlineFont,
+  "dm-serif-display": dmSerifDisplay as OutlineFont,
+  "bebas-neue": bebasNeue as OutlineFont,
+  "anton": anton as OutlineFont,
+  "great-vibes": greatVibes as OutlineFont,
+  "allura": allura as OutlineFont,
+  "pacifico": pacifico as OutlineFont,
+  "caveat": caveat as OutlineFont,
+  "amatic-sc": amaticSc as OutlineFont,
+  "saira-stencil": sairaStencil as OutlineFont,
 };
+
+/** Fonts whose letters join up or overlap (scripts): their words are joined into one shape by default. */
+export const JOINED_FONTS: FontId[] = ["great-vibes", "allura", "pacifico"];
 export const FONT_IDS = Object.keys(FONTS) as FontId[];
 export const DEFAULT_FONT: FontId = "inter-regular";
 
@@ -43,6 +78,8 @@ export type TextAlign = "left" | "centre" | "right";
 export interface TextOutline {
   /** Closed loops (a letter's outside and the holes in it are separate loops). */
   loops: Segment[][];
+  /** For each letter, how many of `loops` (in order) are its own. */
+  letterLoops: number[];
   /** The box round the letters [x0, y0, x1, y1] in mm (null for nothing printable). */
   box: [number, number, number, number] | null;
   /** Characters the font has no outline for (shown as a note). */
@@ -125,6 +162,7 @@ export function textOutline(font: OutlineFont, text: string, capHeight: number, 
   const scale = capHeight / (font.capHeight || font.unitsPerEm * 0.7);
   const lineHeight = (font.ascender - font.descender) * scale;
   const loops: Segment[][] = [];
+  const letterLoops: number[] = [];
   const missing = new Set<string>();
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   lines.forEach((line, row) => {
@@ -139,6 +177,7 @@ export function textOutline(font: OutlineFont, text: string, capHeight: number, 
         if (!glyph) continue;
       }
       if (glyph.o) {
+        const before = loops.length;
         if (!R) loops.push(...glyphLoops(glyph.o, scale, x, y));
         else {
           // Drawn about its own middle, then turned onto the circle.
@@ -150,9 +189,10 @@ export function textOutline(font: OutlineFont, text: string, capHeight: number, 
           const m: [number, number, number, number, number, number] = [c, s, -s, c, -c * mid - s * R, -s * mid + c * R - R];
           for (const loop of glyphLoops(glyph.o, scale, x, y)) loops.push(loop.map((seg) => moveSegment(seg, m)));
         }
+        if (loops.length > before) letterLoops.push(loops.length - before);
       }
       x += glyph.a * scale;
     }
   });
-  return { loops, box: pathsBox(loops.map((segments) => ({ layer: "engrave", segments, closed: true }))), missing: [...missing] };
+  return { loops, letterLoops, box: pathsBox(loops.map((segments) => ({ layer: "engrave", segments, closed: true }))), missing: [...missing] };
 }

@@ -8,7 +8,9 @@ describe("textOutline", () => {
       const { box, loops } = textOutline(FONTS[id], "H", 20);
       expect(loops.length).toBeGreaterThanOrEqual(1);
       expect(box![3] - box![1]).toBeCloseTo(20, 3);
-      expect(box![1]).toBeCloseTo(0, 0);
+      // Printed letters sit on the line; script and hand-drawn capitals may swing a little below it.
+      if (["inter-regular", "inter-bold", "poppins-regular", "poppins-bold", "lora-regular", "dm-serif-display", "bebas-neue", "anton", "saira-stencil"].includes(id)) expect(box![1]).toBeCloseTo(0, 0);
+      else expect(box![1]).toBeGreaterThan(-0.25 * 20);
     }
   });
 
@@ -36,5 +38,20 @@ describe("textOutline", () => {
     const two = textOutline(FONTS["inter-regular"], "A\nA", 10).box!;
     expect(two[1]).toBeLessThan(one[1] - 5);
     expect(textOutline(FONTS["inter-regular"], "A→B", 10).missing).toEqual(["→"]);
+  });
+});
+
+describe("joined letters", () => {
+  it("makes overlapping script letters one shape with no holes where they overlap", async () => {
+    const { makeText, itemOutlines } = await import("../src/model/shapes");
+    const { itemArea } = await import("../src/model/measure");
+    const loose = { ...makeText("t", 0, 0, "Wedding", 20), font: "great-vibes" as const };
+    const joined = { ...loose, weld: true };
+    const a = itemOutlines(loose).length;
+    const b = itemOutlines(joined).length;
+    // Joined: fewer outlines (letters run into each other), and about as much area (overlaps filled, not holes —
+    // an even–odd fill of the loose letters would leave them empty).
+    expect(b < a).toBe(true);
+    expect(itemArea(joined) > 0.95 * itemArea(loose)).toBe(true);
   });
 });

@@ -6,7 +6,19 @@ to be bundled with software like this, as long as this notice travels with them.
 
 - **Inter** (`inter-regular.json`, `inter-bold.json`) — Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter).
 - **Poppins** (`poppins-regular.json`, `poppins-bold.json`) — Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins).
-- **Lora** (`lora-regular.json`) — Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic), with Reserved Font Name "Lora".
+- **Lora** (`lora-regular.json`, shown in JuraCUT as "Book serif", as "Lora" is a Reserved Font Name and these outlines are a converted version) — Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic), with Reserved Font Name "Lora".
+- **Great Vibes** (`great-vibes.json`) — Copyright 2015 The Great Vibes Pro Project Authors (https://github.com/googlefonts/great-vibes).
+- **Allura** (`allura.json`) — Copyright 2010 The Allura Project Authors (https://github.com/googlefonts/allura).
+- **Pacifico** (`pacifico.json`) — Copyright 2018 The Pacifico Project Authors (https://github.com/googlefonts/Pacifico).
+- **Caveat** (`caveat.json`) — Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat).
+- **Amatic SC** (`amatic-sc.json`, Bold) — Copyright 2015 The Amatic SC Project Authors (https://github.com/googlefonts/AmaticSC).
+- **Bebas Neue** (`bebas-neue.json`) — Copyright © 2010 by Dharma Type.
+- **Anton** (`anton.json`) — Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont.git).
+- **DM Serif Display** (`dm-serif-display.json`) — Copyright 2014-2018 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source' (not used here); Copyright 2019 Google LLC.
+- **Saira Stencil One** (`saira-stencil.json`) — Copyright 2019 The Saira Stencil Project Authors (https://github.com/Omnibus-Type/Saira/SairaStencil).
+
+The fonts above were taken from the Google Fonts repository (https://github.com/google/fonts, `ofl/`). Fonts whose
+names are Reserved Font Names are not added under those names (a converted outline file counts as a Modified Version).
 
 ---
 

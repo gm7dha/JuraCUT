@@ -12,7 +12,9 @@ Needs fontTools (pip install fonttools). Run from the repository root:
     python3 scripts/make-fonts.py /path/to/Inter-Regular.otf inter-regular "Inter Regular"
 
 The fonts shipped (all under the SIL Open Font License, see src/geometry/fonts/LICENSE.md):
-Inter Regular and Bold, Poppins Regular and Bold, Lora Regular.
+Inter Regular and Bold, Poppins Regular and Bold, Lora Regular (shown as "Book serif"), Great Vibes, Allura,
+Pacifico, Caveat, Amatic SC Bold, Bebas Neue, Anton, DM Serif Display, Saira Stencil One. Don't add a font under a
+Reserved Font Name (see its OFL.txt): a converted outline file is a Modified Version.
 """
 import json
 import sys

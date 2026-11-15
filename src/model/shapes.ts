@@ -6,6 +6,7 @@ import { FONTS, textOutline } from "../geometry/text";
 import { movePaths, pathPoints, pathsBox, segmentPoints, type Affine, type LaserPath, type Pt, type Segment } from "../geometry/segments";
 import type { CircleItem, Item, LineItem, Outline, PictureItem, PolygonItem, QrItem, RectItem, ShapeItem, TextItem } from "./types";
 import { qrLoops } from "../geometry/qr";
+import { loopsToRings, ringsToLoops, unionOfSets } from "../geometry/boolean";
 
 const deg = (a: number) => (a * Math.PI) / 180;
 
@@ -77,7 +78,7 @@ export function itemOutlines(item: Item): Outline[] {
     case "line":
       return [{ closed: false, segments: [{ kind: "line", from: [item.x1, item.y1], to: [item.x2, item.y2] }] }];
     case "text": {
-      const { loops } = textOutline(FONTS[item.font], item.text, Math.max(item.size, 0.1), item.align, item.curve ?? 0);
+      const loops = item.weld ? weldedText(item) : textOutline(FONTS[item.font], item.text, Math.max(item.size, 0.1), item.align, item.curve ?? 0).loops;
       const outlines = loops.map((segments): Outline => ({ segments, closed: true }));
       let m: Affine = translation(item.x, item.y);
       if (item.angle) m = compose(rotation(item.angle, [item.x, item.y]), m);
@@ -94,6 +95,30 @@ export function itemOutlines(item: Item): Outline[] {
       return [{ closed: true, segments: [{ kind: "line", from: a, to: b }, { kind: "line", from: b, to: c }, { kind: "line", from: c, to: d }, { kind: "line", from: d, to: a }] }];
     }
   }
+}
+
+const welded = new Map<string, Segment[][]>();
+
+/**
+ * Words with their letters joined into one shape (where they touch or overlap), before being placed: worked out once
+ * for each set of words, font, size, lining up and curve.
+ */
+function weldedText(t: TextItem): Segment[][] {
+  const key = `${t.font}|${t.size}|${t.align}|${t.curve ?? 0}|${t.text}`;
+  const kept = welded.get(key);
+  if (kept) return kept;
+  const { loops, letterLoops } = textOutline(FONTS[t.font], t.text, Math.max(t.size, 0.1), t.align, t.curve ?? 0);
+  // Each letter's own outlines are filled even–odd; letters are then joined together.
+  const sets: Pt[][][] = [];
+  let k = 0;
+  for (const n of letterLoops) {
+    sets.push(loopsToRings(loops.slice(k, k + n), 0.01));
+    k += n;
+  }
+  const out = ringsToLoops(unionOfSets(sets));
+  if (welded.size > 200) welded.clear();
+  welded.set(key, out);
+  return out;
 }
 
 /** A polygon's (or star's) corners, anticlockwise from its first. */

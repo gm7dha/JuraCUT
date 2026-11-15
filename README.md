@@ -14,7 +14,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 
 - **The bed**: the R1's 600 × 300 mm work area to scale, with a millimetre grid. Zoom with the wheel or a pinch;
   pan with the middle button, right button, Space, or two fingers.
-- **Draw** rectangles (with rounded corners), circles, polygons and stars, lines and **words** in five fonts, sized by the height of a
+- **Draw** rectangles (with rounded corners), circles, polygons and stars, lines and **words** in fourteen fonts
+  (scripts, handwriting, bold capitals, serifs and a stencil font; script letters joined into one shape), sized by the height of a
   capital letter — straight, or bent **round a circle** for badges. Everything snaps to the millimetre (hold Shift not to).
 - **Import** SVG and DXF drawings at true size — from JuraCAD's *Export for laser*, Inkscape, or anywhere else. Their
   colours are read as cut, score or engrave.

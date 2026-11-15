@@ -175,6 +175,13 @@
   `pickable` (not locked) for clicks, box select and double-click; `selectAll` and `moveSelected` skip them; padlock in
   the shapes list. Tool "measure" (M): gesture "measure", `measured` stays until the next click/tool change, readout
   `measureText`. Smoke steps that need exact positions start from `newDocument()` and add with `{ select: false }`.
+- v0.20 fonts: nine more OFL fonts from github.com/google/fonts (`ofl/…`), made with scripts/make-fonts.py (`python3 -I`):
+  great-vibes, allura, pacifico, caveat, amatic-sc (Bold), bebas-neue, anton, dm-serif-display, saira-stencil. Never add
+  one under a Reserved Font Name (its OFL.txt): Dancing Script, Lobster, Playfair, Stardos, Sacramento… were left out
+  for that reason, and lora-regular's label is "Book serif". `JOINED_FONTS` (scripts) tick `TextItem.weld` when picked.
+  `textOutline` returns `letterLoops` (loops per letter); `weldedText` (shapes.ts, cached) = `unionOfSets` of each
+  letter's even–odd rings. boolean.ts `combineSets` is the general maths (`booleanRings` and `unionOfSets` over it);
+  combine.ts's `unionAll` uses `unionOfSets`. Script capitals may reach below the baseline (tests/text allows it).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

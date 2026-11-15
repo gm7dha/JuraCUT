@@ -6,7 +6,20 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.19 — Snapping to corners, locking, measuring
+## v0.20 — Nine more fonts, and joined letters
+
+- **New fonts** for signs, gifts and weddings: **Great Vibes**, **Allura** and **Pacifico** (scripts), **Caveat**
+  (handwriting), **Amatic SC** (hand-drawn capitals), **Bebas Neue** and **Anton** (tall, bold capitals), **DM Serif
+  Display**, and **Saira Stencil One** — a stencil font whose letters already have their bridges, so the middles of
+  A, O and R don't fall out.
+- **Join the letters into one shape** (in a words' panel): letters that touch or overlap become one shape, so a script
+  word engraves solid (with no gaps where letters overlap) and cuts out as one piece. It's ticked for you when you pick
+  a script font.
+- The font called Lora is now listed as **Book serif** (the same letters; its licence asks that converted copies use
+  another name).
+- Join in Combine is faster with many shapes.
+
+## v0.19 — Snapping to corners, locking, measuring · commit `12d96d2`
 
 - **Snap to points**: drawing, moving and editing points now snap onto other shapes' corners, line ends and middles,
   and circles' centres and edges (a small ring shows the point). Moving a shape snaps its corners onto others' —

@@ -140,6 +140,7 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         font: isFontId(it.font) ? it.font : "inter-regular",
         align: it.align === "centre" || it.align === "right" ? it.align : "left",
         angle: num(it.angle),
+        ...(it.weld === true ? { weld: true } : {}),
         ...(typeof it.curve === "number" && Number.isFinite(it.curve) && Math.abs(it.curve) >= 1 ? { curve: Math.max(-100000, Math.min(100000, it.curve)) } : {}),
       };
     case "picture": {
