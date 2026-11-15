@@ -1657,3 +1657,26 @@ kbd {
 .op-chip.all-hidden {
   opacity: 0.6;
 }
+
+/* Make more: outline, combine, step and repeat. */
+.make-more {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-2);
+}
+.make-more .field-row {
+  align-items: flex-end;
+}
+.make-more .make-button {
+  flex: none;
+  margin-bottom: 1px;
+}
+.make-more .make-button.wide {
+  width: 100%;
+  justify-content: center;
+  margin-top: 6px;
+}
+.make-more .combine-buttons button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

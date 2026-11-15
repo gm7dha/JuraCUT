@@ -15,7 +15,7 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 - **The bed**: the R1's 600 × 300 mm work area to scale, with a millimetre grid. Zoom with the wheel or a pinch;
   pan with the middle button, right button, Space, or two fingers.
 - **Draw** rectangles (with rounded corners), circles, lines and **words** in five fonts, sized by the height of a
-  capital letter. Everything snaps to the millimetre (hold Shift not to).
+  capital letter — straight, or bent **round a circle** for badges. Everything snaps to the millimetre (hold Shift not to).
 - **Import** SVG and DXF drawings at true size — from JuraCAD's *Export for laser*, Inkscape, or anywhere else. Their
   colours are read as cut, score or engrave.
 - **Cut, score or engrave**: pick what the laser does with each shape. Holes inside a shape are found for you and cut
@@ -35,6 +35,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 - **Send designs to and from JuraCAD**: JuraCAD's outlines straight onto the bed, and back as a sketch to extrude.
 - **Trace pictures** (PNG, JPG…) into outlines to engrave, cut or score.
 - **Pack tightly**: pieces fitted together by their real shapes to save material.
+- **Outline** shapes (a border round words), **combine** them (join, cut one out of another, keep the overlap) and
+  **step and repeat** them in a grid.
 - **Groups**, and **Align**: line shapes up with each other, a key shape or the bed, centre them on the bed, or
   space them out evenly (with shortcuts).
 - **Materials**: a list of what you cut, with thickness, kerf and your notes, kept on your computer.

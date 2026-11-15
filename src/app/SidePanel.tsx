@@ -11,6 +11,7 @@ import { PHOTO_MODES, RESOLUTIONS } from "./PhotoTab";
 import { useDocument, useSelection, useStore } from "../model/store";
 import { OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { AlignControls } from "./AlignControls";
+import { MakeMore } from "./MakeMore";
 import { Icons } from "./icons";
 
 /** One chip per colour on the bed: click it to select every shape of that colour, the eye to hide or show them all. */
@@ -114,6 +115,7 @@ export function SidePanel() {
         ) : (
           <ManyProperties items={selected} />
         )}
+        {selected.length > 0 && <MakeMore items={selected} />}
       </section>
     </aside>
   );
@@ -234,6 +236,42 @@ function TextFields({ item, focus }: { item: Extract<Item, { kind: "text" }>; fo
         </label>
         <NumberBox label="Angle" value={item.angle} unit="°" onCommit={(angle) => change({ angle })} />
       </div>
+      <div className="field-label">Round a circle</div>
+      <div className="segmented three" role="radiogroup" aria-label="Round a circle">
+        {(
+          [
+            ["straight", "Straight", "In a straight line"],
+            ["top", "Over the top", "Bent over the top of a circle, reading clockwise (the top of a badge)"],
+            ["bottom", "Under", "Bent under the bottom of a circle, the tops of the letters towards its middle (the bottom of a badge)"],
+          ] as const
+        ).map(([k, label, hint]) => {
+          const now = !item.curve ? "straight" : item.curve > 0 ? "top" : "bottom";
+          return (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={now === k}
+              className={now === k ? "selected" : ""}
+              title={hint}
+              onClick={() => {
+                if (k === "straight") return change({ curve: undefined });
+                // A radius that bends the words about a third of the way round, unless one is set already.
+                const box = itemBox({ ...item, curve: undefined, angle: 0 });
+                const r = Math.abs(item.curve ?? 0) || Math.max(10, Math.round(box ? (box[2] - box[0]) / 2 : 30));
+                change({ curve: k === "top" ? r : -r, align: "centre" });
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {!!item.curve && (
+        <div className="field-row">
+          <NumberBox label="Circle's radius (to the line under the letters)" value={Math.abs(item.curve)} unit="mm" min={1} onCommit={(r) => change({ curve: Math.sign(item.curve ?? 1) * Math.max(1, r) })} />
+        </div>
+      )}
     </>
   );
 }

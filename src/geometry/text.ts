@@ -9,7 +9,7 @@ import interBold from "./fonts/inter-bold.json";
 import poppinsRegular from "./fonts/poppins-regular.json";
 import poppinsBold from "./fonts/poppins-bold.json";
 import loraRegular from "./fonts/lora-regular.json";
-import { pathsBox, type Pt, type Segment } from "./segments";
+import { moveSegment, pathsBox, type Pt, type Segment } from "./segments";
 
 export interface OutlineFont {
   id: string;
@@ -107,12 +107,21 @@ function lineAdvance(font: OutlineFont, line: string): number {
   return w;
 }
 
+/** The smallest radius words may be bent round (mm). */
+export const MIN_CURVE = 1;
+
 /**
  * The outlines of `text` with capital letters `capHeight` mm tall. The first
  * line's baseline is y = 0 and lines run downwards; x = 0 is the left edge
  * (`align` centres or right-aligns each line about x = 0). Lines are split by "\n".
+ *
+ * `curve` bends the words round a circle of that radius (mm): positive, over the top of a circle whose middle is
+ * `curve` below (0, 0), reading clockwise; negative, under the bottom of one `-curve` above, letters' tops towards its
+ * middle (as on the bottom of a badge). Each letter is turned as a whole, so its curves stay exact; distances along
+ * the baseline are kept.
  */
-export function textOutline(font: OutlineFont, text: string, capHeight: number, align: TextAlign = "left"): TextOutline {
+export function textOutline(font: OutlineFont, text: string, capHeight: number, align: TextAlign = "left", curve = 0): TextOutline {
+  const R = Math.abs(curve) < MIN_CURVE ? 0 : curve;
   const scale = capHeight / (font.capHeight || font.unitsPerEm * 0.7);
   const lineHeight = (font.ascender - font.descender) * scale;
   const loops: Segment[][] = [];
@@ -130,7 +139,17 @@ export function textOutline(font: OutlineFont, text: string, capHeight: number, 
         if (!glyph) continue;
       }
       if (glyph.o) {
-        loops.push(...glyphLoops(glyph.o, scale, x, y));
+        if (!R) loops.push(...glyphLoops(glyph.o, scale, x, y));
+        else {
+          // Drawn about its own middle, then turned onto the circle.
+          const mid = x + (glyph.a * scale) / 2;
+          const phi = -mid / R;
+          const c = Math.cos(phi);
+          const s = Math.sin(phi);
+          // p = (0, -R) + turn(phi) · (u, v + R), with u = px - mid, v = py.
+          const m: [number, number, number, number, number, number] = [c, s, -s, c, -c * mid - s * R, -s * mid + c * R - R];
+          for (const loop of glyphLoops(glyph.o, scale, x, y)) loops.push(loop.map((seg) => moveSegment(seg, m)));
+        }
       }
       x += glyph.a * scale;
     }

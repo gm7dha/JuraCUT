@@ -7,8 +7,10 @@
 import { create } from "zustand";
 
 import { arrangeOnBed } from "../geometry/segments";
-import { newDocument } from "./document";
+import { newDocument, newId } from "./document";
 import { copiesOf } from "./clipboard";
+import { combinedRings, outlineRings, ringsShape, type CombineHow } from "./combine";
+import { MOST_COPIES, repeatedItems } from "./repeat";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
@@ -79,6 +81,12 @@ export interface State {
   duplicateSelected(): void;
   /** Copies of shapes (from the clipboard), moved `offset` mm right and down, selected. */
   pasteItems(items: Item[], offset: number): void;
+  /** The selected shapes made one: joined, the others cut out of the biggest, or only where they overlap. */
+  combineSelected(how: CombineHow): void;
+  /** A new shape round the selection, `distance` mm out (gaps closed in filled unless `fillGaps` is false). */
+  outlineSelected(distance: number, fillGaps?: boolean): void;
+  /** Copies of the selection in a grid (`cols` × `rows`, the originals the first, bottom left), `gap` mm apart. */
+  repeatSelected(cols: number, rows: number, gapX: number, gapY: number): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
   selectOp(op: Op): void;
   /** Hide (or show) every shape of one colour. */
@@ -251,6 +259,54 @@ export const useStore = create<State>((set, get) => ({
     const copies = copiesOf(doc.items, items, offset, -offset);
     get().commit({ ...doc, items: [...doc.items, ...copies] });
     set({ selection: copies.map((c) => c.id), tool: "select" });
+  },
+  combineSelected(how) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id) && it.kind !== "picture");
+    const rings = combinedRings(picked, how);
+    if (!rings) {
+      get().showToast(how === "overlap" && picked.length >= 2 ? "These shapes don't overlap anywhere." : how === "cutOut" && picked.length >= 2 ? "Nothing is left once they're cut out." : "Pick two or more shapes with an area (not lines) to combine.", "info");
+      return;
+    }
+    const names = { join: "Joined shape", cutOut: "Cut-out shape", overlap: "Overlap" } as const;
+    const ids = new Set(picked.map((it) => it.id));
+    const at = doc.items.findIndex((it) => ids.has(it.id));
+    const id = newId(doc.items.map((it) => it.id));
+    const shape = ringsShape(id, names[how], picked[0].op, rings);
+    const items = doc.items.filter((it) => !ids.has(it.id));
+    items.splice(Math.min(at, items.length), 0, shape);
+    get().commit({ ...doc, items: tidyGroups(items) });
+    set({ selection: [id], focusItem: null });
+  },
+  outlineSelected(distance, fillGaps = true) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    if (!picked.length || !(distance > 0)) return;
+    const rings = outlineRings(picked, distance, fillGaps);
+    if (!rings.length) return;
+    const id = newId(doc.items.map((it) => it.id));
+    // Behind the shapes it goes round, cut.
+    const at = doc.items.findIndex((it) => selection.includes(it.id));
+    const items = [...doc.items];
+    items.splice(at, 0, ringsShape(id, "Outline", "cut", rings));
+    get().commit({ ...doc, items });
+    set({ selection: [id], focusItem: null });
+  },
+  repeatSelected(cols, rows, gapX, gapY) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    if (!picked.length) return;
+    if (cols * rows > MOST_COPIES) {
+      get().showToast(`That's more than ${MOST_COPIES} copies: try fewer rows or columns.`, "info");
+      return;
+    }
+    const made = repeatedItems(doc.items, picked, cols, rows, gapX, gapY);
+    if (!made.length) return;
+    get().commit({ ...doc, items: [...doc.items, ...made] });
+    set({ selection: [...selection, ...made.map((it) => it.id)] });
   },
   selectOp(op) {
     const ids = get().history.present.items.filter((it) => it.op === op && !it.hidden).map((it) => it.id);
