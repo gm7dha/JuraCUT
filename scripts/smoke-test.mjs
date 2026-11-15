@@ -366,6 +366,85 @@ try {
   await page.waitForSelector(".modal", { state: "detached" });
   await page.evaluate(() => window.fakeJuraCAD.channel.close());
 
+  step = "resize and turn with the handles";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([{ id: "h1", name: "Handle test", op: "cut", kind: "rect", x: 100, y: 100, w: 40, h: 20, radius: 0, angle: 0 }], { select: true });
+    s.setTool("select");
+  });
+  const rectOf = () => store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "h1"));
+  // The top-right corner dragged 20 mm right and 10 up: 60 × 30, the bottom-left corner stays put.
+  await drag([140, 120], [160, 130]);
+  let r = await rectOf();
+  expect(r.kind === "rect" && Math.abs(r.w - 60) < 0.01 && Math.abs(r.h - 30) < 0.01 && Math.abs(r.x - 100) < 0.01 && Math.abs(r.y - 100) < 0.01, `the corner handle made it 60 × 30 (got ${r.w} × ${r.h} at ${r.x}, ${r.y})`);
+  // The right-hand edge with Shift: proportions kept, 90 × 45.
+  const e1 = await bedPoint([160, 115]);
+  const e2 = await bedPoint([190, 115]);
+  await page.mouse.move(e1[0], e1[1]);
+  await page.mouse.down();
+  await page.keyboard.down("Shift");
+  await page.mouse.move((e1[0] + e2[0]) / 2, e1[1]);
+  await page.mouse.move(e2[0], e2[1]);
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+  r = await rectOf();
+  expect(Math.abs(r.w - 90) < 0.01 && Math.abs(r.h - 45) < 0.01, `Shift kept the proportions (got ${r.w} × ${r.h})`);
+  // One undo step per drag.
+  await page.keyboard.press("Control+z");
+  r = await rectOf();
+  expect(Math.abs(r.w - 60) < 0.01, "undo took back one resize");
+  // The turning handle: from above the middle round to the left = a quarter turn.
+  const top = await bedPoint([130, 130]);
+  const centre = await bedPoint([130, 115]);
+  const above = [top[0], top[1] - 26];
+  await page.mouse.move(above[0], above[1]);
+  await page.mouse.down();
+  await page.mouse.move(centre[0] - 40, centre[1] - 40);
+  await page.mouse.move(centre[0] - 80, centre[1] + 1);
+  await page.mouse.up();
+  r = await rectOf();
+  expect(r.kind === "rect" && Math.abs(Math.abs(r.angle) - 90) < 0.01, `the turning handle gave a quarter turn (got ${r.angle}°)`);
+
+  step = "copy and paste, the right-click menu";
+  const count = () => store(() => window.juracutStore.getState().history.present.items.length);
+  const n0 = await count();
+  await store(() => window.juracutStore.getState().select(["h1"]));
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+v");
+  expect((await count()) === n0 + 1, "Ctrl+V pasted a copy");
+  const pasted = await store(() => {
+    const s = window.juracutStore.getState();
+    return s.history.present.items.find((i) => i.id === s.selection[0]);
+  });
+  expect(pasted.id !== "h1" && pasted.name === "Handle test", "the copy is selected, with its own id");
+  // Right-click on it: the menu, then Delete.
+  const pc = await bedPoint([pasted.x + pasted.w / 2, pasted.y + pasted.h / 2]);
+  await page.mouse.click(pc[0], pc[1], { button: "right" });
+  await page.waitForSelector(".bed-menu");
+  await page.click(".bed-menu button:has-text('Delete')");
+  expect((await count()) === n0, "the menu's Delete took the copy away");
+  expect(!(await page.$(".bed-menu")), "the menu closed");
+
+  step = "select and hide by colour, zoom to selection";
+  await store(() => window.juracutStore.getState().addItems([{ id: "sc1", name: "Fold", op: "score", kind: "line", x1: 20, y1: 150, x2: 80, y2: 150 }]));
+  await page.click(".op-chip button[title='Select every score shape']");
+  const scored = await store(() => {
+    const s = window.juracutStore.getState();
+    const all = s.history.present.items;
+    return { picked: s.selection.length, all: all.filter((i) => i.op === "score" && !i.hidden).length, onlyScore: s.selection.every((id) => all.find((i) => i.id === id).op === "score") };
+  });
+  expect(scored.picked > 0 && scored.picked === scored.all && scored.onlyScore, "the chip selected every scored shape");
+  const zoomBefore = await page.evaluate(() => document.querySelector(".bed-svg > g").getAttribute("transform"));
+  await page.keyboard.press("Shift+F");
+  await page.waitForTimeout(100);
+  expect((await page.evaluate(() => document.querySelector(".bed-svg > g").getAttribute("transform"))) !== zoomBefore, "Shift+F zoomed to the selection");
+  await page.keyboard.press("f");
+  await page.click(".op-chip button[aria-label='Hide score shapes']");
+  expect(await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.op === "score").every((i) => i.hidden)), "the eye hid every scored shape");
+  await page.click(".op-chip button[aria-label='Show score shapes']");
+  expect(await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.op === "score").every((i) => !i.hidden)), "and showed them again");
+  await store(() => window.juracutStore.getState().clearSelection());
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

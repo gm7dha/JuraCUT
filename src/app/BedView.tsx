@@ -17,6 +17,9 @@ import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "..
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
 import { OP_INFO, type Item, type PictureItem } from "../model/types";
 import { usePicturePreview } from "./pictures";
+import { anchorOf, canStretch, dragScale, handlePoint, resizedItems, type Handle } from "../model/resize";
+import { rotatedItemAbout } from "../model/shapes";
+import { BedMenu } from "./BedMenu";
 import type { Pt } from "../geometry/segments";
 
 interface View {
@@ -36,8 +39,17 @@ const RULER = 22;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 60;
 
+/** The selection's handles: corners and edges resize, the round one above turns. */
+const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+const HANDLE_PX = 8;
+/** How far above the selection the turning handle sits (screen px). */
+const TURN_PX = 26;
+const HANDLE_CURSOR: Record<Handle, string> = { nw: "nwse-resize", se: "nwse-resize", ne: "nesw-resize", sw: "nesw-resize", n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize" };
+
 type Gesture =
-  | { kind: "pan"; start: Pt; view: View }
+  | { kind: "pan"; start: Pt; view: View; button: number; moved: boolean }
+  | { kind: "resize"; handle: Handle; box: [number, number, number, number]; ids: string[]; stretch: boolean }
+  | { kind: "turn"; centre: Pt; from: number; ids: string[] }
   | { kind: "move"; start: Pt; moved: boolean; box: [number, number, number, number] | null }
   | { kind: "box"; start: Pt; end: Pt }
   | { kind: "draw"; tool: Exclude<Tool, "select" | "text">; start: Pt; end: Pt }
@@ -62,6 +74,12 @@ export function BedView() {
   /** The lines snapped to right now, drawn as guides. */
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   const linesRef = useRef<SnapLines>({ xs: [], ys: [] });
+  /** What a resize or turn is doing, shown by the pointer ("120 × 40 mm", "30°"). */
+  const [readout, setReadout] = useState("");
+  const [hoverHandle, setHoverHandle] = useState<Handle | "turn" | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  /** A right-drag that panned the view: no menu when the button comes up. */
+  const panned = useRef(false);
 
   const setGestureBoth = (g: Gesture | null) => {
     gestureRef.current = g;
@@ -86,8 +104,14 @@ export function BedView() {
     const margin = 36;
     const aw = w - RULER;
     const ah = h - RULER;
-    const scale = Math.max(MIN_SCALE, Math.min((aw - 2 * margin) / doc.bed[0], (ah - 2 * margin) / doc.bed[1]));
-    setView({ scale, x: RULER + (aw - doc.bed[0] * scale) / 2, y: RULER + (ah + doc.bed[1] * scale) / 2 });
+    const st = useStore.getState();
+    // Zoom to the selection when asked (Shift + F), else the whole bed.
+    const sel = st.fitTarget === "selection" ? selectionBox(st.history.present.items, st.selection) : null;
+    const [x0, y0, x1, y1] = sel ?? [0, 0, doc.bed[0], doc.bed[1]];
+    const bw = Math.max(x1 - x0, 1);
+    const bh = Math.max(y1 - y0, 1);
+    const scale = Math.max(MIN_SCALE, Math.min(sel ? 20 : MAX_SCALE, (aw - 2 * margin) / bw, (ah - 2 * margin) / bh));
+    setView({ scale, x: RULER + (aw - bw * scale) / 2 - x0 * scale, y: RULER + (ah + bh * scale) / 2 + y0 * scale });
   }, [doc.bed]);
 
   // Fit when the view first appears and when asked (F, the Fit button, an import).
@@ -169,6 +193,26 @@ export function BedView() {
     return [near.guideX ?? Math.round(p[0] / step) * step, near.guideY ?? Math.round(p[1] / step) * step];
   };
 
+  /** Screen px (relative to the view) of a bed point. */
+  const toScreen = (p: Pt, v: View = viewRef.current): Pt => [v.x + p[0] * v.scale, v.y - p[1] * v.scale];
+
+  /** The selection's handle under a screen point (resize corners and edges, or the turning handle above), if any. */
+  const handleAt = (at: Pt): Handle | "turn" | null => {
+    const st = useStore.getState();
+    if (!st.selection.length) return null;
+    const box = selectionBox(st.history.present.items, st.selection);
+    if (!box) return null;
+    const reach = HANDLE_PX / 2 + 4;
+    const top = toScreen(handlePoint(box, "n"));
+    if (Math.hypot(at[0] - top[0], at[1] - (top[1] - TURN_PX)) <= reach + 2) return "turn";
+    const shown = handlesShown(box, viewRef.current.scale);
+    for (const h of shown) {
+      const p = toScreen(handlePoint(box, h));
+      if (Math.abs(at[0] - p[0]) <= reach && Math.abs(at[1] - p[1]) <= reach) return h;
+    }
+    return null;
+  };
+
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     const s = useStore.getState();
     const [px, py] = local(e);
@@ -182,14 +226,28 @@ export function BedView() {
       return;
     }
     if (pointers.current.size > 2) return;
+    setMenu(null);
     if (e.button === 1 || e.button === 2 || spaceHeld.current) {
-      setGestureBoth({ kind: "pan", start: [px, py], view: viewRef.current });
+      panned.current = false;
+      setGestureBoth({ kind: "pan", start: [px, py], view: viewRef.current, button: e.button, moved: false });
       return;
     }
     if (e.button !== 0) return;
     const mm = toMm(px, py);
     const additive = e.shiftKey || e.ctrlKey || e.metaKey;
     if (tool === "select") {
+      // A handle of the selection: resize or turn it.
+      const h = handleAt([px, py]);
+      if (h) {
+        const ids = useStore.getState().selection;
+        const box = selectionBox(doc.items, ids)!;
+        s.dragStart();
+        if (h === "turn") {
+          const centre: Pt = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
+          setGestureBoth({ kind: "turn", centre, from: Math.atan2(mm[1] - centre[1], mm[0] - centre[0]), ids });
+        } else setGestureBoth({ kind: "resize", handle: h, box, ids, stretch: canStretch(doc.items.filter((it) => ids.includes(it.id))) });
+        return;
+      }
       const hit = itemAt(doc.items, mm, REACH_PX / viewRef.current.scale);
       if (hit) {
         if (additive) s.select([hit.id], true);
@@ -224,12 +282,40 @@ export function BedView() {
     const mm = toMm(px, py);
     setPointerMm(mm);
     const g = gestureRef.current;
-    if (!g) return;
+    if (!g) {
+      if (tool === "select") setHoverHandle(handleAt([px, py]));
+      return;
+    }
     const s = useStore.getState();
     switch (g.kind) {
       case "pan":
+        if (!g.moved && Math.hypot(px - g.start[0], py - g.start[1]) < 4) break;
+        g.moved = true;
+        panned.current = true;
         setView({ ...g.view, x: g.view.x + px - g.start[0], y: g.view.y + py - g.start[1] });
         break;
+      case "resize": {
+        const step = viewRef.current.scale > 8 ? 0.5 : 1;
+        const to: Pt = [Math.round(mm[0] / step) * step, Math.round(mm[1] / step) * step];
+        // Shift keeps the proportions (circles and words always do: stretched, they'd become outlines).
+        const keep = e.shiftKey || !g.stretch;
+        const [sx, sy] = dragScale(g.box, g.handle, to, keep);
+        const about = anchorOf(g.box, g.handle);
+        s.dragUpdate((base) => ({ ...base, items: resizedItems(base.items, g.ids, sx, sy, about) }));
+        const n = (v: number) => Math.round(v * 10) / 10;
+        setReadout(`${n((g.box[2] - g.box[0]) * sx)} × ${n((g.box[3] - g.box[1]) * sy)} mm`);
+        break;
+      }
+      case "turn": {
+        let angle = ((Math.atan2(mm[1] - g.centre[1], mm[0] - g.centre[0]) - g.from) * 180) / Math.PI;
+        angle = ((angle % 360) + 540) % 360 - 180;
+        // Steps of 15° (Shift: any angle).
+        if (!e.shiftKey) angle = Math.round(angle / 15) * 15;
+        else angle = Math.round(angle * 10) / 10;
+        s.dragUpdate((base) => ({ ...base, items: base.items.map((it) => (g.ids.includes(it.id) ? rotatedItemAbout(it, angle, g.centre) : it)) }));
+        setReadout(`${angle > 0 ? "+" : ""}${angle}°`);
+        break;
+      }
       case "pinch": {
         const a = pointers.current.get(g.ids[0]);
         const b = pointers.current.get(g.ids[1]);
@@ -280,7 +366,10 @@ export function BedView() {
     setGuides({ x: null, y: null });
     switch (g.kind) {
       case "move":
+      case "resize":
+      case "turn":
         s.dragEnd();
+        setReadout("");
         break;
       case "box": {
         const picked = itemsInBox(doc.items, [g.start[0], g.start[1], g.end[0], g.end[1]]);
@@ -297,7 +386,9 @@ export function BedView() {
 
   const onPointerCancel = (e: ReactPointerEvent<SVGSVGElement>) => {
     pointers.current.delete(e.pointerId);
-    if (gestureRef.current?.kind === "move") useStore.getState().dragEnd();
+    const k = gestureRef.current?.kind;
+    if (k === "move" || k === "resize" || k === "turn") useStore.getState().dragEnd();
+    setReadout("");
     setGestureBoth(null);
     setGuides({ x: null, y: null });
   };
@@ -307,7 +398,20 @@ export function BedView() {
   const draft = gesture?.kind === "draw" ? drawnItem(gesture, [], true) : null;
   const selectedBoxes = drawn.filter((x) => selection.includes(x.item.id) && x.box);
   const keyBox = useMemo(() => (alignAgainst === "key" ? (keyPiece(doc.items, selection)?.box ?? null) : null), [alignAgainst, doc.items, selection]);
-  const cursor = gesture?.kind === "pan" ? "grabbing" : tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
+  const handleCursor = (h: Handle | "turn" | null) => (h === "turn" ? "grab" : h ? HANDLE_CURSOR[h] : null);
+  const cursor =
+    gesture?.kind === "pan" && gesture.moved
+      ? "grabbing"
+      : gesture?.kind === "resize"
+        ? HANDLE_CURSOR[gesture.handle]
+        : gesture?.kind === "turn"
+          ? "grabbing"
+          : tool === "select"
+            ? (handleCursor(hoverHandle) ?? "default")
+            : tool === "text"
+              ? "text"
+              : "crosshair";
+  const selBox = tool === "select" && (!gesture || gesture.kind === "resize" || gesture.kind === "turn") ? selectionBox(doc.items, selection) : null;
   const [W, H] = doc.bed;
   const px = 1 / view.scale; // one screen pixel in mm
   const dark = theme === "dark";
@@ -322,7 +426,20 @@ export function BedView() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onPointerLeave={() => setPointerMm(null)}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          // Not after a right-drag that panned the view.
+          if (panned.current) {
+            panned.current = false;
+            return;
+          }
+          if (gestureRef.current?.kind === "pan") setGestureBoth(null);
+          const [x, y] = local(e);
+          const hit = itemAt(doc.items, toMm(x, y), REACH_PX / view.scale);
+          const s = useStore.getState();
+          if (hit && !s.selection.includes(hit.id)) s.select([hit.id]);
+          setMenu({ x: e.clientX, y: e.clientY });
+        }}
         onDoubleClick={(e) => {
           if (tool !== "select") return;
           const [x, y] = local(e);
@@ -376,6 +493,18 @@ export function BedView() {
           ))}
           {/* Lining up against the key shape: it's outlined, as it's the one the others line up with. */}
           {keyBox && <rect x={keyBox[0] - 3 * px} y={keyBox[1] - 3 * px} width={keyBox[2] - keyBox[0] + 6 * px} height={keyBox[3] - keyBox[1] + 6 * px} className="key-box" strokeWidth={2.5 * px} />}
+          {/* Handles: corners and edges resize (the edges only when the selection is big enough on screen), the round one turns. */}
+          {selBox && (
+            <g className="handles">
+              <rect x={selBox[0]} y={selBox[1]} width={selBox[2] - selBox[0]} height={selBox[3] - selBox[1]} className="handle-frame" strokeWidth={px} />
+              <line x1={(selBox[0] + selBox[2]) / 2} y1={selBox[3]} x2={(selBox[0] + selBox[2]) / 2} y2={selBox[3] + TURN_PX * px} className="handle-stem" strokeWidth={px} />
+              <circle cx={(selBox[0] + selBox[2]) / 2} cy={selBox[3] + TURN_PX * px} r={(HANDLE_PX / 2 + 1) * px} className="handle turn-handle" strokeWidth={1.5 * px} />
+              {handlesShown(selBox, view.scale).map((h) => {
+                const [hx, hy] = handlePoint(selBox, h);
+                return <rect key={h} x={hx - (HANDLE_PX / 2) * px} y={hy - (HANDLE_PX / 2) * px} width={HANDLE_PX * px} height={HANDLE_PX * px} className={`handle handle-${h}`} strokeWidth={1.5 * px} />;
+              })}
+            </g>
+          )}
           {draft && <path d={itemPathData(draft)} className="draft" fill="none" stroke="var(--accent)" strokeWidth={1.5 * px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {guides.x !== null && <line x1={guides.x} y1={-1e4} x2={guides.x} y2={1e4} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {guides.y !== null && <line x1={-1e4} y1={guides.y} x2={1e4} y2={guides.y} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
@@ -395,10 +524,19 @@ export function BedView() {
       <div className="bed-readout" aria-live="off">
         {pointerMm ? `${pointerMm[0].toFixed(1)}, ${pointerMm[1].toFixed(1)} mm` : ""}
         {draft && gesture?.kind === "draw" && ` · ${draftSize(gesture)}`}
+        {readout && ` · ${readout}`}
         <span className="bed-zoom"> {Math.round(view.scale * 100) / 100 >= 1 ? `${(view.scale).toFixed(1)} px/mm` : `${(view.scale * 100).toFixed(0)}%`}</span>
       </div>
+      {menu && <BedMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </div>
   );
+}
+
+/** Which handles to show: the corners always, the edge handles only when the box is big enough on screen to tell them apart. */
+function handlesShown(box: [number, number, number, number], scale: number): Handle[] {
+  const w = (box[2] - box[0]) * scale;
+  const h = (box[3] - box[1]) * scale;
+  return HANDLES.filter((k) => (k.length === 2 ? true : k === "n" || k === "s" ? w > 40 : h > 40));
 }
 
 /** A photo on the bed, as it'll engrave (the bed's group flips y, so the picture is flipped back inside it). */
