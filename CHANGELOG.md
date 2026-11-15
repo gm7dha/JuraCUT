@@ -6,7 +6,17 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.16 — Holding tabs and copies with different words
+## v0.17 — QR codes
+
+- **QR code tool** (Q): click on the bed, then type a web address or any words in the panel. Change its size and how
+  sturdy it is (how much can be scratched or burnt and still read: more sturdy means more, smaller squares). The panel
+  says how big each square comes out and warns when they're too small to engrave cleanly. Engraved by default; the dark
+  squares are joined into clean outlines.
+- QR codes work with **Copies with different words**: put **#** in the address and each copy gets its own
+  (`https://example.org/table/#`).
+- Made with Nayuki's QR Code generator (MIT licence), included in JuraCUT.
+
+## v0.16 — Holding tabs and copies with different words · commit `252a646`
 
 - **Holding tabs**: a cut shape can have small uncut gaps in its outline (set how many and how wide in the panel, for
   one shape or several). Pieces stay held in the sheet until you snap them out, so they can't drop through the

@@ -153,6 +153,12 @@
   `src/model/names.ts` (`namesFrom`, `numberNames`, `namedText` — "#" replaced else the whole words, shrunk to the
   original's width keeping its middle — `namedCopies` in Step and repeat's grid); store `nameCopiesSelected`; MakeMore's
   `NamedCopies` (list kept in localStorage `juracut.names`).
+- v0.17 QR codes: `src/geometry/qrcodegen.ts` is Nayuki's MIT generator unchanged but for `export namespace` (keep it
+  so); `src/geometry/qr.ts` (`qrModules` cached, null when it doesn't fit or > `MOST_QR_TEXT`; `qrLoops` — traceBitmap of
+  the squares, straight runs merged, mm y up). `QrItem` (kind "qr": x, y bottom-left, size, text, ecc L/M/Q/H; engraved;
+  turned or flipped it becomes a shape; only even resizes, `canStretch` false). Tool "qr" (Q, click to place, panel focused),
+  SidePanel `QrFields`; `namedCopies` replaces "#" in a QR's text too. The smoke test places one, exports it alone and
+  checks the rendered SVG's three corner squares.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

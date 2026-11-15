@@ -4,7 +4,8 @@
  */
 import { FONTS, textOutline } from "../geometry/text";
 import { movePaths, pathPoints, pathsBox, segmentPoints, type Affine, type LaserPath, type Pt, type Segment } from "../geometry/segments";
-import type { CircleItem, Item, LineItem, Outline, PictureItem, PolygonItem, RectItem, ShapeItem, TextItem } from "./types";
+import type { CircleItem, Item, LineItem, Outline, PictureItem, PolygonItem, QrItem, RectItem, ShapeItem, TextItem } from "./types";
+import { qrLoops } from "../geometry/qr";
 
 const deg = (a: number) => (a * Math.PI) / 180;
 
@@ -71,6 +72,8 @@ export function itemOutlines(item: Item): Outline[] {
       const pts = polygonPoints(item);
       return [{ closed: true, segments: pts.map((p, i): Segment => ({ kind: "line", from: p, to: pts[(i + 1) % pts.length] })) }];
     }
+    case "qr":
+      return qrLoops(item.text, item.ecc, item.x, item.y, item.size).map((pts) => ({ closed: true, segments: pts.map((p, i): Segment => ({ kind: "line", from: p, to: pts[(i + 1) % pts.length] })) }));
     case "line":
       return [{ closed: false, segments: [{ kind: "line", from: [item.x1, item.y1], to: [item.x2, item.y2] }] }];
     case "text": {
@@ -158,6 +161,7 @@ export function movedItem(item: Item, dx: number, dy: number): Item {
     case "line":
       return { ...item, x1: item.x1 + dx, y1: item.y1 + dy, x2: item.x2 + dx, y2: item.y2 + dy };
     case "text":
+    case "qr":
       return { ...item, x: item.x + dx, y: item.y + dy };
     case "shape":
       return { ...item, outlines: moveOutlines(item.outlines, translation(dx, dy)) };
@@ -377,6 +381,8 @@ export function polygonName(sides: number): string {
   return names[sides] ?? `${sides}-sided`;
 }
 
+export const makeQr = (id: string, x: number, y: number, text = "https://", size = 30): QrItem => ({ id, name: "QR code", op: "engrave", kind: "qr", x, y, size, text, ecc: "M" });
+
 export const makePolygon = (id: string, cx: number, cy: number, r: number, sides = 6, angle = 90, star?: number): PolygonItem => ({ id, name: star ? "Star" : "Polygon", op: "cut", kind: "polygon", cx, cy, r, sides, angle, ...(star ? { star } : {}) });
 
 /** A short description for the list and the properties panel. */
@@ -387,6 +393,8 @@ export function describeItem(item: Item): string {
       return `${n(item.w)} × ${n(item.h)} mm`;
     case "circle":
       return `⌀ ${n(item.r * 2)} mm`;
+    case "qr":
+      return `QR code ${n(item.size)} mm`;
     case "polygon":
       return `${item.star ? `${item.sides}-point star` : polygonName(item.sides)} ⌀ ${n(item.r * 2)} mm`;
     case "line":

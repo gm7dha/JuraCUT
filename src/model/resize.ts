@@ -87,7 +87,7 @@ export function keepsKindStretched(item: Item): boolean {
 
 /** Can the selection be stretched one way? Not when it's all circles and words, which only grow or shrink evenly. */
 export function canStretch(items: readonly Item[]): boolean {
-  return items.some((it) => it.kind !== "circle" && it.kind !== "text");
+  return items.some((it) => it.kind !== "circle" && it.kind !== "text" && it.kind !== "qr");
 }
 
 /** One shape scaled `sx` across and `sy` up about `about` (both more than 0). */
@@ -107,6 +107,11 @@ export function scaledItem(item: Item, sx: number, sy: number, about: Pt): Item 
       if (!uniform) break;
       const c = P([item.cx, item.cy]);
       return { ...item, cx: c[0], cy: c[1], r: Math.max(MIN_SIZE / 2, item.r * sx) };
+    }
+    case "qr": {
+      if (!uniform) break;
+      const a = P([item.x, item.y]);
+      return { ...item, x: a[0], y: a[1], size: Math.max(1, item.size * sx) };
     }
     case "polygon": {
       if (!uniform) break;

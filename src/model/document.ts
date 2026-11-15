@@ -4,6 +4,7 @@
  */
 import { isFontId } from "../geometry/text";
 import { R1_BED, type Pt, type Segment } from "../geometry/segments";
+import { MOST_QR_TEXT } from "../geometry/qr";
 import { isOp, MOST_TABS, type Item, type JuraCUTDocument, type Material, type Outline } from "./types";
 
 export const FILE_EXTENSION = ".juracut";
@@ -115,6 +116,16 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         ...(star >= 0.05 && star <= 0.95 ? { star } : {}),
       };
     }
+    case "qr":
+      return {
+        ...base,
+        kind: "qr",
+        x: num(it.x),
+        y: num(it.y),
+        size: Math.max(num(it.size, 30), 1),
+        text: str(it.text).slice(0, MOST_QR_TEXT),
+        ecc: it.ecc === "L" || it.ecc === "Q" || it.ecc === "H" ? it.ecc : "M",
+      };
     case "line":
       return { ...base, kind: "line", x1: num(it.x1), y1: num(it.y1), x2: num(it.x2, 10), y2: num(it.y2) };
     case "text":

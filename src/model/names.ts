@@ -1,7 +1,7 @@
 /**
  * Copies with different words (pure) — LightBurn's "variable text": one copy of the selection for each name in a list
  * (or each number), laid out in a grid a gap apart. In every words shape of a copy, "#" is replaced by the name — or,
- * with no "#", the words become the name. With `shrink`, words that come out wider than the first copy's are made
+ * with no "#", the words become the name. A QR code's "#" is replaced too (a web address per copy). With `shrink`, words that come out wider than the first copy's are made
  * smaller to fit, so long names still fit the tag.
  */
 import { copiesOf } from "./clipboard";
@@ -56,7 +56,7 @@ export function namedText(t: TextItem, name: string, maxWidth: number | null): T
  */
 export function namedCopies(existing: readonly Item[], picked: readonly Item[], names: string[], cols: number, gap: number, shrink: boolean): { renamed: Item[]; made: Item[] } {
   const box = boxOfItems(picked);
-  if (!box || !names.length || !picked.some((it) => it.kind === "text")) return { renamed: [...picked], made: [] };
+  if (!box || !names.length || !picked.some((it) => it.kind === "text" || (it.kind === "qr" && it.text.includes("#")))) return { renamed: [...picked], made: [] };
   const width = (t: TextItem) => {
     const b = itemBox(t);
     return b ? b[2] - b[0] : 0;
@@ -64,7 +64,9 @@ export function namedCopies(existing: readonly Item[], picked: readonly Item[], 
   // Each words shape's room: as wide as it is now (or as its "#" text with the first name, if wider).
   const room = new Map(picked.filter((it): it is TextItem => it.kind === "text").map((t) => [t.id, width(t)]));
   const name = (items: readonly Item[], n: string, from: readonly Item[]) =>
-    items.map((it, i) => (it.kind === "text" ? namedText(it, n, shrink ? room.get(from[i].id) || null : null) : it));
+    items.map((it, i) =>
+      it.kind === "text" ? namedText(it, n, shrink ? room.get(from[i].id) || null : null) : it.kind === "qr" && it.text.includes("#") ? { ...it, text: it.text.split("#").join(n) } : it,
+    );
   cols = Math.max(1, Math.floor(cols));
   const stepX = box[2] - box[0] + gap;
   const stepY = box[3] - box[1] + gap;

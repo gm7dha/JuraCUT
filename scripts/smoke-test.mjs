@@ -556,6 +556,53 @@ try {
     s.deleteSelected();
   });
 
+  step = "a QR code: placed with its tool, typed in, exported and drawn right";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.clearSelection();
+  });
+  await page.keyboard.press("q");
+  const qp = await bedPoint([500, 180]);
+  await page.mouse.click(qp[0], qp[1]);
+  await page.fill("textarea[aria-label='What the QR code holds']", "https://gm7dha.github.io/JuraCUT/");
+  const qr = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "qr"));
+  expect(qr && qr.text === "https://gm7dha.github.io/JuraCUT/" && qr.op === "engrave", "the QR code holds the address typed");
+  expect((await page.textContent(".properties")).includes("29 × 29 squares"), "the panel says how many squares");
+  // Exported alone and drawn on a canvas: dark in the middle of each of its three corner squares, light in their rings.
+  const hid = await store(() => {
+    const s = window.juracutStore.getState();
+    const ids = s.history.present.items.filter((i) => i.kind !== "qr" && !i.hidden).map((i) => i.id);
+    for (const id of ids) s.updateItem(id, (it) => ({ ...it, hidden: true }));
+    return ids;
+  });
+  await page.click(".primary-button:has-text('Export for laser')");
+  await page.waitForSelector(".export-preview svg");
+  const [qrDl] = await Promise.all([page.waitForEvent("download"), page.click(".modal button:has-text('Save SVG')")]);
+  const qrText = await readFile(await qrDl.path(), "utf8");
+  await page.keyboard.press("Escape");
+  const finders = await page.evaluate(async (svg) => {
+    const img = new Image();
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = c.height = 290;
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, 290, 290);
+    g.drawImage(img, 0, 0, 290, 290);
+    // 29 squares of 10 px: each corner square's middle (3.5 squares in) and its light ring (1.5 squares in).
+    const dark = (x, y) => g.getImageData(x, y, 1, 1).data[0] < 128;
+    const at = (sx, sy) => [dark(sx * 10 + 35, sy * 10 + 35), !dark(sx * 10 + 15, sy * 10 + 15)];
+    return [at(0, 0), at(22, 0), at(0, 22)];
+  }, qrText);
+  expect(finders.every(([d, l]) => d && l), `the exported code has its three corner squares (${JSON.stringify(finders)})`);
+  await page.evaluate((ids) => {
+    const s = window.juracutStore.getState();
+    for (const id of ids) s.updateItem(id, (it) => ({ ...it, hidden: false }));
+    s.select(s.history.present.items.filter((i) => i.kind === "qr").map((i) => i.id));
+    s.deleteSelected();
+  }, hid);
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");
