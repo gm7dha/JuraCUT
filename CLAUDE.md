@@ -201,6 +201,12 @@
   lines — itself too, not at neighbouring pieces —; `trimmed(item, outline, point, others)` takes out the stretch between
   the nearest crossings either side (closed: needs ≥ 2, else the same item back; open: back to the ends), null when
   nothing's left; `outlineNear`). Store `trimAt`; tool "trim" (X): the topmost shape with a line within reach.
+- v0.24: `src/laser/order.ts` (pure: `orderSteps` — each path's words, length, start/end and travel; `orderTotals`) →
+  `src/app/CutOrder.tsx` (Export's "Show the cut order": play/scrub, `pathLength={1}` dash for the path being cut, step
+  time by length, `PLAY_SECONDS`). Export layout `minmax(0, 1fr) 240px`. `PictureItem.clip` (closed outlines, mm from the
+  photo's middle, bed orientation; turned/flipped/scaled with it in shapes.ts/resize.ts; wins over `mask`): photo.ts
+  `clipped` (even–odd, mirrored sheets), pictures.ts after processing; store `maskPictureWithShape` (photo + one closed
+  shape), MakeMore/BedMenu buttons, the photo panel's "Take the mask shape off".
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

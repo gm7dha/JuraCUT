@@ -580,6 +580,14 @@ function PhotoShape({ item }: { item: PictureItem }) {
   };
   return (
     <>
+      {item.clip && (
+        <div className="points-bar">
+          <p className="small">Engraved only inside a shape you chose.</p>
+          <button type="button" className="text-button" onClick={() => updateItem(item.id, (it) => ({ ...(it as PictureItem), clip: undefined }) as Item)}>
+            Take the mask shape off
+          </button>
+        </div>
+      )}
       <div className="field-label">Shape</div>
       <div className="segmented three" role="radiogroup" aria-label="Photo's shape">
         {(

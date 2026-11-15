@@ -168,6 +168,8 @@ export interface PictureItem extends ItemBase {
   crop?: [number, number, number, number];
   /** Only an oval (round) or a rounded rectangle of it is engraved; outside that is left. */
   mask?: PhotoMask;
+  /** Only the part inside these outlines is engraved (any shape; mm, measured from the photo's middle, as on the bed). */
+  clip?: Outline[];
 }
 
 export type Item = RectItem | CircleItem | EllipseItem | PolygonItem | LineItem | TextItem | QrItem | ShapeItem | PictureItem;

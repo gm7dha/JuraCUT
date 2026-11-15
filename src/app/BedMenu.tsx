@@ -78,6 +78,9 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
         ...(picked.length === 2 && picked.filter((it) => it.kind === "text").length === 1 && picked.some((it) => it.kind !== "text" && it.kind !== "qr" && it.kind !== "picture")
           ? [{ label: "Put the words along the shape", act: () => s().putTextOnPath() }]
           : []),
+        ...(picked.length === 2 && picked.some((it) => it.kind === "picture") && picked.some((it) => it.kind !== "picture" && it.kind !== "line")
+          ? [{ label: "Engrave the photo only inside the shape", act: () => s().maskPictureWithShape() }]
+          : []),
         { label: "Break apart", act: () => s().breakApartSelected(), off: !picked.some((it) => it.kind === "shape" || it.kind === "text") },
         more.round
           ? { label: `Repeat round a circle (${more.count})`, act: () => s().repeatRoundSelected(more.count, more.radius, more.turn) }

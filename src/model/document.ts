@@ -179,6 +179,10 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         dpm: Math.max(2, Math.min(25, num(it.dpm, 10))),
         ...cropOf(it.crop),
         ...(it.mask === "round" || it.mask === "rounded" ? { mask: it.mask } : {}),
+        ...(() => {
+          const clip = Array.isArray(it.clip) ? it.clip.map(parseOutline).filter((o): o is Outline => !!o && o.closed) : [];
+          return clip.length ? { clip } : {};
+        })(),
       };
     }
     case "shape": {

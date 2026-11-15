@@ -6,7 +6,8 @@
 import { useEffect, useState } from "react";
 
 import { greyscale } from "../geometry/trace";
-import { masked, processPhoto, withPngDpi } from "../geometry/photo";
+import { clipped, masked, processPhoto, withPngDpi } from "../geometry/photo";
+import { pathPoints } from "../geometry/segments";
 import { pictureSize } from "../model/shapes";
 import type { PictureItem } from "../model/types";
 
@@ -69,7 +70,8 @@ export async function renderPicture(item: PictureItem, dpm: number, mirrored = f
   const ih = img.naturalHeight;
   ctx.drawImage(img, c0 * iw, c1 * ih, (c2 - c0) * iw, (c3 - c1) * ih, -w / 2, -h / 2, w, h);
   const data = ctx.getImageData(0, 0, width, height);
-  const ready = masked(processPhoto(greyscale(data.data, width, height), width, height, item), width, height, item.mask);
+  let ready = masked(processPhoto(greyscale(data.data, width, height), width, height, item), width, height, item.clip ? undefined : item.mask);
+  if (item.clip) ready = clipped(ready, width, height, k, item.clip.map((o) => pathPoints(o.segments, true, 0.05)), mirrored);
   for (let i = 0; i < ready.length; i++) {
     data.data[4 * i] = data.data[4 * i + 1] = data.data[4 * i + 2] = ready[i];
     data.data[4 * i + 3] = 255;
@@ -84,7 +86,14 @@ export async function renderPicture(item: PictureItem, dpm: number, mirrored = f
 }
 
 const previews = new Map<string, string>();
-const keyOf = (p: PictureItem, dpm: number) => `${p.src.length}:${p.src.slice(-48)}|${p.w}|${p.h}|${p.turns}|${p.flip}|${p.mode}|${p.brightness}|${p.contrast}|${p.invert}|${p.crop?.join(",") ?? ""}|${p.mask ?? ""}|${dpm}`;
+const keyOf = (p: PictureItem, dpm: number) => `${p.src.length}:${p.src.slice(-48)}|${p.w}|${p.h}|${p.turns}|${p.flip}|${p.mode}|${p.brightness}|${p.contrast}|${p.invert}|${p.crop?.join(",") ?? ""}|${p.mask ?? ""}|${p.clip ? hashOf(JSON.stringify(p.clip)) : ""}|${dpm}`;
+
+/** A short fingerprint of some text (so a changed mask shape draws again). */
+function hashOf(s: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return `${s.length}:${(h >>> 0).toString(36)}`;
+}
 
 /** A small version of the picture as it'll engrave, for the bed (null while it's being made). */
 export function usePicturePreview(p: PictureItem | null): string | null {
