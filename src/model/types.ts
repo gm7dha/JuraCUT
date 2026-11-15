@@ -41,7 +41,14 @@ interface ItemBase {
   hidden?: boolean;
   /** Shapes with the same group id are picked, moved and turned together. */
   group?: string;
+  /** Holding tabs: so many small uncut gaps in each closed cut line, so the piece stays in the sheet until snapped out. */
+  tabs?: number;
+  /** How wide each tab is (mm; missing = `DEFAULT_TAB_WIDTH`). */
+  tabWidth?: number;
 }
+
+export const DEFAULT_TAB_WIDTH = 0.6;
+export const MOST_TABS = 20;
 
 /** A rectangle, `angle` degrees anticlockwise about its centre, corners rounded by `radius`. */
 export interface RectItem extends ItemBase {

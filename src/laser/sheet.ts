@@ -5,9 +5,10 @@
  * layer, and open cut lines are cut as inner lines (before any outline).
  */
 import { nestingDepths, offsetLoop } from "../geometry/offset";
-import { movePaths, pathsBox, sortLoops, type LaserPath, type LaserSheet } from "../geometry/segments";
+import { movePaths, pathsBox, sortLoops, type LaserPath, type LaserSheet, type Segment } from "../geometry/segments";
+import { withTabs } from "./tabs";
 import { itemBox, itemOutlines } from "../model/shapes";
-import type { Item, JuraCUTDocument, Op, PictureItem } from "../model/types";
+import { DEFAULT_TAB_WIDTH, type Item, type JuraCUTDocument, type Op, type PictureItem } from "../model/types";
 
 export interface SheetOptions {
   /** Only these shapes (default: every shape that isn't hidden). */
@@ -27,6 +28,8 @@ export function laserPaths(items: readonly Item[], kerf = 0): LaserPath[] {
     score: { closed: [], open: [] },
     engrave: { closed: [], open: [] },
   };
+  // Which cut loops have holding tabs (by their segments, which sorting keeps).
+  const tabbed = new Map<Segment[], { count: number; width: number }>();
   for (const it of items) {
     // Pictures are engraved as images (see sheetPictures), not as outlines.
     if (it.hidden || it.kind === "picture") continue;
@@ -34,6 +37,7 @@ export function laserPaths(items: readonly Item[], kerf = 0): LaserPath[] {
       if (!o.segments.length) continue;
       const layer = it.op === "cut" ? "inner" : it.op;
       (o.closed ? byOp[it.op].closed : byOp[it.op].open).push({ layer, segments: o.segments, closed: o.closed });
+      if (it.op === "cut" && o.closed && it.tabs) tabbed.set(o.segments, { count: it.tabs, width: it.tabWidth ?? DEFAULT_TAB_WIDTH });
     }
   }
   const out: LaserPath[] = [];
@@ -43,7 +47,16 @@ export function laserPaths(items: readonly Item[], kerf = 0): LaserPath[] {
   // Cuts: open runs first (lines never free a piece), then holes before the outlines round them.
   out.push(...byOp.cut.open);
   const sorted = sortLoops(byOp.cut.closed.map((p) => p.segments));
-  out.push(...(kerf > 0 ? withKerf(sorted, kerf) : sorted));
+  const tabs = sorted.map((p) => tabbed.get(p.segments));
+  const moved = kerf > 0 ? kerfEach(sorted, kerf) : sorted;
+  moved.forEach((p, i) => {
+    if (!p) return;
+    const t = tabs[i];
+    const runs = t && p.closed ? withTabs(p.segments, t.count, t.width + kerf) : null;
+    // A loop with tabs is cut as the runs between them, still in its place in the order.
+    if (runs) out.push(...runs.map((segments): LaserPath => ({ layer: p.layer, segments, closed: false })));
+    else out.push(p);
+  });
   return out;
 }
 
@@ -52,9 +65,14 @@ export function laserPaths(items: readonly Item[], kerf = 0): LaserPath[] {
  * stay where they are. A hole smaller than the kerf disappears — the beam would take all of it anyway.
  */
 export function withKerf(paths: LaserPath[], kerf: number): LaserPath[] {
+  return kerfEach(paths, kerf).filter((p): p is LaserPath => !!p);
+}
+
+/** As `withKerf`, one for one (null where a hole disappears). */
+function kerfEach(paths: LaserPath[], kerf: number): (LaserPath | null)[] {
   const closed = paths.filter((p) => p.closed);
   const depths = nestingDepths(closed.map((p) => p.segments));
-  const out: LaserPath[] = [];
+  const out: (LaserPath | null)[] = [];
   let k = 0;
   for (const p of paths) {
     if (!p.closed) {
@@ -63,7 +81,7 @@ export function withKerf(paths: LaserPath[], kerf: number): LaserPath[] {
     }
     const depth = depths[k++];
     const moved = offsetLoop(p.segments, depth % 2 === 0 ? kerf / 2 : -kerf / 2);
-    if (moved) out.push({ ...p, segments: moved });
+    out.push(moved ? { ...p, segments: moved } : null);
   }
   return out;
 }

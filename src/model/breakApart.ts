@@ -6,7 +6,7 @@
 import { signedArea } from "../geometry/boolean";
 import { nestingDepths } from "../geometry/offset";
 import { pathPoints, pointInPolygon, type Pt } from "../geometry/segments";
-import { itemOutlines } from "./shapes";
+import { baseOf, itemOutlines } from "./shapes";
 import type { Item, Outline } from "./types";
 
 /** The pieces' outlines (one entry per piece, outsides first, then open lines). */
@@ -41,11 +41,10 @@ export function brokenApart(item: Item, newIds: () => string): Item[] {
   const pieces = piecesOfOutlines(itemOutlines(item));
   if (pieces.length < 2) return [item];
   return pieces.map((outlines, k) => ({
+    ...baseOf(item),
     id: k === 0 ? item.id : newIds(),
     name: `${item.name} ${k + 1}`,
-    op: item.op,
     kind: "shape",
     outlines,
-    ...(item.hidden ? { hidden: true } : {}),
   }));
 }

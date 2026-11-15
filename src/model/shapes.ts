@@ -191,8 +191,21 @@ export function transformedItem(item: Item, m: Affine): Item {
       return Math.abs(angle - q * (Math.PI / 2)) < 1e-6 ? turnedPicture(p, flipped ? -q : q) : p;
     }
     default:
-      return { id: item.id, name: item.name, op: item.op, hidden: item.hidden, group: item.group, kind: "shape", outlines: moveOutlines(itemOutlines(item), m) };
+      return { ...baseOf(item), kind: "shape", outlines: moveOutlines(itemOutlines(item), m) };
   }
+}
+
+/** What every shape has, whatever its kind (kept when a shape becomes an outline). */
+export function baseOf(item: Item): Pick<Item, "id" | "name" | "op" | "hidden" | "group" | "tabs" | "tabWidth"> {
+  return {
+    id: item.id,
+    name: item.name,
+    op: item.op,
+    ...(item.hidden ? { hidden: true } : {}),
+    ...(item.group ? { group: item.group } : {}),
+    ...(item.tabs ? { tabs: item.tabs } : {}),
+    ...(item.tabWidth ? { tabWidth: item.tabWidth } : {}),
+  };
 }
 
 /** The shape turned `angle` degrees anticlockwise about its centre (rectangles and text keep their settings). */

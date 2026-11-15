@@ -15,7 +15,8 @@ import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makePo
 import { newId } from "../model/document";
 import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
-import { OP_INFO, type Item, type PictureItem } from "../model/types";
+import { DEFAULT_TAB_WIDTH, OP_INFO, type Item, type PictureItem } from "../model/types";
+import { tabPlaces } from "../laser/tabs";
 import { usePicturePreview } from "./pictures";
 import { anchorOf, canStretch, dragScale, handlePoint, resizedItems, type Handle } from "../model/resize";
 import { rotatedItemAbout } from "../model/shapes";
@@ -412,6 +413,26 @@ export function BedView() {
             : tool === "text"
               ? "text"
               : "crosshair";
+  const tabMarks = useMemo(() => {
+    const out = new Map<string, Pt[]>();
+    for (const it of doc.items) {
+      if (!it.tabs || it.op !== "cut" || it.hidden || it.kind === "picture") continue;
+      const marks: Pt[] = [];
+      for (const o of itemOutlines(it)) {
+        if (!o.closed) continue;
+        const { points, along, gaps } = tabPlaces(o.segments, it.tabs, it.tabWidth ?? DEFAULT_TAB_WIDTH);
+        for (const [a, b] of gaps) {
+          const m = (a + b) / 2;
+          let i = 1;
+          while (i < along.length - 1 && along[i] < m) i++;
+          const t = (m - along[i - 1]) / Math.max(along[i] - along[i - 1], 1e-12);
+          marks.push([points[i - 1][0] + (points[i][0] - points[i - 1][0]) * t, points[i - 1][1] + (points[i][1] - points[i - 1][1]) * t]);
+        }
+      }
+      if (marks.length) out.set(it.id, marks);
+    }
+    return out;
+  }, [doc.items]);
   const selBox = tool === "select" && (!gesture || gesture.kind === "resize" || gesture.kind === "turn") ? selectionBox(doc.items, selection) : null;
   const [W, H] = doc.bed;
   const px = 1 / view.scale; // one screen pixel in mm
@@ -485,6 +506,8 @@ export function BedView() {
               <g key={item.id} className={`shape op-${item.op}${selected ? " selected" : ""}`}>
                 {selected && <path d={d} fill="none" stroke="var(--accent)" strokeOpacity={0.35} strokeWidth={7 * px} strokeLinejoin="round" strokeLinecap="round" />}
                 <path d={d} fill={engrave ? colour : "none"} fillRule="evenodd" fillOpacity={engrave ? 0.85 : undefined} stroke={colour} strokeWidth={(engrave ? 0.75 : 1.5) * px} strokeLinejoin="round" strokeLinecap="round" />
+                {/* Holding tabs: a little break in the line where it isn't cut. */}
+                {tabMarks.get(item.id)?.map(([x, y], k) => <circle key={k} cx={x} cy={y} r={3.5 * px} className="tab-mark" stroke={colour} strokeWidth={1.5 * px} />)}
               </g>
             );
           })}

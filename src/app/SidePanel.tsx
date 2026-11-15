@@ -9,7 +9,7 @@ import { boxOf, piecesOf } from "../model/arrange";
 import { describeItem, itemBox, pictureSize, placedAt } from "../model/shapes";
 import { PHOTO_MODES, RESOLUTIONS } from "./PhotoTab";
 import { useDocument, useSelection, useStore } from "../model/store";
-import { OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
+import { DEFAULT_TAB_WIDTH, MOST_TABS, OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { AlignControls } from "./AlignControls";
 import { MakeMore } from "./MakeMore";
 import { areaText, itemArea, itemLength, lengthText } from "../model/measure";
@@ -191,12 +191,52 @@ function ItemProperties({ item }: { item: Item }) {
           </div>
         </>
       )}
+      <TabFields items={[item]} />
       {item.kind !== "picture" && <Measures item={item} />}
       {item.kind === "shape" && box && (
         <p className="dialog-hint">
           {describeItem(item)}, {item.outlines.length} {item.outlines.length === 1 ? "outline" : "outlines"}. Use the toolbar to turn or flip it.
         </p>
       )}
+    </>
+  );
+}
+
+/**
+ * Holding tabs, for cut shapes with a closed outline: how many small uncut gaps each outline gets, and how wide.
+ * Several shapes: set for all of them.
+ */
+function TabFields({ items }: { items: readonly Item[] }) {
+  const updateSelected = useStore((s) => s.updateSelected);
+  const updateItem = useStore((s) => s.updateItem);
+  const cut = items.filter((it) => it.op === "cut" && it.kind !== "picture" && it.kind !== "line");
+  if (!cut.length) return null;
+  const counts = new Set(cut.map((it) => it.tabs ?? 0));
+  const widths = new Set(cut.map((it) => it.tabWidth ?? DEFAULT_TAB_WIDTH));
+  const count = counts.size === 1 ? [...counts][0] : 0;
+  const width = widths.size === 1 ? [...widths][0] : DEFAULT_TAB_WIDTH;
+  const change = (patch: { tabs?: number; tabWidth?: number }) => {
+    const apply = (it: Item): Item => {
+      if (it.op !== "cut" || it.kind === "picture" || it.kind === "line") return it;
+      const next = { ...it, ...patch };
+      if (!next.tabs) {
+        delete next.tabs;
+        delete next.tabWidth;
+      }
+      return next as Item;
+    };
+    if (items.length === 1) updateItem(items[0].id, apply);
+    else updateSelected(apply);
+  };
+  return (
+    <>
+      <div className="field-label" title="Small gaps left uncut, so pieces stay held in the sheet until you snap them out (they can't drop through the honeycomb or tip up into the head).">
+        Holding tabs
+      </div>
+      <div className="field-row">
+        <NumberBox label="Tabs on each outline (0 = none)" value={count} unit="" min={0} onCommit={(v) => change({ tabs: Math.round(Math.min(MOST_TABS, v)) })} />
+        {count > 0 && <NumberBox label="Tab width" value={width} unit="mm" min={0.1} onCommit={(v) => change({ tabWidth: Math.min(20, v) })} />}
+      </div>
     </>
   );
 }
@@ -396,6 +436,7 @@ function ManyProperties({ items }: { items: Item[] }) {
           </p>
         </>
       )}
+      <TabFields items={items} />
       <AlignControls />
       {!lone && (
         <>

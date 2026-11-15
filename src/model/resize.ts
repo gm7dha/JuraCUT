@@ -7,7 +7,7 @@
  * stretched one way at all and stay what it is.
  */
 import { arcInfo, ellipseArcBeziers, type Pt, type Segment } from "../geometry/segments";
-import { itemBox, itemOutlines } from "./shapes";
+import { baseOf, itemBox, itemOutlines } from "./shapes";
 import type { Item, Outline } from "./types";
 
 /** The smallest a shape may be scaled to (mm across). */
@@ -132,7 +132,7 @@ export function scaledItem(item: Item, sx: number, sy: number, about: Pt): Item 
       return { ...item, outlines: scaledOutlines(item.outlines, sx, sy, about) };
   }
   // Can't stay what it is: its outline, stretched.
-  return { id: item.id, name: item.name, op: item.op, hidden: item.hidden, group: item.group, kind: "shape", outlines: scaledOutlines(itemOutlines(item), sx, sy, about) };
+  return { ...baseOf(item), kind: "shape", outlines: scaledOutlines(itemOutlines(item), sx, sy, about) };
 }
 
 export type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
