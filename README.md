@@ -45,7 +45,8 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
 - **Groups**, and **Align**: line shapes up with each other, a key shape or the bed, centre them on the bed, or
   space them out evenly (with shortcuts).
 - **Materials**: a list of what you cut, with thickness, kerf and your notes, kept on your computer.
-- **Rulers** and **snapping**: edges and middles line up with other shapes and the bed as you draw or move.
+- **Rulers** and **snapping**: edges and middles line up with other shapes and the bed as you draw or move, and points
+  snap onto other shapes' corners, ends and centres. **Lock** shapes, and **measure** between any two points.
 - **Save** to a `.juracut` file and open it later (or drag it onto the window). Your latest work is also kept in the
   browser. **Install it as an app** (Chrome/Edge) so it opens in its own window and works offline. Light and dark.
 

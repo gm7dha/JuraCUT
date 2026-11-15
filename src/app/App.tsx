@@ -165,6 +165,7 @@ function useShortcuts() {
           else if (k === "l") s.setTool("line");
           else if (k === "p") s.setTool("polygon");
           else if (k === "q") s.setTool("qr");
+          else if (k === "m") s.setTool("measure");
           else if (k === "t") s.setTool("text");
           else if (k === "f") s.requestFit();
         }

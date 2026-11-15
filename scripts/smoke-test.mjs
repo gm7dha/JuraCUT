@@ -614,9 +614,11 @@ try {
   await page.mouse.dblclick(epMid[0], epMid[1]);
   let ep = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "ep"));
   expect(ep.kind === "shape" && (await store(() => window.juracutStore.getState().pointsOf)) === "ep", "a double-click starts editing its points");
+  await page.keyboard.down("Shift");
   await drag([340, 230], [350, 240]);
+  await page.keyboard.up("Shift");
   ep = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "ep"));
-  expect(ep.outlines[0].segments.some((g) => g.from[0] === 350 && g.from[1] === 240), "the top-right corner was dragged out");
+  expect(ep.outlines[0].segments.some((g) => Math.abs(g.from[0] - 350) < 0.2 && Math.abs(g.from[1] - 240) < 0.2), "the top-right corner was dragged out");
   // A point added half-way along the bottom, then taken out with Delete.
   const bottom = await bedPoint([320, 200]);
   await page.mouse.dblclick(bottom[0], bottom[1]);
@@ -630,6 +632,40 @@ try {
   await store(() => {
     const s = window.juracutStore.getState();
     s.select(["ep"]);
+    s.deleteSelected();
+  });
+
+  step = "snapping to corners, locking, measuring";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    // A fresh design, so nothing left from earlier steps is near enough to snap to.
+    s.newDocument();
+    s.setTool("select");
+    s.addItems([
+      { id: "sa", name: "Base", op: "cut", kind: "rect", x: 500, y: 200, w: 40, h: 40, radius: 0, angle: 0 },
+      { id: "sb", name: "Mover", op: "cut", kind: "rect", x: 560, y: 200, w: 20, h: 20, radius: 0, angle: 0 },
+    ], { select: false });
+  });
+  // Drag the small square's bottom-left corner near the big one's top-right: it lands exactly on it.
+  await drag([565, 205], [545.6, 244.6]);
+  const mover = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "sb"));
+  expect(Math.abs(mover.x - 540) < 1e-9 && Math.abs(mover.y - 240) < 1e-9, `the corner snapped onto the other's corner (at ${mover.x}, ${mover.y})`);
+  // Locked: a click on it picks nothing, and a drag doesn't move it.
+  await store(() => window.juracutStore.getState().updateItem("sa", (it) => ({ ...it, locked: true })));
+  await store(() => window.juracutStore.getState().clearSelection());
+  await drag([510, 210], [530, 220]);
+  const base = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "sa"));
+  expect(base.x === 500 && base.y === 200, "the locked shape didn't move");
+  // Measure corner to corner across the 40 × 40 square: 56.6 mm at 45°.
+  await page.keyboard.press("m");
+  await drag([500.3, 200.2], [539.8, 239.7]);
+  const said = await page.textContent(".bed-readout");
+  expect(said.includes("56.6 mm (across 40, up 40) at 45°"), `the measurement says 56.6 mm at 45° (${said})`);
+  await page.keyboard.press("v");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.updateItem("sa", (it) => ({ ...it, locked: false }));
+    s.select(["sa", "sb"]);
     s.deleteSelected();
   });
 

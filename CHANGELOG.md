@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.18 — Edit points
+## v0.19 — Snapping to corners, locking, measuring
+
+- **Snap to points**: drawing, moving and editing points now snap onto other shapes' corners, line ends and middles,
+  and circles' centres and edges (a small ring shows the point). Moving a shape snaps its corners onto others' —
+  handy for butting pieces together. Shift: no snapping.
+- **Lock**: the padlock in the shapes list locks a shape so it can't be picked or moved on the bed (a background, or a
+  jig outline to line things up with). It stays editable from the list.
+- **Measure tool** (M): drag between two points to see the distance, how far across and up, and the angle. It snaps
+  to shapes' points too.
+- Help lists the new keys (P, Q, M) and the double-click to edit points.
+
+## v0.18 — Edit points · commit `43a904f`
 
 - **Edit points** (like LightBurn's Edit Nodes): double-click a shape (or press **Edit points** in the panel) to
   reshape it point by point. Drag a point — its curve handles come with it — or pick a point and drag its curve's

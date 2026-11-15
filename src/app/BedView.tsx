@@ -13,7 +13,7 @@ import { svgPathData } from "../laser/files";
 import { keyPiece } from "../model/arrange";
 import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makePolygon, makeQr, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
-import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
+import { rulerStep, shapePoints, snapBoxMove, snapLines, snapPoint, snapPointsMove, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
 import { DEFAULT_TAB_WIDTH, OP_INFO, type Item, type PictureItem } from "../model/types";
 import { tabPlaces } from "../laser/tabs";
@@ -54,6 +54,7 @@ type Gesture =
   | { kind: "resize"; handle: Handle; box: [number, number, number, number]; ids: string[]; stretch: boolean }
   | { kind: "turn"; centre: Pt; from: number; ids: string[] }
   | { kind: "node"; node: NodeRef }
+  | { kind: "measure"; start: Pt; end: Pt }
   | { kind: "handle"; handle: HandleRef }
   | { kind: "move"; start: Pt; moved: boolean; box: [number, number, number, number] | null }
   | { kind: "box"; start: Pt; end: Pt }
@@ -65,6 +66,8 @@ export function BedView() {
   const selection = useSelection();
   const alignAgainst = useStore((st) => st.alignAgainst);
   const tool = useStore((s) => s.tool);
+  // What can be picked on the bed: everything but locked shapes.
+  const pickable = useMemo(() => doc.items.filter((it) => !it.locked), [doc.items]);
   const pointsOf = useStore((s) => s.pointsOf);
   const pickedNode = useStore((s) => s.pickedNode);
   // The shape whose points are being edited (only while it's a free shape and selected).
@@ -85,8 +88,12 @@ export function BedView() {
   const spaceHeld = useRef(false);
   const [pointerMm, setPointerMm] = useState<Pt | null>(null);
   /** The lines snapped to right now, drawn as guides. */
-  const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const [guides, setGuides] = useState<{ x: number | null; y: number | null; point?: Pt }>({ x: null, y: null });
   const linesRef = useRef<SnapLines>({ xs: [], ys: [] });
+  const ownPoints = useRef<Pt[]>([]);
+  /** The last measurement, shown until the next click or tool change. */
+  const [measured, setMeasured] = useState<[Pt, Pt] | null>(null);
+  useEffect(() => setMeasured(null), [tool]);
   /** What a resize or turn is doing, shown by the pointer ("120 × 40 mm", "30°"). */
   const [readout, setReadout] = useState("");
   const [hoverHandle, setHoverHandle] = useState<Handle | "turn" | null>(null);
@@ -201,7 +208,8 @@ export function BedView() {
       return p;
     }
     const near = snapPoint(p, linesRef.current, SNAP_PX / viewRef.current.scale);
-    setGuides({ x: near.guideX, y: near.guideY });
+    setGuides({ x: near.guideX, y: near.guideY, point: near.point });
+    if (near.point) return near.point;
     const step = viewRef.current.scale > 8 ? 0.5 : 1;
     return [near.guideX ?? Math.round(p[0] / step) * step, near.guideY ?? Math.round(p[1] / step) * step];
   };
@@ -260,6 +268,7 @@ export function BedView() {
     }
     if (pointers.current.size > 2) return;
     setMenu(null);
+    setMeasured(null);
     if (e.button === 1 || e.button === 2 || spaceHeld.current) {
       panned.current = false;
       setGestureBoth({ kind: "pan", start: [px, py], view: viewRef.current, button: e.button, moved: false });
@@ -273,6 +282,12 @@ export function BedView() {
       const hit = pointAt([px, py]);
       if (hit) {
         s.dragStart();
+        // Snap to other shapes, and to this shape's other points.
+        const lines = snapLines(doc.items, [editing.id], doc.bed);
+        const own = nodesOf(editing.outlines)
+          .filter((n) => "which" in hit || n.ref.outline !== hit.outline || n.ref.index !== hit.index)
+          .map((n) => n.at);
+        linesRef.current = { ...lines, points: [...(lines.points ?? []), ...own] };
         if ("which" in hit) setGestureBoth({ kind: "handle", handle: hit });
         else {
           s.pickNode(hit);
@@ -300,12 +315,14 @@ export function BedView() {
         } else setGestureBoth({ kind: "resize", handle: h, box, ids, stretch: canStretch(doc.items.filter((it) => ids.includes(it.id))) });
         return;
       }
-      const hit = itemAt(doc.items, mm, REACH_PX / viewRef.current.scale);
+      const hit = itemAt(pickable, mm, REACH_PX / viewRef.current.scale);
       if (hit) {
         if (additive) s.select([hit.id], true);
         else if (!selection.includes(hit.id)) s.select([hit.id]);
         const ids = useStore.getState().selection;
         linesRef.current = snapLines(doc.items, ids, doc.bed);
+        // The moving shapes' own points (a few hundred at most), to snap onto other shapes' points.
+        ownPoints.current = doc.items.filter((it) => ids.includes(it.id)).flatMap(shapePoints).slice(0, 300);
         s.dragStart();
         setGestureBoth({ kind: "move", start: mm, moved: false, box: selectionBox(doc.items, ids) });
       } else {
@@ -333,6 +350,11 @@ export function BedView() {
     }
     linesRef.current = snapLines(doc.items, [], doc.bed);
     const p = snap(mm, e.shiftKey);
+    if (tool === "measure") {
+      setMeasured(null);
+      setGestureBoth({ kind: "measure", start: p, end: p });
+      return;
+    }
     setGestureBoth({ kind: "draw", tool, start: p, end: p });
   };
 
@@ -356,8 +378,7 @@ export function BedView() {
         break;
       case "node":
       case "handle": {
-        const step = viewRef.current.scale > 8 ? 0.5 : 1;
-        const to: Pt = e.shiftKey ? mm : [Math.round(mm[0] / step) * step, Math.round(mm[1] / step) * step];
+        const to: Pt = snap(mm, e.shiftKey);
         const id = useStore.getState().pointsOf;
         s.dragUpdate((base) => ({
           ...base,
@@ -406,7 +427,12 @@ export function BedView() {
         g.moved = true;
         const step = e.shiftKey ? 0 : viewRef.current.scale > 8 ? 0.5 : 1;
         let d: Pt = step ? [Math.round(raw[0] / step) * step, Math.round(raw[1] / step) * step] : raw;
-        if (!e.shiftKey && g.box) {
+        const onPoint = !e.shiftKey ? snapPointsMove(ownPoints.current, raw[0], raw[1], linesRef.current.points ?? [], SNAP_PX / viewRef.current.scale) : null;
+        if (onPoint) {
+          // A corner (or end, or centre) lands on another shape's.
+          d = [onPoint.dx, onPoint.dy];
+          setGuides({ x: null, y: null, point: onPoint.point });
+        } else if (!e.shiftKey && g.box) {
           // Edges and middles of what's being moved line up with other shapes when they come close.
           const sn = snapBoxMove(g.box, raw[0], raw[1], linesRef.current, SNAP_PX / viewRef.current.scale);
           d = [sn.guideX !== null ? sn.dx : d[0], sn.guideY !== null ? sn.dy : d[1]];
@@ -420,6 +446,9 @@ export function BedView() {
         setGestureBoth({ ...g, end: mm });
         break;
       case "draw":
+        setGestureBoth({ ...g, end: snap(mm, e.shiftKey) });
+        break;
+      case "measure":
         setGestureBoth({ ...g, end: snap(mm, e.shiftKey) });
         break;
     }
@@ -438,6 +467,10 @@ export function BedView() {
     setGestureBoth(null);
     setGuides({ x: null, y: null });
     switch (g.kind) {
+      case "measure":
+        // It stays on show until the next click.
+        setMeasured([g.start, g.end]);
+        break;
       case "move":
       case "resize":
       case "turn":
@@ -447,7 +480,7 @@ export function BedView() {
         setReadout("");
         break;
       case "box": {
-        const picked = itemsInBox(doc.items, [g.start[0], g.start[1], g.end[0], g.end[1]]);
+        const picked = itemsInBox(pickable, [g.start[0], g.start[1], g.end[0], g.end[1]]);
         if (picked.length) s.select(picked.map((it) => it.id), e.shiftKey || e.ctrlKey || e.metaKey);
         break;
       }
@@ -530,7 +563,7 @@ export function BedView() {
           }
           if (gestureRef.current?.kind === "pan") setGestureBoth(null);
           const [x, y] = local(e);
-          const hit = itemAt(doc.items, toMm(x, y), REACH_PX / view.scale);
+          const hit = itemAt(pickable, toMm(x, y), REACH_PX / view.scale);
           const s = useStore.getState();
           if (hit && !s.selection.includes(hit.id)) s.select([hit.id]);
           setMenu({ x: e.clientX, y: e.clientY });
@@ -549,7 +582,7 @@ export function BedView() {
             }
             return;
           }
-          const hit = itemAt(doc.items, mm, REACH_PX / view.scale);
+          const hit = itemAt(pickable, mm, REACH_PX / view.scale);
           if (!hit) return;
           // Words: type them. Anything else (but photos): edit its points.
           if (hit.kind === "text" || hit.kind === "qr") s.setFocusItem(hit.id);
@@ -634,6 +667,19 @@ export function BedView() {
           )}
           {draft && <path d={itemPathData(draft)} className="draft" fill="none" stroke="var(--accent)" strokeWidth={1.5 * px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {guides.x !== null && <line x1={guides.x} y1={-1e4} x2={guides.x} y2={1e4} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
+          {(() => {
+            const m = gesture?.kind === "measure" ? ([gesture.start, gesture.end] as [Pt, Pt]) : measured;
+            if (!m) return null;
+            const [a, b] = m;
+            return (
+              <g className="measure">
+                <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth={1.5 * px} />
+                <circle cx={a[0]} cy={a[1]} r={3 * px} strokeWidth={1.5 * px} />
+                <circle cx={b[0]} cy={b[1]} r={3 * px} strokeWidth={1.5 * px} />
+              </g>
+            );
+          })()}
+          {guides.point && <circle cx={guides.point[0]} cy={guides.point[1]} r={6 * px} className="snap-point" strokeWidth={1.5 * px} />}
           {guides.y !== null && <line x1={-1e4} y1={guides.y} x2={1e4} y2={guides.y} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {gesture?.kind === "box" && (
             <rect
@@ -652,11 +698,24 @@ export function BedView() {
         {pointerMm ? `${pointerMm[0].toFixed(1)}, ${pointerMm[1].toFixed(1)} mm` : ""}
         {draft && gesture?.kind === "draw" && ` · ${draftSize(gesture)}`}
         {readout && ` · ${readout}`}
+        {(() => {
+          const m = gesture?.kind === "measure" ? ([gesture.start, gesture.end] as [Pt, Pt]) : measured;
+          return m ? ` · ${measureText(m[0], m[1])}` : "";
+        })()}
         <span className="bed-zoom"> {Math.round(view.scale * 100) / 100 >= 1 ? `${(view.scale).toFixed(1)} px/mm` : `${(view.scale * 100).toFixed(0)}%`}</span>
       </div>
       {menu && <BedMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </div>
   );
+}
+
+/** "52.3 mm (across 40, up 33.7) at 40.1°" */
+function measureText(a: Pt, b: Pt): string {
+  const n = (v: number) => Math.round(v * 10) / 10;
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  return `${n(Math.hypot(dx, dy))} mm (across ${n(Math.abs(dx))}, up ${n(Math.abs(dy))}) at ${n(angle)}°`;
 }
 
 /** Which handles to show: the corners always, the edge handles only when the box is big enough on screen to tell them apart. */

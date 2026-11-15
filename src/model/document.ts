@@ -94,6 +94,7 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
     op: isOp(it.op) ? it.op : ("cut" as const),
     ...(it.hidden === true ? { hidden: true } : {}),
     ...(typeof it.group === "string" && it.group ? { group: it.group.slice(0, 40) } : {}),
+    ...(it.locked === true ? { locked: true } : {}),
     ...(num(it.tabs) >= 1 ? { tabs: Math.round(Math.min(MOST_TABS, num(it.tabs))) } : {}),
     ...(num(it.tabWidth) > 0 ? { tabWidth: Math.min(20, num(it.tabWidth)) } : {}),
   };

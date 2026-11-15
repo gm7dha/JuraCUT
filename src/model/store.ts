@@ -19,7 +19,7 @@ import { baseOf, boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedIt
 import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline } from "./types";
 
-export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text" | "qr";
+export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text" | "qr" | "measure";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
 
 export interface Toast {
@@ -431,7 +431,7 @@ export const useStore = create<State>((set, get) => ({
     }
   },
   moveSelected(dx, dy) {
-    get().updateSelected((it) => movedItem(it, dx, dy));
+    get().updateSelected((it) => (it.locked ? it : movedItem(it, dx, dy)));
   },
   rotateSelected(angle) {
     const { history, selection } = get();
@@ -572,7 +572,7 @@ export const useStore = create<State>((set, get) => ({
     if (next.length !== selection.length || next.some((id, i) => id !== selection[i])) set({ selection: next });
   },
   selectAll() {
-    const ids = get().history.present.items.filter((it) => !it.hidden).map((it) => it.id);
+    const ids = get().history.present.items.filter((it) => !it.hidden && !it.locked).map((it) => it.id);
     set({ selection: ids.length ? ids : EMPTY });
   },
   clearSelection() {

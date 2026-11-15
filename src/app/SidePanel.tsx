@@ -95,6 +95,21 @@ export function SidePanel() {
                   >
                     {it.hidden ? <Icons.EyeOff size={16} /> : <Icons.Eye size={16} />}
                   </button>
+                  <button
+                    type="button"
+                    className={`icon-button small row-button${it.locked ? " on" : ""}`}
+                    title={it.locked ? "Unlock (so it can be picked and moved on the bed)" : "Lock (it can't be picked or moved on the bed)"}
+                    aria-label={it.locked ? "Unlock" : "Lock"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateItem(it.id, (x) => {
+                        const { locked, ...rest } = x;
+                        return (locked ? rest : { ...rest, locked: true }) as Item;
+                      });
+                    }}
+                  >
+                    {it.locked ? <Icons.Lock size={15} /> : <Icons.Unlock size={15} />}
+                  </button>
                   <button type="button" className="icon-button small row-button" title="Bring forward (drawn on top)" aria-label="Bring forward" disabled={index === doc.items.length - 1} onClick={(e) => (e.stopPropagation(), reorder(it.id, index + 1))}>
                     <Icons.Up size={14} />
                   </button>

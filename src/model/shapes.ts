@@ -200,13 +200,14 @@ export function transformedItem(item: Item, m: Affine): Item {
 }
 
 /** What every shape has, whatever its kind (kept when a shape becomes an outline). */
-export function baseOf(item: Item): Pick<Item, "id" | "name" | "op" | "hidden" | "group" | "tabs" | "tabWidth"> {
+export function baseOf(item: Item): Pick<Item, "id" | "name" | "op" | "hidden" | "group" | "locked" | "tabs" | "tabWidth"> {
   return {
     id: item.id,
     name: item.name,
     op: item.op,
     ...(item.hidden ? { hidden: true } : {}),
     ...(item.group ? { group: item.group } : {}),
+    ...(item.locked ? { locked: true } : {}),
     ...(item.tabs ? { tabs: item.tabs } : {}),
     ...(item.tabWidth ? { tabWidth: item.tabWidth } : {}),
   };

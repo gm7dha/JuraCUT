@@ -34,6 +34,7 @@ const TOOLS: { tool: Tool; label: string; key: string; icon: (p: { size?: number
   { tool: "line", label: "Line", key: "L", icon: Icons.Line, hint: "Drag from one end to the other (cut or score it)" },
   { tool: "text", label: "Text", key: "T", icon: Icons.Text, hint: "Click where the words start, then type them in the panel" },
   { tool: "qr", label: "QR code", key: "Q", icon: Icons.Qr, hint: "Click where the code goes, then type the web address or words in the panel" },
+  { tool: "measure", label: "Measure", key: "M", icon: Icons.Measure, hint: "Drag between two points to see how far apart they are, across, up and at what angle. Snaps to shapes' corners and middles" },
 ];
 
 export function Toolbar() {
