@@ -603,6 +603,36 @@ try {
     s.deleteSelected();
   }, hid);
 
+  step = "editing points: double-click, drag a corner, add and take out points";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.clearSelection();
+    s.setTool("select");
+    s.addItems([{ id: "ep", name: "Reshape", op: "cut", kind: "rect", x: 300, y: 200, w: 40, h: 30, radius: 0, angle: 0 }]);
+  });
+  const epMid = await bedPoint([300, 215]);
+  await page.mouse.dblclick(epMid[0], epMid[1]);
+  let ep = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "ep"));
+  expect(ep.kind === "shape" && (await store(() => window.juracutStore.getState().pointsOf)) === "ep", "a double-click starts editing its points");
+  await drag([340, 230], [350, 240]);
+  ep = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "ep"));
+  expect(ep.outlines[0].segments.some((g) => g.from[0] === 350 && g.from[1] === 240), "the top-right corner was dragged out");
+  // A point added half-way along the bottom, then taken out with Delete.
+  const bottom = await bedPoint([320, 200]);
+  await page.mouse.dblclick(bottom[0], bottom[1]);
+  ep = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "ep"));
+  expect(ep.outlines[0].segments.length === 5, "a double-click on a line added a point");
+  await page.keyboard.press("Delete");
+  ep = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "ep"));
+  expect(ep && ep.outlines[0].segments.length === 4, "Delete took the point out, not the shape");
+  await page.keyboard.press("Escape");
+  expect((await store(() => window.juracutStore.getState().pointsOf)) === null, "Esc finished editing");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.select(["ep"]);
+    s.deleteSelected();
+  });
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

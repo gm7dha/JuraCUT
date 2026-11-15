@@ -1665,7 +1665,8 @@ kbd {
   border-top: 1px solid var(--line-2);
 }
 .make-more .field-row {
-  align-items: flex-end;
+  align-items: end;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
 }
 .make-more .make-button {
   flex: none;
@@ -1716,4 +1717,38 @@ kbd {
   width: 100%;
   resize: vertical;
   margin-bottom: 4px;
+}
+
+/* Editing points. */
+.nodes .node {
+  fill: var(--panel);
+  stroke: var(--accent);
+}
+.nodes .node.picked {
+  fill: var(--accent);
+}
+.nodes .node-stalk {
+  stroke: var(--accent);
+  stroke-dasharray: none;
+}
+.nodes .node-handle {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+.points-bar {
+  padding: 10px;
+  margin: 0 0 10px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+.points-bar p {
+  margin: 0 0 8px;
+}
+.points-bar .field-row {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.points-bar .field-row button {
+  justify-content: center;
 }

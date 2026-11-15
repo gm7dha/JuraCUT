@@ -159,6 +159,15 @@
   turned or flipped it becomes a shape; only even resizes, `canStretch` false). Tool "qr" (Q, click to place, panel focused),
   SidePanel `QrFields`; `namedCopies` replaces "#" in a QR's text too. The smoke test places one, exports it alone and
   checks the rendered SVG's three corner squares.
+- v0.18 Edit points: `src/model/nodes.ts` (pure: `editable` — curves → Béziers via `asBeziers`; `NodeRef` {outline, index}
+  — index = the piece it starts, or segments.length for an open line's end; `nodesOf`, `handlesOf`, `movedNode` (handles
+  go along), `movedHandle`, `nearestOn`, `pieceAt`, `addedNode` (de Casteljau, shape unchanged), `removedNode` (null when
+  too few), `curved`/`straightened`). Store `pointsOf`/`pickedNode`, `editPoints` (converts to a shape: one undo step),
+  `stopEditingPoints` (also when the selection drops it), `pickNode`, `changePoints`. BedView: `editing`, `pointAt` (handles
+  of the picked point first, then points, screen px), gestures "node"/"handle" (one drag = one step, grid snap unless
+  Shift), double-click adds a point (else, off editing: words/QR focus their text, others start editing), `.nodes`
+  drawing, no resize handles or dashed boxes meanwhile. App: Esc stops, Delete removes the picked point. SidePanel
+  `PointsBar`.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

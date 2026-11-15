@@ -19,6 +19,7 @@ import { DEFAULT_TAB_WIDTH, OP_INFO, type Item, type PictureItem } from "../mode
 import { tabPlaces } from "../laser/tabs";
 import { usePicturePreview } from "./pictures";
 import { anchorOf, canStretch, dragScale, handlePoint, resizedItems, type Handle } from "../model/resize";
+import { addedNode, handlesOf, movedHandle, movedNode, nodesOf, pieceAt, type HandleRef, type NodeRef } from "../model/nodes";
 import { rotatedItemAbout } from "../model/shapes";
 import { polygonStyle } from "./polygonStyle";
 import { BedMenu } from "./BedMenu";
@@ -52,6 +53,8 @@ type Gesture =
   | { kind: "pan"; start: Pt; view: View; button: number; moved: boolean }
   | { kind: "resize"; handle: Handle; box: [number, number, number, number]; ids: string[]; stretch: boolean }
   | { kind: "turn"; centre: Pt; from: number; ids: string[] }
+  | { kind: "node"; node: NodeRef }
+  | { kind: "handle"; handle: HandleRef }
   | { kind: "move"; start: Pt; moved: boolean; box: [number, number, number, number] | null }
   | { kind: "box"; start: Pt; end: Pt }
   | { kind: "draw"; tool: Exclude<Tool, "select" | "text">; start: Pt; end: Pt }
@@ -62,6 +65,14 @@ export function BedView() {
   const selection = useSelection();
   const alignAgainst = useStore((st) => st.alignAgainst);
   const tool = useStore((s) => s.tool);
+  const pointsOf = useStore((s) => s.pointsOf);
+  const pickedNode = useStore((s) => s.pickedNode);
+  // The shape whose points are being edited (only while it's a free shape and selected).
+  const editing = (() => {
+    if (!pointsOf || !selection.includes(pointsOf)) return null;
+    const it = doc.items.find((i) => i.id === pointsOf);
+    return it && it.kind === "shape" ? it : null;
+  })();
   const fitRequest = useStore((s) => s.fitRequest);
   const theme = useStore((s) => s.theme);
   const host = useRef<HTMLDivElement>(null);
@@ -215,6 +226,26 @@ export function BedView() {
     return null;
   };
 
+  /** The edited shape's curve handle (of the picked point) or point under a screen point, if any. */
+  const pointAt = (at: Pt): NodeRef | HandleRef | null => {
+    const st = useStore.getState();
+    const it = st.history.present.items.find((i) => i.id === st.pointsOf);
+    if (!it || it.kind !== "shape") return null;
+    const reach = HANDLE_PX / 2 + 4;
+    const near = (p: Pt) => {
+      const q = toScreen(p);
+      return Math.hypot(at[0] - q[0], at[1] - q[1]) <= reach;
+    };
+    if (st.pickedNode) for (const h of handlesOf(it.outlines, st.pickedNode)) if (near(h.at)) return h.ref;
+    let best: { ref: NodeRef; d: number } | null = null;
+    for (const n of nodesOf(it.outlines)) {
+      const q = toScreen(n.at);
+      const d = Math.hypot(at[0] - q[0], at[1] - q[1]);
+      if (d <= reach && (!best || d < best.d)) best = { ref: n.ref, d };
+    }
+    return best?.ref ?? null;
+  };
+
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     const s = useStore.getState();
     const [px, py] = local(e);
@@ -237,6 +268,25 @@ export function BedView() {
     if (e.button !== 0) return;
     const mm = toMm(px, py);
     const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+    if (tool === "select" && editing) {
+      // Editing points: a curve handle or a point is dragged; a click on the shape's lines just lets the picked point go.
+      const hit = pointAt([px, py]);
+      if (hit) {
+        s.dragStart();
+        if ("which" in hit) setGestureBoth({ kind: "handle", handle: hit });
+        else {
+          s.pickNode(hit);
+          setGestureBoth({ kind: "node", node: hit });
+        }
+        return;
+      }
+      if (pieceAt(editing.outlines, mm, REACH_PX / viewRef.current.scale)) {
+        s.pickNode(null);
+        return;
+      }
+      // Anywhere else: editing is done, and the click goes on as usual.
+      s.stopEditingPoints();
+    }
     if (tool === "select") {
       // A handle of the selection: resize or turn it.
       const h = handleAt([px, py]);
@@ -304,6 +354,19 @@ export function BedView() {
         panned.current = true;
         setView({ ...g.view, x: g.view.x + px - g.start[0], y: g.view.y + py - g.start[1] });
         break;
+      case "node":
+      case "handle": {
+        const step = viewRef.current.scale > 8 ? 0.5 : 1;
+        const to: Pt = e.shiftKey ? mm : [Math.round(mm[0] / step) * step, Math.round(mm[1] / step) * step];
+        const id = useStore.getState().pointsOf;
+        s.dragUpdate((base) => ({
+          ...base,
+          items: base.items.map((it) => (it.id === id && it.kind === "shape" ? { ...it, outlines: g.kind === "node" ? movedNode(it.outlines, g.node, to) : movedHandle(it.outlines, g.handle, to) } : it)),
+        }));
+        const n = (v: number) => Math.round(v * 100) / 100;
+        setReadout(`${n(to[0])}, ${n(to[1])} mm`);
+        break;
+      }
       case "resize": {
         const step = viewRef.current.scale > 8 ? 0.5 : 1;
         const to: Pt = [Math.round(mm[0] / step) * step, Math.round(mm[1] / step) * step];
@@ -378,6 +441,8 @@ export function BedView() {
       case "move":
       case "resize":
       case "turn":
+      case "node":
+      case "handle":
         s.dragEnd();
         setReadout("");
         break;
@@ -441,7 +506,7 @@ export function BedView() {
     }
     return out;
   }, [doc.items]);
-  const selBox = tool === "select" && (!gesture || gesture.kind === "resize" || gesture.kind === "turn") ? selectionBox(doc.items, selection) : null;
+  const selBox = !editing && tool === "select" && (!gesture || gesture.kind === "resize" || gesture.kind === "turn") ? selectionBox(doc.items, selection) : null;
   const [W, H] = doc.bed;
   const px = 1 / view.scale; // one screen pixel in mm
   const dark = theme === "dark";
@@ -473,8 +538,22 @@ export function BedView() {
         onDoubleClick={(e) => {
           if (tool !== "select") return;
           const [x, y] = local(e);
-          const hit = itemAt(doc.items, toMm(x, y), REACH_PX / view.scale);
-          if (hit) useStore.getState().setFocusItem(hit.id);
+          const mm = toMm(x, y);
+          const s = useStore.getState();
+          if (editing) {
+            // A double-click on a line adds a point there (the shape doesn't change).
+            const on = pieceAt(editing.outlines, mm, REACH_PX / view.scale);
+            if (on && !pointAt([x, y])) {
+              s.changePoints((o) => addedNode(o, on.outline, on.index, on.t));
+              s.pickNode({ outline: on.outline, index: on.index + 1 });
+            }
+            return;
+          }
+          const hit = itemAt(doc.items, mm, REACH_PX / view.scale);
+          if (!hit) return;
+          // Words: type them. Anything else (but photos): edit its points.
+          if (hit.kind === "text" || hit.kind === "qr") s.setFocusItem(hit.id);
+          else if (hit.kind !== "picture") s.editPoints(hit.id);
         }}
       >
         <defs>
@@ -520,11 +599,27 @@ export function BedView() {
             );
           })}
           {/* The selection's box with handles. */}
-          {selectedBoxes.map(({ item, box }) => (
+          {!editing && selectedBoxes.map(({ item, box }) => (
             <rect key={`sel-${item.id}`} x={box![0]} y={box![1]} width={box![2] - box![0]} height={box![3] - box![1]} className="selection-box" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />
           ))}
           {/* Lining up against the key shape: it's outlined, as it's the one the others line up with. */}
           {keyBox && <rect x={keyBox[0] - 3 * px} y={keyBox[1] - 3 * px} width={keyBox[2] - keyBox[0] + 6 * px} height={keyBox[3] - keyBox[1] + 6 * px} className="key-box" strokeWidth={2.5 * px} />}
+          {/* Editing points: every point a small square (the picked one filled), its curve handles as dots on stalks. */}
+          {editing && (
+            <g className="nodes">
+              {pickedNode &&
+                handlesOf(editing.outlines, pickedNode).map((h, k) => (
+                  <g key={`h${k}`}>
+                    <line x1={h.from[0]} y1={h.from[1]} x2={h.at[0]} y2={h.at[1]} className="node-stalk" strokeWidth={px} />
+                    <circle cx={h.at[0]} cy={h.at[1]} r={4 * px} className="node-handle" strokeWidth={1.5 * px} />
+                  </g>
+                ))}
+              {nodesOf(editing.outlines).map((n) => {
+                const on = pickedNode && pickedNode.outline === n.ref.outline && pickedNode.index === n.ref.index;
+                return <rect key={`${n.ref.outline}-${n.ref.index}`} x={n.at[0] - 3.5 * px} y={n.at[1] - 3.5 * px} width={7 * px} height={7 * px} className={`node${on ? " picked" : ""}`} strokeWidth={1.5 * px} />;
+              })}
+            </g>
+          )}
           {/* Handles: corners and edges resize (the edges only when the selection is big enough on screen), the round one turns. */}
           {selBox && (
             <g className="handles">
