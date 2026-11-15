@@ -6,7 +6,17 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.17 — QR codes
+## v0.18 — Edit points
+
+- **Edit points** (like LightBurn's Edit Nodes): double-click a shape (or press **Edit points** in the panel) to
+  reshape it point by point. Drag a point — its curve handles come with it — or pick a point and drag its curve's
+  handles. **Double-click a line** to add a point there (the shape doesn't change until you move it); **Delete** takes
+  the picked point out. "Make the next piece a curve / straight" changes the piece after the picked point. Points snap
+  to the grid (Shift: no snapping). **Esc** or **Done** when finished; each change is one undo step.
+- The shape becomes a free shape of lines and curves when you start (circles and arcs become curves, exactly enough to
+  cut). Words and QR codes still open their text on double-click; Edit points is in their panel.
+
+## v0.17 — QR codes · commit `5e551f2`
 
 - **QR code tool** (Q): click on the bed, then type a web address or any words in the panel. Change its size and how
   sturdy it is (how much can be scratched or burnt and still read: more sturdy means more, smaller squares). The panel

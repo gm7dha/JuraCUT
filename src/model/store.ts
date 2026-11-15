@@ -15,8 +15,9 @@ import { brokenApart } from "./breakApart";
 import { namedCopies } from "./names";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
-import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
-import type { Item, JuraCUTDocument, Material, Op } from "./types";
+import { baseOf, boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
+import { editable, type NodeRef } from "./nodes";
+import type { Item, JuraCUTDocument, Material, Op, Outline } from "./types";
 
 export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text" | "qr";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
@@ -54,6 +55,9 @@ export interface State {
   fitTarget: "bed" | "selection";
   /** The shape whose words are being typed (text tool): its properties panel gets the focus. */
   focusItem: string | null;
+  /** The shape whose points are being edited (Edit points), and the point picked in it. */
+  pointsOf: string | null;
+  pickedNode: NodeRef | null;
   /** What Line up lines pieces up against (kept in this browser). */
   alignAgainst: AlignAgainst;
   /** A picture waiting to be traced (the Trace window shows it). */
@@ -93,6 +97,12 @@ export interface State {
   repeatRoundSelected(count: number, radius: number, turn: boolean): void;
   /** A copy of the selection for each name (its words become the name), `cols` across, `gap` apart. */
   nameCopiesSelected(names: string[], cols: number, gap: number, shrink: boolean): void;
+  /** Start editing a shape's points (it becomes a free shape of lines and curves, one undo step). */
+  editPoints(id: string): void;
+  stopEditingPoints(): void;
+  pickNode(node: NodeRef | null): void;
+  /** A change to the edited shape's points (one undo step); a change that returns null is refused. */
+  changePoints(change: (outlines: Outline[]) => Outline[] | null): void;
   /** Shapes made of separate pieces split into one shape per piece. */
   breakApartSelected(): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
@@ -160,6 +170,8 @@ export const useStore = create<State>((set, get) => ({
   fitRequest: 0,
   fitTarget: "bed",
   focusItem: null,
+  pointsOf: null,
+  pickedNode: null,
   picture: null,
   alignAgainst: rememberedAgainst(),
 
@@ -350,6 +362,36 @@ export const useStore = create<State>((set, get) => ({
     const copies = names.length - 1;
     if (copies) get().showToast(`Made ${copies} ${copies === 1 ? "copy" : "copies"}: ${names.length} in all, each with its own words.`, "info");
   },
+  editPoints(id) {
+    const doc = get().history.present;
+    const it = doc.items.find((i) => i.id === id);
+    if (!it) return;
+    if (it.kind === "picture") {
+      get().showToast("A photo has no points to edit.", "info");
+      return;
+    }
+    const ready = it.kind === "shape" && it.outlines.every((o) => o.segments.every((s) => s.kind === "line" || s.kind === "bezier"));
+    if (!ready) {
+      const shape: Item = { ...baseOf(it), kind: "shape", outlines: editable(itemOutlines(it)) };
+      get().commit({ ...doc, items: doc.items.map((i) => (i.id === id ? shape : i)) });
+    }
+    set({ selection: [id], pointsOf: id, pickedNode: null, tool: "select", focusItem: null });
+  },
+  stopEditingPoints() {
+    if (get().pointsOf) set({ pointsOf: null, pickedNode: null });
+  },
+  pickNode(node) {
+    set({ pickedNode: node });
+  },
+  changePoints(change) {
+    const { history, pointsOf } = get();
+    const doc = history.present;
+    const it = doc.items.find((i) => i.id === pointsOf);
+    if (!it || it.kind !== "shape") return;
+    const outlines = change(it.outlines);
+    if (!outlines) return;
+    get().commit({ ...doc, items: doc.items.map((i) => (i.id === it.id ? { ...it, outlines } : i)) });
+  },
   breakApartSelected() {
     const { history, selection } = get();
     const doc = history.present;
@@ -526,6 +568,7 @@ export const useStore = create<State>((set, get) => ({
       next = allIn ? selection.filter((id) => !ids.includes(id)) : [...selection, ...ids.filter((id) => !selection.includes(id))];
     }
     if (!next.length) next = EMPTY;
+    if (get().pointsOf && !next.includes(get().pointsOf!)) set({ pointsOf: null, pickedNode: null });
     if (next.length !== selection.length || next.some((id, i) => id !== selection[i])) set({ selection: next });
   },
   selectAll() {
@@ -533,6 +576,7 @@ export const useStore = create<State>((set, get) => ({
     set({ selection: ids.length ? ids : EMPTY });
   },
   clearSelection() {
+    if (get().pointsOf) set({ pointsOf: null, pickedNode: null });
     if (get().selection.length) set({ selection: EMPTY });
   },
   setTool(tool) {

@@ -12,6 +12,7 @@ import { useDocument, useSelection, useStore } from "../model/store";
 import { DEFAULT_TAB_WIDTH, MOST_TABS, OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { AlignControls } from "./AlignControls";
 import { MakeMore } from "./MakeMore";
+import { curved, straightened } from "../model/nodes";
 import { MOST_QR_TEXT, qrModules } from "../geometry/qr";
 import { areaText, itemArea, itemLength, lengthText } from "../model/measure";
 import { keepPolygonStyle } from "./polygonStyle";
@@ -195,6 +196,7 @@ function ItemProperties({ item }: { item: Item }) {
       )}
       <TabFields items={[item]} />
       {item.kind !== "picture" && <Measures item={item} />}
+      {item.kind !== "picture" && <PointsBar item={item} />}
       {item.kind === "shape" && box && (
         <p className="dialog-hint">
           {describeItem(item)}, {item.outlines.length} {item.outlines.length === 1 ? "outline" : "outlines"}. Use the toolbar to turn or flip it.
@@ -240,6 +242,46 @@ function TabFields({ items }: { items: readonly Item[] }) {
         {count > 0 && <NumberBox label="Tab width" value={width} unit="mm" min={0.1} onCommit={(v) => change({ tabWidth: Math.min(20, v) })} />}
       </div>
     </>
+  );
+}
+
+/**
+ * Edit points: the button that starts it, or — while editing — how it works, and making the piece after the picked
+ * point straight or curved.
+ */
+function PointsBar({ item }: { item: Item }) {
+  const pointsOf = useStore((s) => s.pointsOf);
+  const picked = useStore((s) => s.pickedNode);
+  const s = useStore.getState;
+  if (pointsOf !== item.id || item.kind !== "shape") {
+    return (
+      <button type="button" className="text-button make-button wide" onClick={() => s().editPoints(item.id)} title="Reshape it point by point (double-click a shape does this too). It becomes a free shape of lines and curves.">
+        Edit points
+      </button>
+    );
+  }
+  const piece = picked ? item.outlines[picked.outline]?.segments[picked.index] : undefined;
+  return (
+    <div className="points-bar">
+      <p className="small">
+        <strong>Editing points.</strong> Drag a point, or a curve's handle (pick a point to see them). Double-click a line to add a point; Delete takes the picked point out. Shift: no snapping.
+      </p>
+      <div className="field-row">
+        {piece && (
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => s().changePoints((o) => (piece.kind === "line" ? curved(o, picked!.outline, picked!.index) : straightened(o, picked!.outline, picked!.index)))}
+            title="The piece from the picked point to the next"
+          >
+            {piece.kind === "line" ? "Make the next piece a curve" : "Make the next piece straight"}
+          </button>
+        )}
+        <button type="button" className="primary-button" onClick={() => s().stopEditingPoints()}>
+          Done
+        </button>
+      </div>
+    </div>
   );
 }
 

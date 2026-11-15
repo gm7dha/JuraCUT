@@ -1,3 +1,4 @@
+import { removedNode } from "../model/nodes";
 import { useEffect } from "react";
 
 import { startLink } from "./juraLinkApp";
@@ -113,13 +114,23 @@ function useShortcuts() {
       const step = e.shiftKey ? 10 : 1;
       switch (e.key) {
         case "Escape":
-          if (s.tool !== "select") s.setTool("select");
+          if (s.pointsOf) s.stopEditingPoints();
+          else if (s.tool !== "select") s.setTool("select");
           else s.clearSelection();
           break;
         case "Delete":
         case "Backspace":
           e.preventDefault();
-          s.deleteSelected();
+          // Editing points: the picked point goes (not the shape).
+          if (s.pointsOf && s.pickedNode) {
+            const node = s.pickedNode;
+            s.changePoints((o) => {
+              const left = removedNode(o, node);
+              if (!left) s.showToast("That's as few points as this outline can have.", "info");
+              return left;
+            });
+            s.pickNode(null);
+          } else if (!s.pointsOf) s.deleteSelected();
           break;
         case "ArrowLeft":
           e.preventDefault();
