@@ -136,6 +136,15 @@
   (sizes in localStorage `juracut.makeMore`, shared with BedMenu). `TextItem.curve` (radius; + over the top, − under;
   missing = straight): `textOutline(…, curve)` turns each glyph rigidly onto the circle (centre `curve` below the anchor);
   resize scales it; SidePanel's "Round a circle".
+- v0.15: `PolygonItem` (kind "polygon": cx, cy, r to a corner, sides 3–100, angle of the first corner, `star` = inner
+  corners' share of r; `polygonPoints`, `makePolygon`, `polygonName`; turns keep it, flips set angle 180 − a, only even
+  resizes keep it). Tool "polygon" (P; drag centre → corner, 15° steps; last sides/star in localStorage `juracut.polygon`,
+  `src/app/polygonStyle.ts`), SidePanel `PolygonFields`. `src/model/breakApart.ts` (`piecesOfOutlines`: outsides with
+  their direct holes, open lines alone; `brokenApart`), store `breakApartSelected`. `combine.ts` `insetRings` (outsides in,
+  holes out, ∩ the shape) → `outlineSelected(d, fill, inside)`. `repeat.ts` `roundItems` (clockwise from the top round a
+  centre `radius` below, turned or moved) → `repeatRoundSelected`. `src/model/measure.ts` (`pathLength`, `itemLength`,
+  `itemArea`, text helpers): SidePanel `Measures`, Export's line length per layer. Undo/Redo `.icon-only`; under 1440 px
+  the toolbar's buttons close up — the smoke test checks it fits at 1280 px.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

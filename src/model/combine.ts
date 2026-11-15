@@ -83,6 +83,37 @@ export function outlineRings(items: readonly Item[], d: number, fillGaps = true)
   return fillGaps ? outsidesOnly(all) : all;
 }
 
+/**
+ * The area `d` mm inside the shapes (d > 0): every outside moved in, every hole moved out, as rings. Parts narrower
+ * than 2·d go. Lines have no inside, so they're left out.
+ */
+export function insetRings(items: readonly Item[], d: number): Pt[][] {
+  const pieces: Pt[][][] = [];
+  for (const it of items) {
+    if (it.kind === "picture") continue;
+    const loops = itemOutlines(it)
+      .filter((o) => o.closed)
+      .map((o) => o.segments);
+    if (!loops.length) continue;
+    const depths = nestingDepths(loops);
+    const outs: Pt[][][] = [];
+    const holes: Pt[][][] = [];
+    loops.forEach((l, i) => {
+      const moved = offsetLoop(l, depths[i] % 2 === 0 ? -d : d, TOL);
+      if (!moved) return;
+      const rings = loopsToRings([moved], TOL);
+      if (rings.length) (depths[i] % 2 === 0 ? outs : holes).push(rings);
+    });
+    if (!outs.length) continue;
+    let area = unionAll(outs);
+    if (holes.length) area = booleanRings(area, unionAll(holes), "difference");
+    // Never outside the shape itself.
+    area = booleanRings(area, loopsToRings(loops, TOL), "intersection");
+    if (area.length) pieces.push(area);
+  }
+  return unionAll(pieces);
+}
+
 /** What `combined` does with a set of shapes, as rings (null: nothing left). */
 export function combinedRings(items: readonly Item[], how: CombineHow): Pt[][] | null {
   const sets = items.map(itemRings).filter((r) => r.length);

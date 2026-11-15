@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { layerCounts, LASER_LAYERS, LAYER_ORDER } from "../geometry/segments";
+import { lengthText, pathLength } from "../model/measure";
 import { colourKey, laserDxf, laserSvg } from "../laser/files";
 import { sendToJuraCAD } from "./juraLinkApp";
 import { makeSheet, offBed } from "../laser/sheet";
@@ -27,6 +28,11 @@ export function ExportDialog() {
   const items = useMemo(() => (what === "selected" ? doc.items.filter((it) => selection.includes(it.id)) : doc.items), [what, doc.items, selection]);
   const sheet = useMemo(() => makeSheet(doc, { items, mirror, wholeBed, kerf: useKerf ? kerf : 0 }), [doc, items, mirror, wholeBed, useKerf, kerf]);
   const counts = layerCounts(sheet);
+  const lengths = useMemo(() => {
+    const out: Record<string, number> = { outer: 0, inner: 0, score: 0, engrave: 0 };
+    for (const p of sheet.paths) out[p.layer] += pathLength(p.segments, p.closed);
+    return out;
+  }, [sheet]);
   // Photos: drawn small for the preview straight away, and at full detail for the files.
   const [small, setSmall] = useState<(RenderedPicture | null)[]>([]);
   const [full, setFull] = useState<(RenderedPicture | null)[] | null>(null);
@@ -111,7 +117,7 @@ export function ExportDialog() {
                 <div key={l} className="colour-key-row">
                   <span className="op-dot big" style={{ background: LASER_LAYERS[l].colour, borderColor: LASER_LAYERS[l].colour === "#000000" ? "var(--line)" : "transparent" }} />
                   <span>
-                    <strong>{LASER_LAYERS[l].label}</strong> ({counts[l]}): {LASER_LAYERS[l].hint}
+                    <strong>{LASER_LAYERS[l].label}</strong> ({counts[l]}{l !== "engrave" ? `, ${lengthText(lengths[l])} of line` : ""}): {LASER_LAYERS[l].hint}
                   </span>
                 </div>
               ) : null,

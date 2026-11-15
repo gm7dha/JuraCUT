@@ -154,6 +154,16 @@ export const Icons = {
       <rect x="4" y="6" width="16" height="12" />
     </Svg>
   ),
+  Polygon: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M12 3.5 20.1 9.4 17 18.9H7L3.9 9.4Z" />
+    </Svg>
+  ),
+  Star: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M12 3.2 14.6 9 20.8 9.5 16.1 13.6 17.5 19.8 12 16.5 6.5 19.8 7.9 13.6 3.2 9.5 9.4 9Z" />
+    </Svg>
+  ),
   Circle: (p: IconProps) => (
     <Svg {...p}>
       <circle cx="12" cy="12" r="8" />

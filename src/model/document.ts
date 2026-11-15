@@ -100,6 +100,19 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
       return { ...base, kind: "rect", x: num(it.x), y: num(it.y), w: Math.max(num(it.w, 10), 0.01), h: Math.max(num(it.h, 10), 0.01), radius: Math.max(num(it.radius), 0), angle: num(it.angle) };
     case "circle":
       return { ...base, kind: "circle", cx: num(it.cx), cy: num(it.cy), r: Math.max(num(it.r, 5), 0.005) };
+    case "polygon": {
+      const star = num(it.star);
+      return {
+        ...base,
+        kind: "polygon",
+        cx: num(it.cx),
+        cy: num(it.cy),
+        r: Math.max(num(it.r, 10), 0.005),
+        sides: Math.round(Math.min(100, Math.max(3, num(it.sides, 6)))),
+        angle: num(it.angle, 90),
+        ...(star >= 0.05 && star <= 0.95 ? { star } : {}),
+      };
+    }
     case "line":
       return { ...base, kind: "line", x1: num(it.x1), y1: num(it.y1), x2: num(it.x2, 10), y2: num(it.y2) };
     case "text":

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import { svgPathData } from "../laser/files";
 import { keyPiece } from "../model/arrange";
-import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makeRect, makeText, movedItem } from "../model/shapes";
+import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makePolygon, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
 import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
@@ -19,6 +19,7 @@ import { OP_INFO, type Item, type PictureItem } from "../model/types";
 import { usePicturePreview } from "./pictures";
 import { anchorOf, canStretch, dragScale, handlePoint, resizedItems, type Handle } from "../model/resize";
 import { rotatedItemAbout } from "../model/shapes";
+import { polygonStyle } from "./polygonStyle";
 import { BedMenu } from "./BedMenu";
 import type { Pt } from "../geometry/segments";
 
@@ -652,6 +653,14 @@ function drawnItem(g: Extract<Gesture, { kind: "draw" }>, taken: string[], previ
       if (!preview && r < 0.25) return null;
       return makeCircle(id, x0, y0, Math.max(r, 0.01));
     }
+    case "polygon": {
+      const r = Math.hypot(x1 - x0, y1 - y0);
+      if (!preview && r < 0.25) return null;
+      // A corner follows the pointer, in steps of 15° (the pointer itself snaps to the grid).
+      const st = polygonStyle();
+      const angle = r > 0 ? Math.round(((Math.atan2(y1 - y0, x1 - x0) * 180) / Math.PI) / 15) * 15 : 90;
+      return makePolygon(id, x0, y0, Math.max(r, 0.01), st.sides, r > 0 ? ((angle % 360) + 360) % 360 : 90, st.star || undefined);
+    }
     case "line":
       if (!preview && Math.hypot(x1 - x0, y1 - y0) < 0.5) return null;
       return makeLine(id, x0, y0, x1, y1);
@@ -666,6 +675,7 @@ function draftSize(g: Extract<Gesture, { kind: "draw" }>): string {
     case "rect":
       return `${n(Math.abs(x1 - x0))} × ${n(Math.abs(y1 - y0))} mm`;
     case "circle":
+    case "polygon":
       return `⌀ ${n(2 * Math.hypot(x1 - x0, y1 - y0))} mm`;
     case "line":
       return `${n(Math.hypot(x1 - x0, y1 - y0))} mm`;

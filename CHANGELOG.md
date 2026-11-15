@@ -6,7 +6,22 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.14 — Outline, combine, words round a circle, step and repeat
+## v0.15 — Polygons and stars, break apart, more ways to repeat
+
+- **Polygon tool** (P): drag from the middle out to a corner. In the panel choose how many sides, or make it a
+  **star** (with how deep its points go), its size across the corners and its angle. The tool remembers your last
+  choice.
+- **Outline inside**: Outline now goes **round** the shapes or **inside** them, following their edges in (a frame's
+  inner line, an inlay).
+- **Step and repeat round a circle**: copies spaced evenly round a circle below the selection, each turned with the
+  circle or not — petals, clock marks, a ring of tags.
+- **Break apart**: splits a shape made of separate pieces (a traced picture, an imported drawing, words) into one
+  shape per piece; letters keep their holes.
+- **Measuring**: the panel shows a shape's line length (how far the laser travels) and its area; Export shows how much
+  line each colour has.
+- The toolbar closes up a little on narrower screens so everything fits; Undo and Redo are icons only.
+
+## v0.14 — Outline, combine, words round a circle, step and repeat · commit `07dab0a`
 
 New under the selected shapes' settings (**Make more**), and in the right-click menu:
 

@@ -30,6 +30,7 @@ const TOOLS: { tool: Tool; label: string; key: string; icon: (p: { size?: number
   { tool: "select", label: "Select", key: "V", icon: Icons.Select, hint: "Click a shape to select it, drag to move it, drag on empty bed to select several" },
   { tool: "rect", label: "Rectangle", key: "R", icon: Icons.Rectangle, hint: "Drag a box on the bed. Round its corners in the panel afterwards" },
   { tool: "circle", label: "Circle", key: "C", icon: Icons.Circle, hint: "Drag from the centre out to the edge" },
+  { tool: "polygon", label: "Polygon", key: "P", icon: Icons.Polygon, hint: "Drag from the centre out to a corner. Change the number of sides, or make it a star, in the panel" },
   { tool: "line", label: "Line", key: "L", icon: Icons.Line, hint: "Drag from one end to the other (cut or score it)" },
   { tool: "text", label: "Text", key: "T", icon: Icons.Text, hint: "Click where the words start, then type them in the panel" },
 ];
@@ -69,11 +70,11 @@ export function Toolbar() {
       </div>
       <div className="tool-divider" />
       <div className="tool-group">
-        <button type="button" className="tool-button" onClick={() => s().undo()} disabled={!undoable} title={`Undo (${shortcut(platform, "Z")})`}>
+        <button type="button" className="tool-button icon-only" aria-label="Undo" onClick={() => s().undo()} disabled={!undoable} title={`Undo (${shortcut(platform, "Z")})`}>
           <Icons.Undo size={20} />
           <span>Undo</span>
         </button>
-        <button type="button" className="tool-button" onClick={() => s().redo()} disabled={!redoable} title={`Redo (${shortcut(platform, "Y")})`}>
+        <button type="button" className="tool-button icon-only" aria-label="Redo" onClick={() => s().redo()} disabled={!redoable} title={`Redo (${shortcut(platform, "Y")})`}>
           <Icons.Redo size={20} />
           <span>Redo</span>
         </button>

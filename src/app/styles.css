@@ -1680,3 +1680,32 @@ kbd {
   opacity: 0.45;
   cursor: default;
 }
+.measures {
+  margin: 8px 0 0;
+}
+.make-more .segmented.two {
+  margin-bottom: 6px;
+}
+
+/* Undo and redo are icons only (their arrows say what they do). */
+.tool-button.icon-only {
+  min-width: 36px;
+}
+.tool-button.icon-only span {
+  display: none;
+}
+/* On narrower screens the toolbar's buttons close up so everything fits. */
+@media (max-width: 1440px) {
+  .toolbar {
+    gap: 2px;
+    padding: 0 6px;
+  }
+  .tool-button {
+    min-width: 46px;
+    padding: 2px 4px;
+    font-size: 10.5px;
+  }
+  .tool-button.icon-only {
+    min-width: 34px;
+  }
+}

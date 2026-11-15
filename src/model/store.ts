@@ -9,14 +9,15 @@ import { create } from "zustand";
 import { arrangeOnBed } from "../geometry/segments";
 import { newDocument, newId } from "./document";
 import { copiesOf } from "./clipboard";
-import { combinedRings, outlineRings, ringsShape, type CombineHow } from "./combine";
-import { MOST_COPIES, repeatedItems } from "./repeat";
+import { combinedRings, insetRings, outlineRings, ringsShape, type CombineHow } from "./combine";
+import { MOST_COPIES, repeatedItems, roundItems } from "./repeat";
+import { brokenApart } from "./breakApart";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
 
-export type Tool = "select" | "rect" | "circle" | "line" | "text";
+export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
 
 export interface Toast {
@@ -84,9 +85,13 @@ export interface State {
   /** The selected shapes made one: joined, the others cut out of the biggest, or only where they overlap. */
   combineSelected(how: CombineHow): void;
   /** A new shape round the selection, `distance` mm out (gaps closed in filled unless `fillGaps` is false). */
-  outlineSelected(distance: number, fillGaps?: boolean): void;
+  outlineSelected(distance: number, fillGaps?: boolean, inside?: boolean): void;
   /** Copies of the selection in a grid (`cols` × `rows`, the originals the first, bottom left), `gap` mm apart. */
   repeatSelected(cols: number, rows: number, gapX: number, gapY: number): void;
+  /** Copies of the selection round a circle (`count` in all), turned with it or not. */
+  repeatRoundSelected(count: number, radius: number, turn: boolean): void;
+  /** Shapes made of separate pieces split into one shape per piece. */
+  breakApartSelected(): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
   selectOp(op: Op): void;
   /** Hide (or show) every shape of one colour. */
@@ -279,18 +284,22 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...doc, items: tidyGroups(items) });
     set({ selection: [id], focusItem: null });
   },
-  outlineSelected(distance, fillGaps = true) {
+  outlineSelected(distance, fillGaps = true, inside = false) {
     const { history, selection } = get();
     const doc = history.present;
     const picked = doc.items.filter((it) => selection.includes(it.id));
     if (!picked.length || !(distance > 0)) return;
-    const rings = outlineRings(picked, distance, fillGaps);
-    if (!rings.length) return;
+    const rings = inside ? insetRings(picked, distance) : outlineRings(picked, distance, fillGaps);
+    if (!rings.length) {
+      get().showToast(inside ? `Nothing is left ${distance} mm inside: the shapes are too thin for that.` : "There's nothing to go round (photos have no outline).", "info");
+      return;
+    }
     const id = newId(doc.items.map((it) => it.id));
     // Behind the shapes it goes round, cut.
     const at = doc.items.findIndex((it) => selection.includes(it.id));
     const items = [...doc.items];
-    items.splice(at, 0, ringsShape(id, "Outline", "cut", rings));
+    // An inside outline goes on top (it's within the shape); an outside one behind.
+    items.splice(inside ? at + 1 : at, 0, ringsShape(id, inside ? "Inside outline" : "Outline", "cut", rings));
     get().commit({ ...doc, items });
     set({ selection: [id], focusItem: null });
   },
@@ -307,6 +316,45 @@ export const useStore = create<State>((set, get) => ({
     if (!made.length) return;
     get().commit({ ...doc, items: [...doc.items, ...made] });
     set({ selection: [...selection, ...made.map((it) => it.id)] });
+  },
+  repeatRoundSelected(count, radius, turn) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    if (!picked.length || count < 2) return;
+    if (count > MOST_COPIES) {
+      get().showToast(`That's more than ${MOST_COPIES} copies: try fewer.`, "info");
+      return;
+    }
+    const made = roundItems(doc.items, picked, count, radius, turn);
+    if (!made.length) return;
+    get().commit({ ...doc, items: [...doc.items, ...made] });
+    set({ selection: [...selection, ...made.map((it) => it.id)] });
+  },
+  breakApartSelected() {
+    const { history, selection } = get();
+    const doc = history.present;
+    const ids = new Set(doc.items.map((it) => it.id));
+    const fresh = () => {
+      const id = newId(ids);
+      ids.add(id);
+      return id;
+    };
+    const picked = new Set<string>();
+    let split = 0;
+    const items = doc.items.flatMap((it) => {
+      if (!selection.includes(it.id)) return [it];
+      const parts = brokenApart(it, fresh);
+      if (parts.length > 1) split++;
+      parts.forEach((p) => picked.add(p.id));
+      return parts;
+    });
+    if (!split) {
+      get().showToast("Nothing to break apart: each selected shape is already one piece.", "info");
+      return;
+    }
+    get().commit({ ...doc, items: tidyGroups(items) });
+    set({ selection: [...picked], focusItem: null });
   },
   selectOp(op) {
     const ids = get().history.present.items.filter((it) => it.op === op && !it.hidden).map((it) => it.id);

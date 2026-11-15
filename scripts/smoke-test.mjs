@@ -495,6 +495,42 @@ try {
   expect(bent.curve > 0 && bent.align === "centre", "the words are bent over the top of a circle");
   await store(() => window.juracutStore.getState().deleteSelected());
 
+  step = "polygon and star, break apart, round repeat, the toolbar fits";
+  expect(await page.evaluate(() => {
+    const t = document.querySelector(".toolbar");
+    return t.scrollWidth <= t.clientWidth + 1;
+  }), "every toolbar button fits at 1280 px");
+  await store(() => window.juracutStore.getState().clearSelection());
+  await page.keyboard.press("p");
+  await drag([450, 150], [450, 170]);
+  let poly = await store(() => {
+    const s = window.juracutStore.getState();
+    return s.history.present.items.find((i) => i.id === s.selection[0]);
+  });
+  expect(poly && poly.kind === "polygon" && Math.abs(poly.r - 20) < 0.01 && poly.angle === 90, "the Polygon tool drew one 40 mm across, a corner at the top");
+  await page.click("[aria-label='Polygon or star'] button:has-text('Star')");
+  await page.keyboard.press("v");
+  poly = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "polygon"));
+  expect(poly.star > 0, "it's a star now");
+  await page.click("[aria-label='Copies in a grid or round a circle'] button:has-text('Round a circle')");
+  const n15 = (await shapesNow()).length;
+  await page.click(".make-more button:has-text('copies round a circle')");
+  expect((await shapesNow()).length === n15 + 7, "8 round a circle = 7 copies");
+  await page.keyboard.press("Control+z");
+  await page.click("[aria-label='Copies in a grid or round a circle'] button:has-text('In a grid')");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([{ id: "ba", name: "Letters", op: "engrave", kind: "text", text: "OK", x: 450, y: 60, size: 10, font: "inter-bold", align: "left", angle: 0 }], { select: true });
+  });
+  await page.click(".make-more button:has-text('Break apart')");
+  const letters = await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.name.startsWith("Letters ")));
+  expect(letters.length === 2 && letters.every((i) => i.kind === "shape"), "the words broke apart into two letters");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.select(s.history.present.items.filter((i) => i.name.startsWith("Letters ") || i.kind === "polygon").map((i) => i.id));
+    s.deleteSelected();
+  });
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");
