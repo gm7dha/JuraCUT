@@ -154,6 +154,24 @@ export const Icons = {
       <rect x="4" y="6" width="16" height="12" />
     </Svg>
   ),
+  Measure: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M3.5 15.5 15.5 3.5l5 5-12 12z" />
+      <path d="M7 12l2 2M10 9l2 2M13 6l2 2" />
+    </Svg>
+  ),
+  Lock: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="5" y="11" width="14" height="9" rx="1.5" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </Svg>
+  ),
+  Unlock: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="5" y="11" width="14" height="9" rx="1.5" />
+      <path d="M8 11V8a4 4 0 0 1 7.5-2" />
+    </Svg>
+  ),
   Qr: (p: IconProps) => (
     <Svg {...p}>
       <rect x="4" y="4" width="6" height="6" />

@@ -168,6 +168,13 @@
   Shift), double-click adds a point (else, off editing: words/QR focus their text, others start editing), `.nodes`
   drawing, no resize handles or dashed boxes meanwhile. App: Esc stops, Delete removes the picked point. SidePanel
   `PointsBar`.
+- v0.19: snap.ts `shapePoints` (corners/ends/line middles, circle centre + quadrants, polygon centre; none for words/QR),
+  `SnapLines.points` (≤ `MOST_SNAP_POINTS`), `snapPoint` (points win over lines → `point`), `snapPointsMove` (the moving
+  shapes' points, ≤ 300 in BedView's `ownPoints`, onto others'; before the box-edge snap). Node drags snap too (other
+  shapes + the shape's other points). `.snap-point` ring. `Item.locked` (base field, `baseOf`): BedView picks from
+  `pickable` (not locked) for clicks, box select and double-click; `selectAll` and `moveSelected` skip them; padlock in
+  the shapes list. Tool "measure" (M): gesture "measure", `measured` stays until the next click/tool change, readout
+  `measureText`. Smoke steps that need exact positions start from `newDocument()` and add with `{ select: false }`.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

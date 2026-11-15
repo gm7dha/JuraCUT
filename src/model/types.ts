@@ -42,6 +42,8 @@ interface ItemBase {
   hidden?: boolean;
   /** Shapes with the same group id are picked, moved and turned together. */
   group?: string;
+  /** Locked shapes can't be picked or moved on the bed (only from the shapes list). */
+  locked?: boolean;
   /** Holding tabs: so many small uncut gaps in each closed cut line, so the piece stays in the sheet until snapped out. */
   tabs?: number;
   /** How wide each tab is (mm; missing = `DEFAULT_TAB_WIDTH`). */

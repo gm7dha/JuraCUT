@@ -537,8 +537,12 @@ button:disabled {
 
 .shape-row:hover .row-button,
 .shape-row.selected .row-button,
-.shape-row.hidden .row-button:first-of-type {
+.shape-row.hidden .row-button:first-of-type,
+.shape-row .row-button.on {
   visibility: visible;
+}
+.row-button.on {
+  color: var(--accent);
 }
 
 .name-box {
@@ -1751,4 +1755,15 @@ kbd {
 }
 .points-bar .field-row button {
   justify-content: center;
+}
+.snap-point {
+  fill: none;
+  stroke: var(--accent);
+  pointer-events: none;
+}
+.measure line,
+.measure circle {
+  stroke: var(--accent);
+  fill: var(--panel);
+  pointer-events: none;
 }
