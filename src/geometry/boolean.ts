@@ -171,10 +171,33 @@ function crossing(e: Edge, f: Edge, ta: number[], tb: number[]) {
  * clockwise.
  */
 export function booleanRings(a: Pt[][], b: Pt[][], op: BooleanOp): Pt[][] {
-  const A = a.map(ringOf);
-  const B = b.map(ringOf);
+  return combineSets([a, b], (ins) => wanted(op, ins(0), ins(1)));
+}
+
+/** Many even–odd sets of rings (letters, say) joined into one area: inside any of them is inside. */
+export function unionOfSets(sets: Pt[][][]): Pt[][] {
+  return combineSets(
+    sets.filter((s) => s.length),
+    (ins, n) => {
+      for (let i = 0; i < n; i++) if (ins(i)) return true;
+      return false;
+    },
+  );
+}
+
+/**
+ * The general Boolean: every edge of every set split where it meets another, each piece kept when `want` (asked
+ * whether a point is inside set i) differs on its two sides, turned with the wanted side on its left, chained.
+ */
+function combineSets(sets: Pt[][][], want: (inside: (i: number) => boolean, n: number) => boolean): Pt[][] {
+  const S = sets.map((rings) => {
+    const rs = rings.map(ringOf);
+    let box: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const r of rs) box = [Math.min(box[0], r.box[0]), Math.min(box[1], r.box[1]), Math.max(box[2], r.box[2]), Math.max(box[3], r.box[3])];
+    return { rs, box };
+  });
   const edges: Edge[] = [];
-  for (const r of [...a, ...b]) for (let i = 0; i < r.length; i++) edges.push({ a: r[i], b: r[(i + 1) % r.length] });
+  for (const set of sets) for (const r of set) for (let i = 0; i < r.length; i++) edges.push({ a: r[i], b: r[(i + 1) % r.length] });
   // Pieces, each once (snapped ends).
   const pieces = new Map<string, Edge>();
   for (const e of splitEdges(edges)) {
@@ -184,6 +207,11 @@ export function booleanRings(a: Pt[][], b: Pt[][], op: BooleanOp): Pt[][] {
     const k = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
     if (!pieces.has(k)) pieces.set(k, e);
   }
+  const insideAt = (p: Pt) => (i: number) => {
+    const s = S[i];
+    if (p[0] < s.box[0] || p[0] > s.box[2] || p[1] < s.box[1] || p[1] > s.box[3]) return false;
+    return inside(p, s.rs);
+  };
   // Keep a piece when the wanted area is on one side of it only; turn it so that side is its left.
   const kept: Edge[] = [];
   for (const e of pieces.values()) {
@@ -194,8 +222,8 @@ export function booleanRings(a: Pt[][], b: Pt[][], op: BooleanOp): Pt[][] {
     const h = Math.min(1e-4, l / 4);
     const left: Pt = [m[0] - (dy / l) * h, m[1] + (dx / l) * h];
     const right: Pt = [m[0] + (dy / l) * h, m[1] - (dx / l) * h];
-    const wl = wanted(op, inside(left, A), inside(left, B));
-    const wr = wanted(op, inside(right, A), inside(right, B));
+    const wl = want(insideAt(left), S.length);
+    const wr = want(insideAt(right), S.length);
     if (wl === wr) continue;
     kept.push(wl ? e : { a: e.b, b: e.a });
   }

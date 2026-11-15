@@ -118,6 +118,8 @@ export interface TextItem extends ItemBase {
   angle: number;
   /** Bent round a circle of this radius (mm): + over the top, − under the bottom. Missing or 0 = straight. */
   curve?: number;
+  /** Letters joined into one shape where they touch or overlap (script fonts), so they engrave and cut as one. */
+  weld?: boolean;
 }
 
 /** Any outlines (brought in from an SVG or DXF, or converted from another shape), already on the bed. */

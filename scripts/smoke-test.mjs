@@ -669,6 +669,17 @@ try {
     s.deleteSelected();
   });
 
+  step = "a script font joins its letters";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.addItems([{ id: "sw", name: "Words", op: "engrave", kind: "text", text: "Wedding", x: 50, y: 150, size: 20, font: "inter-regular", align: "left", angle: 0 }]);
+  });
+  await page.selectOption(".properties select:near(:text('Font'))", "great-vibes");
+  const sw = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.id === "sw"));
+  expect(sw.font === "great-vibes" && sw.weld === true, "picking a script font joins its letters");
+  expect(await page.isChecked(".properties label:has-text('Join the letters') input"), "the Join box is ticked");
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

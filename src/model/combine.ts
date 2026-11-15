@@ -8,7 +8,7 @@
  *   (only where they all overlap).
  * Results are free shapes of straight lines (geometry/boolean.ts).
  */
-import { booleanRings, loopsToRings, outsidesOnly, ringsToLoops, signedArea, type BooleanOp } from "../geometry/boolean";
+import { booleanRings, loopsToRings, outsidesOnly, ringsToLoops, signedArea, unionOfSets, type BooleanOp } from "../geometry/boolean";
 import { nestingDepths, offsetLoop } from "../geometry/offset";
 import { pathPoints, type Pt, type Segment } from "../geometry/segments";
 import { itemOutlines } from "./shapes";
@@ -29,12 +29,7 @@ export function itemRings(item: Item): Pt[][] {
 
 /** Many separate rings sets made one area (each set even–odd, the sets joined). */
 function unionAll(sets: Pt[][][]): Pt[][] {
-  let out: Pt[][] = [];
-  for (const s of sets) {
-    if (!s.length) continue;
-    out = out.length ? booleanRings(out, s, "union") : booleanRings(s, [], "union");
-  }
-  return out;
+  return unionOfSets(sets);
 }
 
 const ringArea = (rings: Pt[][]) => rings.reduce((a, r) => a + signedArea(r), 0);
