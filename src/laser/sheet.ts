@@ -7,6 +7,7 @@
 import { nestingDepths, offsetLoop } from "../geometry/offset";
 import { movePaths, pathsBox, sortLoops, type LaserPath, type LaserSheet, type Segment } from "../geometry/segments";
 import { withTabs } from "./tabs";
+import { withoutShared } from "./shared";
 import { itemBox, itemOutlines } from "../model/shapes";
 import { DEFAULT_TAB_WIDTH, type Item, type JuraCUTDocument, type Op, type PictureItem } from "../model/types";
 
@@ -19,6 +20,8 @@ export interface SheetOptions {
   mirror?: boolean;
   /** Keep the shapes where they are on the bed (the sheet is the whole bed); else the sheet is just the box round them. */
   wholeBed?: boolean;
+  /** Cut lines lying on top of each other (butted pieces' shared edges) only once. */
+  once?: boolean;
 }
 
 /** The laser paths of some shapes, on the bed, cuts sorted (and moved by half the kerf when one is given). */
@@ -101,7 +104,8 @@ export interface Sheet extends LaserSheet {
 /** The sheet to write: paths (and photos) moved so the sheet's bottom-left corner is (0, 0). */
 export function makeSheet(doc: JuraCUTDocument, opts: SheetOptions = {}): Sheet {
   const items = opts.items ?? doc.items;
-  const paths = laserPaths(items, opts.kerf ?? 0);
+  const drawn = laserPaths(items, opts.kerf ?? 0);
+  const paths = opts.once ? withoutShared(drawn) : drawn;
   const pics = items.filter((it): it is PictureItem => it.kind === "picture" && !it.hidden);
   const picBoxes = pics.map((p) => itemBox(p)!);
   const all = [pathsBox(paths), ...picBoxes].filter((b): b is [number, number, number, number] => !!b);
