@@ -6,7 +6,15 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.22 — Ovals, and names from a spreadsheet
+## v0.23 — Trim
+
+- **Trim tool** (X), like LightBurn's Trim Shapes: click a stretch of line between two places where it crosses other
+  lines (or itself) and it's taken away; a line nothing crosses goes altogether. Handy for tidying overlapping shapes
+  into one cut line — two overlapping circles become a figure of eight with two clicks. Each click is one undo step.
+  The trimmed line is followed as straight pieces (within 0.01 mm); the shape's other outlines keep their curves.
+- Help lists the E (Oval) and X (Trim) keys.
+
+## v0.22 — Ovals, and names from a spreadsheet · commit `759479f`
 
 - **Oval tool** (E): drag a box and the oval fills it. Set its width, height and angle in the panel; it stays an oval
   when turned, flipped or stretched square to the bed.

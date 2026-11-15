@@ -28,6 +28,7 @@ import { detectPlatform, shortcut } from "./platform";
 
 const TOOLS: { tool: Tool; label: string; key: string; icon: (p: { size?: number }) => ReactElement; hint: string }[] = [
   { tool: "select", label: "Select", key: "V", icon: Icons.Select, hint: "Click a shape to select it, drag to move it, drag on empty bed to select several" },
+  { tool: "trim", label: "Trim", key: "X", icon: Icons.Trim, hint: "Click a stretch of line between two places where it crosses others: it's taken away (with nothing crossing it, the whole line goes)" },
   { tool: "rect", label: "Rectangle", key: "R", icon: Icons.Rectangle, hint: "Drag a box on the bed. Round its corners in the panel afterwards" },
   { tool: "circle", label: "Circle", key: "C", icon: Icons.Circle, hint: "Drag from the centre out to the edge" },
   { tool: "ellipse", label: "Oval", key: "E", icon: Icons.Ellipse, hint: "Drag a box: the oval fills it" },

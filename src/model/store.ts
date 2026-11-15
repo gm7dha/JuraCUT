@@ -18,10 +18,11 @@ import { packPieces } from "../geometry/pack";
 import { baseOf, boxCentre, itemBox, itemOutlines, makeCircle, makeRect, makeShape, movedItem, pictureSize, pieceOf, rotatedItemAbout } from "./shapes";
 import { ROUNDED_SHARE } from "../geometry/photo";
 import { pathOf, placedOnPath } from "./textPath";
+import { trimmed } from "./trim";
 import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline, TextItem } from "./types";
 
-export type Tool = "select" | "rect" | "circle" | "ellipse" | "polygon" | "line" | "text" | "qr" | "measure";
+export type Tool = "select" | "trim" | "rect" | "circle" | "ellipse" | "polygon" | "line" | "text" | "qr" | "measure";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
 
 export interface Toast {
@@ -101,6 +102,8 @@ export interface State {
   nameCopiesSelected(names: (string | NameEntry)[], cols: number, gap: number, shrink: boolean): void;
   /** The selected words run along the other selected shape's outline. */
   putTextOnPath(): void;
+  /** The stretch of a shape's line at `at` between its nearest crossings taken out (Trim). */
+  trimAt(id: string, outline: number, at: [number, number]): void;
   /** A cut shape the photo's shape (rectangle, rounded or oval) round it, behind it. */
   addCutRoundPicture(id: string): void;
   /** Start editing a shape's points (it becomes a free shape of lines and curves, one undo step). */
@@ -382,6 +385,19 @@ export const useStore = create<State>((set, get) => ({
     const placed = placedOnPath(words[0], path);
     get().commit({ ...doc, items: doc.items.map((it) => (it.id === placed.id ? placed : it)) });
     set({ selection: [placed.id] });
+  },
+  trimAt(id, outline, at) {
+    const doc = get().history.present;
+    const it = doc.items.find((i) => i.id === id);
+    if (!it) return;
+    const others = doc.items.filter((o) => o.id !== id && !o.hidden && o.kind !== "picture");
+    const result = trimmed(it, outline, at, others);
+    if (result === it) {
+      get().showToast("Nothing to trim there: that outline isn't crossed in two places.", "info");
+      return;
+    }
+    get().commit({ ...doc, items: tidyGroups(result ? doc.items.map((i) => (i.id === id ? result : i)) : doc.items.filter((i) => i.id !== id)) });
+    if (!result) set({ selection: get().selection.filter((s) => s !== id) });
   },
   addCutRoundPicture(id) {
     const doc = get().history.present;

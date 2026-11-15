@@ -730,6 +730,30 @@ try {
   const cards = await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.kind === "text").map((i) => i.text));
   expect(["Amy - table 3", "Ben - table 5", "Cara - table 7"].every((t) => cards.includes(t)), `each card has its row (${cards.join(" / ")})`);
 
+  step = "trimming where lines cross";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.addItems(
+      [
+        { id: "ta", name: "Left", op: "cut", kind: "circle", cx: 200, cy: 150, r: 20 },
+        { id: "tb", name: "Right", op: "cut", kind: "circle", cx: 220, cy: 150, r: 20 },
+      ],
+      { select: false },
+    );
+  });
+  await page.keyboard.press("x");
+  // Click the left circle's arc inside the right one, then the right circle's arc inside the left: a figure of 8 → one outline.
+  const inA = await bedPoint([220, 150]);
+  await page.mouse.click(inA[0], inA[1]);
+  const inB = await bedPoint([200, 150]);
+  await page.mouse.click(inB[0], inB[1]);
+  const two = await store(() => window.juracutStore.getState().history.present.items.map((i) => ({ kind: i.kind, n: i.outlines ? i.outlines.length : 0 })));
+  expect(two.length === 2 && two.every((i) => i.kind === "shape" && i.n === 1), `both circles were trimmed (${JSON.stringify(two)})`);
+  await page.keyboard.press("Control+z");
+  expect((await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.kind === "circle").length)) === 1, "undo puts one trim back");
+  await page.keyboard.press("v");
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");
