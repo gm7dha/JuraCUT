@@ -6,7 +6,14 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.24 — Cut order, and photos masked by any shape
+## v0.25 — Shared edges cut once
+
+- **Cut lines lying on top of each other once** (in Export for laser, on unless you untick it), like LightBurn's
+  Remove overlapping lines: pieces butted together — easy now that corners snap to corners — share an edge, and cut
+  twice it burns and takes longer. The box says how much doubled line it found. With the kerf allowance on, the lines
+  move apart by the kerf, so they're no longer on top of each other and both are cut.
+
+## v0.24 — Cut order, and photos masked by any shape · commit `bd0b878`
 
 - **Show the cut order** (in Export for laser), like LightBurn's Preview: press Play, or drag the slider, to watch the
   lines go in the order they're in the file — engraving, scoring, then holes before the outlines round them — with what

@@ -207,6 +207,9 @@
   photo's middle, bed orientation; turned/flipped/scaled with it in shapes.ts/resize.ts; wins over `mask`): photo.ts
   `clipped` (even–odd, mirrored sheets), pictures.ts after processing; store `maskPictureWithShape` (photo + one closed
   shape), MakeMore/BedMenu buttons, the photo panel's "Take the mask shape off".
+- v0.25: `src/laser/shared.ts` (pure `withoutShared`: cut paths in order, flattened; each piece's stretches lying along
+  pieces already cut — within 0.01 mm, either way — left out, the rest cut as open runs; untouched paths kept exactly; grid
+  of done pieces). `SheetOptions.once` (makeSheet, after kerf); Export's box (on by default) says how much is doubled.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

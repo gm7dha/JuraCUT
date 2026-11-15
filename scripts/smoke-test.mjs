@@ -778,6 +778,25 @@ try {
   expect(said16.includes("Step 1 of 3: a hole"), `the first step is the hole (${said16})`);
   await page.keyboard.press("Escape");
 
+  step = "butted pieces' shared edge cut once";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    // No kerf: with it, the two edges move apart and aren't on top of each other any more.
+    s.setMaterial({ ...s.history.present.material, kerf: 0 });
+    s.addItems([
+      { id: "ba", name: "A", op: "cut", kind: "rect", x: 20, y: 20, w: 30, h: 30, radius: 0, angle: 0 },
+      { id: "bb", name: "B", op: "cut", kind: "rect", x: 50, y: 20, w: 30, h: 30, radius: 0, angle: 0 },
+    ], { select: false });
+  });
+  await page.click(".primary-button:has-text('Export for laser')");
+  await page.waitForSelector(".export-preview svg");
+  expect((await page.textContent(".modal")).includes("(30 mm doubled)"), "Export finds the 30 mm edge the squares share");
+  const [onceDl] = await Promise.all([page.waitForEvent("download"), page.click(".modal button:has-text('Save SVG')")]);
+  const onceText = await readFile(await onceDl.path(), "utf8");
+  expect((onceText.match(/<path/g) ?? []).length >= 2, "both squares are in the file");
+  await page.keyboard.press("Escape");
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

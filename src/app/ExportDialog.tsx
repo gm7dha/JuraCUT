@@ -8,6 +8,7 @@ import { layerCounts, LASER_LAYERS, LAYER_ORDER } from "../geometry/segments";
 import { lengthText, pathLength } from "../model/measure";
 import { colourKey, laserDxf, laserSvg } from "../laser/files";
 import { CutOrder } from "./CutOrder";
+import { withoutShared } from "../laser/shared";
 import { sendToJuraCAD } from "./juraLinkApp";
 import { makeSheet, offBed } from "../laser/sheet";
 import { useDocument, useSelection, useStore } from "../model/store";
@@ -24,11 +25,19 @@ export function ExportDialog() {
   const [mirror, setMirror] = useState(false);
   const [wholeBed, setWholeBed] = useState(false);
   const [showOrder, setShowOrder] = useState(false);
+  const [once, setOnce] = useState(true);
   const kerf = doc.material.kerf;
   const [useKerf, setUseKerf] = useState(kerf > 0);
   // Kept the same between redraws, so the sheet (and the photos drawn from it) only change when something does.
   const items = useMemo(() => (what === "selected" ? doc.items.filter((it) => selection.includes(it.id)) : doc.items), [what, doc.items, selection]);
-  const sheet = useMemo(() => makeSheet(doc, { items, mirror, wholeBed, kerf: useKerf ? kerf : 0 }), [doc, items, mirror, wholeBed, useKerf, kerf]);
+  const sheet = useMemo(() => makeSheet(doc, { items, mirror, wholeBed, kerf: useKerf ? kerf : 0, once }), [doc, items, mirror, wholeBed, useKerf, kerf, once]);
+  // How much doubled line there is (cut lines lying on top of each other), so the box can say.
+  const doubled = useMemo(() => {
+    const twice = makeSheet(doc, { items, kerf: useKerf ? kerf : 0 }).paths.filter((p) => p.layer === "inner" || p.layer === "outer");
+    const all = twice.reduce((s, p) => s + pathLength(p.segments, p.closed), 0);
+    const left = withoutShared(twice).reduce((s, p) => s + pathLength(p.segments, p.closed), 0);
+    return all - left;
+  }, [doc, items, useKerf, kerf]);
   const counts = layerCounts(sheet);
   const lengths = useMemo(() => {
     const out: Record<string, number> = { outer: 0, inner: 0, score: 0, engrave: 0 };
@@ -116,6 +125,10 @@ export function ExportDialog() {
           <label className="check-row">
             <input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} />
             Mirror (flip left to right, for engraving on the back)
+          </label>
+          <label className="check-row" title="Pieces butted together share an edge: cut twice, it burns and takes longer">
+            <input type="checkbox" checked={once} onChange={(e) => setOnce(e.target.checked)} />
+            Cut lines lying on top of each other once{doubled > 0.05 ? ` (${lengthText(doubled)} doubled)` : ""}
           </label>
           <label className="check-row" title="The beam takes away a strip as wide as the kerf, half each side of the line. Moving the lines by half of it makes pieces and holes come out the size you drew. Set the kerf for your material in Settings.">
             <input type="checkbox" checked={useKerf} disabled={kerf <= 0} onChange={(e) => setUseKerf(e.target.checked)} />
