@@ -126,6 +126,16 @@
   `src/app/clipboardApp.ts` (document copy/cut/paste events, not in text boxes or popups; menu Paste reads the clipboard or
   this tab's last copy). `src/app/BedMenu.tsx`: right-click (no menu after a right-drag pan). Store `pasteItems`,
   `selectOp`, `setOpHidden`, `orderSelected`, `requestFit("selection")` (`fitTarget`; Shift+F). SidePanel `OpChips`.
+- Outline / combine / repeat / curved words (v0.14): `src/geometry/boolean.ts` (pure, own maths — no library: even–odd
+  rings, edges split where they cross or run along each other on a grid, each piece kept when the wanted area is on one
+  side only, oriented inside-left, chained taking the leftmost turn so shapes touching at a corner stay apart;
+  `booleanRings`, `loopsToRings`/`ringsToLoops`, `outsidesOnly`). `src/model/combine.ts` (`outlineRings` — outsides
+  offset by `offsetLoop`, lines as round-ended strips, unioned, gaps filled; `combinedRings` join/cutOut (biggest minus
+  the rest)/overlap; `ringsShape`, `canCombine`); `src/model/repeat.ts` (`repeatedItems`, `MOST_COPIES`). Store
+  `combineSelected`, `outlineSelected`, `repeatSelected`. UI `src/app/MakeMore.tsx` under the selection's settings
+  (sizes in localStorage `juracut.makeMore`, shared with BedMenu). `TextItem.curve` (radius; + over the top, − under;
+  missing = straight): `textOutline(…, curve)` turns each glyph rigidly onto the circle (centre `curve` below the anchor);
+  resize scales it; SidePanel's "Round a circle".
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

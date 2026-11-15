@@ -70,7 +70,7 @@ export function itemOutlines(item: Item): Outline[] {
     case "line":
       return [{ closed: false, segments: [{ kind: "line", from: [item.x1, item.y1], to: [item.x2, item.y2] }] }];
     case "text": {
-      const { loops } = textOutline(FONTS[item.font], item.text, Math.max(item.size, 0.1), item.align);
+      const { loops } = textOutline(FONTS[item.font], item.text, Math.max(item.size, 0.1), item.align, item.curve ?? 0);
       const outlines = loops.map((segments): Outline => ({ segments, closed: true }));
       let m: Affine = translation(item.x, item.y);
       if (item.angle) m = compose(rotation(item.angle, [item.x, item.y]), m);

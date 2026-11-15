@@ -80,6 +80,8 @@ export interface TextItem extends ItemBase {
   font: FontId;
   align: TextAlign;
   angle: number;
+  /** Bent round a circle of this radius (mm): + over the top, − under the bottom. Missing or 0 = straight. */
+  curve?: number;
 }
 
 /** Any outlines (brought in from an SVG or DXF, or converted from another shape), already on the bed. */

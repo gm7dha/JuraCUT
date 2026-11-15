@@ -6,6 +6,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { OPS, OP_INFO } from "../model/types";
 import { useStore } from "../model/store";
 import { copyFromMenu, pasteFromMenu } from "./clipboardApp";
+import { canCombine } from "../model/combine";
+import { makeMoreSettings } from "./MakeMore";
 
 type Entry = { label: string; hint?: string; act: () => void; off?: boolean } | "line";
 
@@ -18,6 +20,8 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
   const picked = items.filter((it) => selection.includes(it.id));
   const any = picked.length > 0;
   const grouped = picked.some((it) => it.group);
+  const combinable = canCombine(picked);
+  const more = makeMoreSettings();
   const ops = new Set(picked.filter((it) => it.kind !== "picture").map((it) => it.op));
 
   // Kept inside the window.
@@ -67,6 +71,12 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
         { label: "Flip left to right", act: () => s().mirrorSelected() },
         { label: "Group", act: () => s().groupSelected(), off: picked.length < 2 },
         { label: "Ungroup", act: () => s().ungroupSelected(), off: !grouped },
+        { label: "Join", act: () => s().combineSelected("join"), off: !combinable },
+        { label: "Cut out of the biggest", act: () => s().combineSelected("cutOut"), off: !combinable },
+        { label: "Keep the overlap", act: () => s().combineSelected("overlap"), off: !combinable },
+        { label: `Add an outline ${more.distance} mm out`, act: () => s().outlineSelected(more.distance, more.fill) },
+        { label: `Step and repeat (${more.cols} × ${more.rows})`, act: () => s().repeatSelected(more.cols, more.rows, more.gap, more.gap), off: more.cols * more.rows < 2 },
+        "line",
         { label: "Bring to front", act: () => s().orderSelected("front") },
         { label: "Send to back", act: () => s().orderSelected("back") },
         "line",

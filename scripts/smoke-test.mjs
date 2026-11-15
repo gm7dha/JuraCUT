@@ -445,6 +445,56 @@ try {
   expect(await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.op === "score").every((i) => !i.hidden)), "and showed them again");
   await store(() => window.juracutStore.getState().clearSelection());
 
+  step = "outline, combine, step and repeat, words round a circle";
+  const shapesNow = () => store(() => window.juracutStore.getState().history.present.items);
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([
+      { id: "m1", name: "Plate", op: "cut", kind: "rect", x: 300, y: 20, w: 60, h: 40, radius: 0, angle: 0 },
+      { id: "m2", name: "Hole", op: "cut", kind: "circle", cx: 330, cy: 40, r: 8 },
+    ]);
+    s.select(["m1", "m2"]);
+  });
+  // Combine › Cut out: one shape, the hole in it.
+  await page.click(".make-more button:has-text('Cut out')");
+  let all = await shapesNow();
+  const cut = all.find((i) => i.name === "Cut-out shape");
+  expect(cut && cut.kind === "shape" && cut.outlines.length === 2 && !all.some((i) => i.id === "m1" || i.id === "m2"), "the circle was cut out of the plate");
+  // An outline 3 mm out: a new cut shape round it, 66 × 46.
+  await page.click(".make-more button:has-text('Add outline')");
+  all = await shapesNow();
+  const outline = all.find((i) => i.name === "Outline");
+  const ob = await store(() => {
+    const s = window.juracutStore.getState();
+    const it = s.history.present.items.find((i) => i.name === "Outline");
+    let x0 = Infinity, x1 = -Infinity;
+    for (const o of it.outlines) for (const g of o.segments) for (const p of [g.from, g.to]) if (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); }
+    return x1 - x0;
+  });
+  expect(outline && Math.abs(ob - 66) < 0.05, `the outline is 3 mm out (${ob} across)`);
+  // Step and repeat: 3 × 2 of the outline = 5 copies.
+  const before5 = all.length;
+  await page.click(".make-more button:has-text('Make 5 copies')");
+  expect((await shapesNow()).length === before5 + 5, "step and repeat made 5 copies");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+z");
+  expect((await shapesNow()).some((i) => i.id === "m1"), "undo put the plate and hole back");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.select(["m1", "m2"]);
+    s.deleteSelected();
+  });
+  // Words bent over the top of a circle.
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([{ id: "cw", name: "Round", op: "engrave", kind: "text", text: "ROUND WE GO", x: 400, y: 150, size: 6, font: "inter-bold", align: "left", angle: 0 }], { select: true });
+  });
+  await page.click("[aria-label='Round a circle'] button:has-text('Over the top')");
+  const bent = (await shapesNow()).find((i) => i.id === "cw");
+  expect(bent.curve > 0 && bent.align === "centre", "the words are bent over the top of a circle");
+  await store(() => window.juracutStore.getState().deleteSelected());
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

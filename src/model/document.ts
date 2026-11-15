@@ -113,6 +113,7 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         font: isFontId(it.font) ? it.font : "inter-regular",
         align: it.align === "centre" || it.align === "right" ? it.align : "left",
         angle: num(it.angle),
+        ...(typeof it.curve === "number" && Number.isFinite(it.curve) && Math.abs(it.curve) >= 1 ? { curve: Math.max(-100000, Math.min(100000, it.curve)) } : {}),
       };
     case "picture": {
       const src = typeof it.src === "string" && /^data:image\/(png|jpeg|webp|gif);base64,/.test(it.src) && it.src.length <= 8_000_000 ? it.src : null;

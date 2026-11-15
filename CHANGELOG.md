@@ -6,7 +6,21 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.13 — Handles, copy and paste, right-click menu
+## v0.14 — Outline, combine, words round a circle, step and repeat
+
+New under the selected shapes' settings (**Make more**), and in the right-click menu:
+
+- **Outline**: a new cut shape round the selection, a set distance out — a border round words, or a backing piece to
+  glue them on. "Fill gaps inside" makes it one solid piece (the spaces between letters filled).
+- **Combine** two or more shapes: **Join** them into one, **Cut out** the smaller ones from the biggest, or keep only
+  where they **Overlap**. The result is one shape of straight lines (curves are followed to within 0.01 mm).
+- **Step and repeat**: copies in a grid, so many across and so many up, a gap apart — handy for a sheet of coasters or
+  tags.
+- **Words round a circle**: a words shape can go **Over the top** of a circle (reading clockwise, like the top of a
+  badge) or **Under** it (letters upright along the bottom), with the circle's size to set. Each letter keeps its
+  exact curves.
+
+## v0.13 — Handles, copy and paste, right-click menu · commit `b1d5348`
 
 - **Resize by dragging**: a selected shape (or several) has small square handles round it. Drag a corner to make it
   bigger or smaller both ways, or an edge to stretch it one way. Hold **Shift** to keep its proportions. Circles and
