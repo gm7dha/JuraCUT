@@ -218,7 +218,7 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           </button>
         </>
       )}
-      {items.some((it) => it.kind === "text") && <NamedCopies cols={s.cols} gap={s.gap} />}
+      {items.some((it) => it.kind === "text" || (it.kind === "qr" && it.text.includes("#"))) && <NamedCopies cols={s.cols} gap={s.gap} />}
       {items.some((it) => it.kind === "shape" || it.kind === "text") && (
         <button type="button" className="text-button make-button wide" onClick={() => st().breakApartSelected()} title="Split shapes made of separate pieces (a traced picture, an imported drawing, words) into one shape per piece">
           Break apart

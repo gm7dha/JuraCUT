@@ -5,6 +5,7 @@
  */
 import type { FontId, TextAlign } from "../geometry/text";
 import type { Segment } from "../geometry/segments";
+import type { QrEcc } from "../geometry/qr";
 
 /** What the laser does with a shape. */
 export type Op = "cut" | "score" | "engrave";
@@ -91,6 +92,17 @@ export interface PolygonItem extends ItemBase {
   star?: number;
 }
 
+/** A QR code: `text` (a web address or any words) as a square `size` mm across, bottom-left corner at (x, y). */
+export interface QrItem extends ItemBase {
+  kind: "qr";
+  x: number;
+  y: number;
+  size: number;
+  text: string;
+  /** How much of the code can be damaged and still read: L 7%, M 15%, Q 25%, H 30% (bigger codes). */
+  ecc: QrEcc;
+}
+
 /** Words: `x`, `y` is where the first line's baseline starts (its left end, middle or right end by `align`). */
 export interface TextItem extends ItemBase {
   kind: "text";
@@ -134,7 +146,7 @@ export interface PictureItem extends ItemBase {
   dpm: number;
 }
 
-export type Item = RectItem | CircleItem | PolygonItem | LineItem | TextItem | ShapeItem | PictureItem;
+export type Item = RectItem | CircleItem | PolygonItem | LineItem | TextItem | QrItem | ShapeItem | PictureItem;
 export type ItemKind = Item["kind"];
 
 /** The material on the bed (saved with the design; sizes in mm). */

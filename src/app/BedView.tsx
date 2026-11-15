@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import { svgPathData } from "../laser/files";
 import { keyPiece } from "../model/arrange";
-import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makePolygon, makeRect, makeText, movedItem } from "../model/shapes";
+import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeLine, makePolygon, makeQr, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
 import { rulerStep, snapBoxMove, snapLines, snapPoint, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
@@ -262,6 +262,14 @@ export function BedView() {
         if (!additive) s.clearSelection();
         setGestureBoth({ kind: "box", start: mm, end: mm });
       }
+      return;
+    }
+    if (tool === "qr") {
+      linesRef.current = snapLines(doc.items, [], doc.bed);
+      const p = snap(mm, e.shiftKey);
+      const id = newId(doc.items.map((it) => it.id));
+      s.addItems([makeQr(id, p[0], p[1])], { select: true, focus: true });
+      s.setTool("select");
       return;
     }
     if (tool === "text") {
@@ -687,6 +695,8 @@ function drawnItem(g: Extract<Gesture, { kind: "draw" }>, taken: string[], previ
     case "line":
       if (!preview && Math.hypot(x1 - x0, y1 - y0) < 0.5) return null;
       return makeLine(id, x0, y0, x1, y1);
+    default:
+      return null;
   }
 }
 
@@ -702,5 +712,7 @@ function draftSize(g: Extract<Gesture, { kind: "draw" }>): string {
       return `⌀ ${n(2 * Math.hypot(x1 - x0, y1 - y0))} mm`;
     case "line":
       return `${n(Math.hypot(x1 - x0, y1 - y0))} mm`;
+    default:
+      return "";
   }
 }

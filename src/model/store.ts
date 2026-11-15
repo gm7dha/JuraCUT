@@ -18,7 +18,7 @@ import { packPieces } from "../geometry/pack";
 import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
 
-export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text";
+export type Tool = "select" | "rect" | "circle" | "polygon" | "line" | "text" | "qr";
 export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
 
 export interface Toast {
@@ -338,7 +338,7 @@ export const useStore = create<State>((set, get) => ({
     const { history, selection } = get();
     const doc = history.present;
     const picked = doc.items.filter((it) => selection.includes(it.id));
-    if (!picked.some((it) => it.kind === "text")) {
+    if (!picked.some((it) => it.kind === "text" || (it.kind === "qr" && it.text.includes("#")))) {
       get().showToast("Pick some words (and anything that goes with them, like a tag) first.", "info");
       return;
     }

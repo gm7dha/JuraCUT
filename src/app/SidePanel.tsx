@@ -12,6 +12,7 @@ import { useDocument, useSelection, useStore } from "../model/store";
 import { DEFAULT_TAB_WIDTH, MOST_TABS, OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { AlignControls } from "./AlignControls";
 import { MakeMore } from "./MakeMore";
+import { MOST_QR_TEXT, qrModules } from "../geometry/qr";
 import { areaText, itemArea, itemLength, lengthText } from "../model/measure";
 import { keepPolygonStyle } from "./polygonStyle";
 import { Icons } from "./icons";
@@ -178,6 +179,7 @@ function ItemProperties({ item }: { item: Item }) {
         </>
       )}
       {item.kind === "polygon" && <PolygonFields item={item} />}
+      {item.kind === "qr" && <QrFields item={item} focus={focusItem === item.id} />}
       {item.kind === "line" && (
         <>
           <div className="field-label">Ends</div>
@@ -249,6 +251,50 @@ function Measures({ item }: { item: Item }) {
       Line length {lengthText(len)}
       {area > 0 ? ` · area ${areaText(area)}` : ""}
     </p>
+  );
+}
+
+/** A QR code's settings: what it holds, how big, how sturdy. */
+function QrFields({ item, focus }: { item: Extract<Item, { kind: "qr" }>; focus: boolean }) {
+  const updateItem = useStore((s) => s.updateItem);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const change = (patch: Partial<typeof item>) => updateItem(item.id, (it) => ({ ...it, ...patch }) as Item);
+  useEffect(() => {
+    if (focus) {
+      ref.current?.focus();
+      ref.current?.select();
+      useStore.getState().setFocusItem(null);
+    }
+  }, [focus]);
+  const m = qrModules(item.text, item.ecc);
+  const cell = m ? item.size / m.size : 0;
+  return (
+    <>
+      <div className="field-label">Web address or words</div>
+      <textarea ref={ref} className="text-box" rows={2} value={item.text} aria-label="What the QR code holds" maxLength={MOST_QR_TEXT} onChange={(e) => change({ text: e.target.value })} />
+      <div className="field-row">
+        <NumberBox label="Size" value={item.size} unit="mm" min={5} onCommit={(size) => change({ size })} />
+        <label className="field">
+          <span>Sturdiness</span>
+          <select value={item.ecc} onChange={(e) => change({ ecc: e.target.value as typeof item.ecc })} title="How much of the code can be scratched or burnt and still read. More means more, smaller squares.">
+            <option value="L">Low (7%)</option>
+            <option value="M">Medium (15%)</option>
+            <option value="Q">High (25%)</option>
+            <option value="H">Highest (30%)</option>
+          </select>
+        </label>
+      </div>
+      {!item.text ? (
+        <p className="dialog-hint attention">Type a web address or some words for the code.</p>
+      ) : !m ? (
+        <p className="dialog-hint attention">That's too much for a QR code: make it shorter, or choose a lower sturdiness.</p>
+      ) : (
+        <p className={`dialog-hint${cell < 0.5 ? " attention" : ""}`}>
+          {m.size} × {m.size} squares, each {Math.round(cell * 100) / 100} mm.
+          {cell < 0.5 ? " That's very small to engrave cleanly: make the code bigger or hold less." : " Leave a light margin round it (a few squares wide) so phones can read it."}
+        </p>
+      )}
+    </>
   );
 }
 
