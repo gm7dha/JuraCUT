@@ -20,7 +20,9 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
   colours are read as cut, score or engrave.
 - **Cut, score or engrave**: pick what the laser does with each shape. Holes inside a shape are found for you and cut
   before the outside round them, so pieces don't move before their holes are done.
-- **Move, turn, flip, copy, delete, hide** shapes; nudge with the arrow keys; **Arrange** lays every piece out on the
+- **Move, turn, flip, copy, delete, hide** shapes; nudge with the arrow keys; **resize and turn by dragging** the
+  handles round the selection; **copy and paste** (also between tabs, and SVG drawings or words from elsewhere); a
+  **right-click menu**; pick or hide **every shape of one colour**; **zoom to the selection** (Shift + F); **Arrange** lays every piece out on the
   bed (a hole stays with its plate).
 - **Export for laser**: an SVG (or DXF) at true size with each colour as a layer, the way Bambu Studio's laser mode
   wants it — with a preview and a colour key. Mirror for engraving on the back. **Kerf compensation** moves cut lines

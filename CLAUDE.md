@@ -116,6 +116,16 @@
   toolbar's Arrange opens Pack tightly / In rows, gap and "may be turned", kept in localStorage `juracut.arrange`).
 - Mountain puzzle: there is none here. A layered laser version lived here in v0.8–v0.11.1 and was taken out at the
   owner's request (v0.12); the mountain puzzle is JuraCAD's, 3D printed only. Don't bring it back unless asked.
+- Handles, clipboard, menu (v0.13): `src/model/resize.ts` (pure: `scaledItem` — rects stay rects when square to the bed
+  or scaled evenly, circles/text/pictures when even, else the outline stretched, curves → Béziers by `asBeziers`;
+  `dragScale`/`anchorOf`/`handlePoint`, `canStretch`, `MIN_SIZE`). BedView draws `.handles` round the selection box
+  (corners, edges when > 40 px, a round turn handle `TURN_PX` above), hit-tested in screen px before `itemAt`; gestures
+  "resize" (1 mm grid, Shift or all circles/words = even) and "turn" (`rotatedItemAbout` the box middle, 15° steps, Shift
+  free), both one undo step via dragStart/Update/End. `src/model/clipboard.ts` (pure: `clipText` JSON "juracut-shapes" v1,
+  `whatIsPasted` → shapes checked by `parseDocument` / svg / words; `copiesOf` — new ids and groups) and
+  `src/app/clipboardApp.ts` (document copy/cut/paste events, not in text boxes or popups; menu Paste reads the clipboard or
+  this tab's last copy). `src/app/BedMenu.tsx`: right-click (no menu after a right-drag pan). Store `pasteItems`,
+  `selectOp`, `setOpHidden`, `orderSelected`, `requestFit("selection")` (`fitTarget`; Shift+F). SidePanel `OpChips`.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

@@ -13,6 +13,32 @@ import { OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/typ
 import { AlignControls } from "./AlignControls";
 import { Icons } from "./icons";
 
+/** One chip per colour on the bed: click it to select every shape of that colour, the eye to hide or show them all. */
+function OpChips({ items }: { items: readonly Item[] }) {
+  const s = useStore.getState;
+  return (
+    <div className="op-chips" aria-label="Shapes by colour">
+      {OPS.map((op) => {
+        const mine = items.filter((it) => it.op === op);
+        if (!mine.length) return null;
+        const hidden = mine.every((it) => it.hidden);
+        const label = OP_INFO[op].label.toLowerCase();
+        return (
+          <span key={op} className={`op-chip${hidden ? " all-hidden" : ""}`}>
+            <button type="button" disabled={hidden} onClick={() => s().selectOp(op)} title={`Select every ${label} shape`}>
+              <span className="op-dot" style={{ background: OP_INFO[op].colour }} />
+              {OP_INFO[op].label} {mine.length}
+            </button>
+            <button type="button" onClick={() => s().setOpHidden(op, !hidden)} title={hidden ? `Show every ${label} shape` : `Hide every ${label} shape (hidden shapes aren't exported)`} aria-label={hidden ? `Show ${label} shapes` : `Hide ${label} shapes`}>
+              {hidden ? <Icons.EyeOff size={14} /> : <Icons.Eye size={14} />}
+            </button>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SidePanel() {
   const doc = useDocument();
   const selection = useSelection();
@@ -30,6 +56,8 @@ export function SidePanel() {
         {doc.items.length === 0 ? (
           <p className="panel-hint">Nothing on the bed yet. Draw a rectangle, circle, line or words with the tools above, or Import an SVG or DXF drawing.</p>
         ) : (
+          <>
+          <OpChips items={doc.items} />
           <ul className="shape-list" role="listbox" aria-label="Shapes">
             {[...doc.items].reverse().map((it, k) => {
               const index = doc.items.length - 1 - k;
@@ -72,6 +100,7 @@ export function SidePanel() {
               );
             })}
           </ul>
+          </>
         )}
       </section>
       <section className="panel-section properties">

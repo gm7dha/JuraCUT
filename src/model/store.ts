@@ -7,8 +7,9 @@
 import { create } from "zustand";
 
 import { arrangeOnBed } from "../geometry/segments";
-import { newDocument, newId } from "./document";
-import { aligned, centredOnBed, distributed, grouped, mirroredPieces, newGroupId, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
+import { newDocument } from "./document";
+import { copiesOf } from "./clipboard";
+import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { boxCentre, itemBox, itemOutlines, movedItem, pieceOf, rotatedItemAbout } from "./shapes";
 import type { Item, JuraCUTDocument, Material, Op } from "./types";
@@ -45,6 +46,8 @@ export interface State {
   storageProblem: string | null;
   /** Bumped to ask the bed view to zoom to fit. */
   fitRequest: number;
+  /** What the last fit was for: the whole bed, or the selected shapes. */
+  fitTarget: "bed" | "selection";
   /** The shape whose words are being typed (text tool): its properties panel gets the focus. */
   focusItem: string | null;
   /** What Line up lines pieces up against (kept in this browser). */
@@ -74,6 +77,12 @@ export interface State {
   setOp(ids: string[], op: Op): void;
   deleteSelected(): void;
   duplicateSelected(): void;
+  /** Copies of shapes (from the clipboard), moved `offset` mm right and down, selected. */
+  pasteItems(items: Item[], offset: number): void;
+  /** Select every shape the laser cuts (or scores, or engraves). */
+  selectOp(op: Op): void;
+  /** Hide (or show) every shape of one colour. */
+  setOpHidden(op: Op, hidden: boolean): void;
   moveSelected(dx: number, dy: number): void;
   rotateSelected(angle: number): void;
   mirrorSelected(): void;
@@ -88,6 +97,8 @@ export interface State {
   centreSelected(axis?: "x" | "y" | "both"): void;
   distributeSelected(axis: "x" | "y", gap?: number): void;
   reorder(id: string, to: number): void;
+  /** The selected shapes moved to the end of the list (drawn on top, "front") or the start ("back"), keeping their order. */
+  orderSelected(where: "front" | "back"): void;
 
   // Selection and tools.
   select(ids: string[], additive?: boolean): void;
@@ -103,7 +114,7 @@ export interface State {
   showToast(text: string, kind?: Toast["kind"]): void;
   dismissToast(id: number): void;
   setTheme(theme: "light" | "dark"): void;
-  requestFit(): void;
+  requestFit(target?: "bed" | "selection"): void;
 }
 
 let dragBase: JuraCUTDocument | null = null;
@@ -131,6 +142,7 @@ export const useStore = create<State>((set, get) => ({
   savedDoc: null,
   storageProblem: null,
   fitRequest: 0,
+  fitTarget: "bed",
   focusItem: null,
   picture: null,
   alignAgainst: rememberedAgainst(),
@@ -229,27 +241,29 @@ export const useStore = create<State>((set, get) => ({
     const doc = history.present;
     const picked = doc.items.filter((it) => selection.includes(it.id));
     if (!picked.length) return;
-    const ids = new Set(doc.items.map((it) => it.id));
-    // Copies of a group make a new group of their own.
-    const newGroups = new Map<string, string>();
-    let taken = [...doc.items];
-    const copies = picked.map((it) => {
-      const id = newId(ids);
-      ids.add(id);
-      let group = it.group;
-      if (group) {
-        if (!newGroups.has(group)) {
-          const g = newGroupId(taken);
-          newGroups.set(group, g);
-          taken = [...taken, { ...it, id: "_", group: g }];
-        }
-        group = newGroups.get(group);
-      }
-      const copy = movedItem({ ...it, id, name: copyName(it.name) }, 10, -10);
-      return group ? { ...copy, group } : copy;
-    });
+    const copies = copiesOf(doc.items, picked, 10, -10, copyName);
     get().commit({ ...doc, items: [...doc.items, ...copies] });
     set({ selection: copies.map((c) => c.id) });
+  },
+  pasteItems(items, offset) {
+    if (!items.length) return;
+    const doc = get().history.present;
+    const copies = copiesOf(doc.items, items, offset, -offset);
+    get().commit({ ...doc, items: [...doc.items, ...copies] });
+    set({ selection: copies.map((c) => c.id), tool: "select" });
+  },
+  selectOp(op) {
+    const ids = get().history.present.items.filter((it) => it.op === op && !it.hidden).map((it) => it.id);
+    set({ selection: ids.length ? ids : EMPTY });
+  },
+  setOpHidden(op, hidden) {
+    const doc = get().history.present;
+    const items = doc.items.map((it) => (it.op === op && !!it.hidden !== hidden ? { ...it, hidden } : it));
+    if (items.some((it, i) => it !== doc.items[i])) get().commit({ ...doc, items });
+    if (hidden) {
+      const visible = get().selection.filter((id) => !items.find((it) => it.id === id)?.hidden);
+      if (visible.length !== get().selection.length) set({ selection: visible.length ? visible : EMPTY });
+    }
   },
   moveSelected(dx, dy) {
     get().updateSelected((it) => movedItem(it, dx, dy));
@@ -366,6 +380,17 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...doc, items });
   },
 
+  orderSelected(where) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    if (!picked.length) return;
+    const rest = doc.items.filter((it) => !selection.includes(it.id));
+    const items = where === "front" ? [...rest, ...picked] : [...picked, ...rest];
+    if (items.every((it, i) => it === doc.items[i])) return;
+    get().commit({ ...doc, items });
+  },
+
   select(picked, additive = false) {
     const { selection, history } = get();
     // A shape in a group brings the rest of its group.
@@ -411,8 +436,8 @@ export const useStore = create<State>((set, get) => ({
   setTheme(theme) {
     if (theme !== get().theme) set({ theme });
   },
-  requestFit() {
-    set({ fitRequest: get().fitRequest + 1 });
+  requestFit(target = "bed") {
+    set({ fitRequest: get().fitRequest + 1, fitTarget: target === "selection" && get().selection.length ? "selection" : "bed" });
   },
 }));
 

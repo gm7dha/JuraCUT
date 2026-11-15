@@ -6,7 +6,24 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.12 — Mountain puzzle taken out
+## v0.13 — Handles, copy and paste, right-click menu
+
+- **Resize by dragging**: a selected shape (or several) has small square handles round it. Drag a corner to make it
+  bigger or smaller both ways, or an edge to stretch it one way. Hold **Shift** to keep its proportions. Circles and
+  words always keep theirs (stretched, they'd stop being circles and words). A rectangle stays a rectangle; anything
+  else stretched one way becomes an outline. The size shows by the pointer as you drag.
+- **Turn by dragging**: the round handle above the selection turns it about its middle, in steps of 15° (Shift: any
+  angle).
+- **Copy, cut and paste** with Ctrl/⌘ + C, X and V. A paste lands a little beside the original (further each time).
+  You can paste into another JuraCUT tab, and paste an SVG drawing, a picture (it opens the Picture window) or plain
+  words from other programs.
+- **Right-click menu** on the bed (Control-click on a Mac): copy, cut, paste, duplicate, delete, cut/score/engrave,
+  turn, flip, group, bring to front or send to back, zoom to the selection, and select every shape of a colour.
+- **By colour**: above the shapes list, a chip for each colour on the bed. Click it to select every cut, score or
+  engrave shape; its eye hides or shows them all.
+- **Zoom to selection**: Shift + F (F still fits the whole bed).
+
+## v0.12 — Mountain puzzle taken out · commit `332f4e5`
 
 - The **Mountain** tool has been taken out of JuraCUT. The mountain puzzle is now 3D printing only, in JuraCAD's
   Mountain tool. Nothing else changes.

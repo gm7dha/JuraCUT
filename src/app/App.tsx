@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { startLink } from "./juraLinkApp";
+import { listenForClipboard } from "./clipboardApp";
 
 import { KEEP_PROBLEM, keepInBrowser, readKept } from "../model/keep";
 import { useStore } from "../model/store";
@@ -25,6 +26,8 @@ export function App() {
   useFileDrop();
   // The link with JuraCAD (after the kept design is back, so a design sent here lands on it).
   useEffect(() => startLink(), []);
+  // Copy, cut and paste (Ctrl/⌘ + C, X, V).
+  useEffect(() => listenForClipboard(), []);
 
   return (
     <div className="app">
@@ -138,6 +141,11 @@ function useShortcuts() {
           s.openDialog("help");
           break;
         default: {
+          // Shift + F: zoom in on what's selected.
+          if (e.shiftKey && e.key.toLowerCase() === "f") {
+            s.requestFit("selection");
+            break;
+          }
           if (e.shiftKey) break;
           const k = e.key.toLowerCase();
           if (k === "v") s.setTool("select");
