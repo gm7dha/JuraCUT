@@ -7,6 +7,7 @@
  * browsers (Safari, Firefox) save by downloading and open with the normal
  * file picker.
  */
+import { beforeOtherDesign } from "./recentApp";
 import { FILE_EXTENSION, FILE_MIME, nameFromFileName, readDocumentFile, serializeDocument } from "../model/document";
 import { IMPORT_ACCEPT, importDrawing, isImportFile, isPictureFile } from "../model/importFile";
 import { useStore } from "../model/store";
@@ -142,6 +143,7 @@ export async function openFile(file: File): Promise<boolean> {
     return false;
   }
   const doc = result.doc.name === "Untitled design" ? { ...result.doc, name: nameFromFileName(file.name) || result.doc.name } : result.doc;
+  await beforeOtherDesign();
   s.openDocument(doc, file.name);
   currentHandle = null;
   useStore.getState().showToast(`Opened ${file.name}. Undo brings back what you had before.`, "success");

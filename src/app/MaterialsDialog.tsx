@@ -107,6 +107,17 @@ export function MaterialsDialog() {
         <button type="button" className="text-button" onClick={reset} title="Put the starter list back">
           Starter list
         </button>
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => {
+            useStore.getState().addTestCard();
+            useStore.getState().openDialog(null);
+          }}
+          title="A small card to cut from this design's material: a kerf test (ten squares) and a fit test (a comb of slots), with how to read them"
+        >
+          Kerf and fit test card
+        </button>
         <div className="topbar-spacer" />
         <button type="button" className="text-button" onClick={add} title="Add a material (starting from this design's settings)">
           <Icons.Plus size={16} /> Add material

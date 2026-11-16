@@ -210,6 +210,13 @@
 - v0.25: `src/laser/shared.ts` (pure `withoutShared`: cut paths in order, flattened; each piece's stretches lying along
   pieces already cut — within 0.01 mm, either way — left out, the rest cut as open runs; untouched paths kept exactly; grid
   of done pieces). `SheetOptions.once` (makeSheet, after kerf); Export's box (on by default) says how much is doubled.
+- v0.26: `src/model/recent.ts` (pure, over an async `RecentStore`: `keepRecent` — newest `MOST_RECENT`, empty designs not
+  kept —, `recentList`, `openRecent`, `thumbnail` SVG, `memoryStore`); `src/app/recentApp.ts` (IndexedDB "juracut":
+  stores recentMeta/recentDocs; current id in localStorage `juracut.recentId`; `startRecent` (App) keeps 2 s after
+  changes; `beforeOtherDesign` (New in TopBar, openFile) keeps then starts a new id; `openRecentDesign` replaces the
+  history so undo can't carry the old design in); `src/app/RecentMenu.tsx` (top bar). `src/model/testCard.ts` (kerf
+  window of ten squares + a one-outline comb of `SLOT_STEPS` slots, labelled, one group) → store `addTestCard` →
+  MaterialsDialog's "Kerf and fit test card".
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

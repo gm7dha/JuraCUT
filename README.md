@@ -47,7 +47,9 @@ JuraCUT runs entirely in your browser. Your designs never leave your computer, t
   shape's line length and area.
 - **Groups**, and **Align**: line shapes up with each other, a key shape or the bed, centre them on the bed, or
   space them out evenly (with shortcuts).
-- **Materials**: a list of what you cut, with thickness, kerf and your notes, kept on your computer.
+- **Materials**: a list of what you cut, with thickness, kerf and your notes, kept on your computer — and a kerf and
+  fit **test card** to find them.
+- **Recent designs**: every design you work on is kept in the browser, so New never loses the last one.
 - **Rulers** and **snapping**: edges and middles line up with other shapes and the bed as you draw or move, and points
   snap onto other shapes' corners, ends and centres. **Lock** shapes, and **measure** between any two points.
 - **Save** to a `.juracut` file and open it later (or drag it onto the window). Your latest work is also kept in the

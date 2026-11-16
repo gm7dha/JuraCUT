@@ -4,6 +4,8 @@ import { useDocument, useStore } from "../model/store";
 import { SHORT_VERSION } from "../version";
 import { Icons } from "./icons";
 import { forgetFile, openFromFile, saveToFile } from "./fileActions";
+import { RecentMenu } from "./RecentMenu";
+import { beforeOtherDesign } from "./recentApp";
 import { browserKind, installApp, installSteps, isInstalledApp, useCanInstall } from "./install";
 import { Modal } from "./Modal";
 import { setThemeChoice, themeChoice, type ThemeChoice } from "./theme";
@@ -85,9 +87,11 @@ export function TopBar() {
       <button
         className="text-button"
         onClick={() => {
-          if (!hasShapes || window.confirm("Start a new, empty design? (You can undo this.)")) {
-            newDocument();
-            forgetFile();
+          if (!hasShapes || window.confirm("Start a new, empty design? (This one is kept in Recent.)")) {
+            void beforeOtherDesign().then(() => {
+              newDocument();
+              forgetFile();
+            });
           }
         }}
         title="Start a new, empty design"
@@ -97,6 +101,7 @@ export function TopBar() {
       <button className="text-button" onClick={() => void openFromFile()} title={`Open a .juracut design (${shortcut(platform, "O")}). You can also drag a file onto the window.`}>
         <Icons.Open size={18} /> <span className="button-label">Open</span>
       </button>
+      <RecentMenu />
       <button className="text-button" onClick={() => void openFromFile(true)} title="Bring an SVG or DXF drawing in as shapes on the bed (from JuraCAD, Inkscape, or anywhere else), or a picture (PNG, JPG…) to trace into outlines">
         <Icons.Import size={18} /> <span className="button-label">Import</span>
       </button>
