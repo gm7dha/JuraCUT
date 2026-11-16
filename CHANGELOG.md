@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.25 — Shared edges cut once
+## v0.26 — Recent designs, and a kerf and fit test card
+
+- **Recent** (top bar): the designs you've worked on in this browser, newest first, each with a small picture. Every
+  design is kept as you work, so pressing New or opening a file never loses the last one — pick it from Recent to carry
+  on. The newest 12 are kept (× forgets one). They live in this browser only: Save still makes a file.
+- **Kerf and fit test card** (Settings › Materials): puts a small card on the bed to cut from your sheet —
+  - a **kerf test**: ten 10 mm squares in a window; push them to one end and the gap ÷ 10 is the kerf to put in
+    Materials;
+  - a **fit test**: a comb of slots from 0.3 mm narrower to 0.2 mm wider than the sheet, each labelled; the one an
+    offcut fits snugly is the slot width for joints.
+
+## v0.25 — Shared edges cut once · commit `5216218`
 
 - **Cut lines lying on top of each other once** (in Export for laser, on unless you untick it), like LightBurn's
   Remove overlapping lines: pieces butted together — easy now that corners snap to corners — share an edge, and cut

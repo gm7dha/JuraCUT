@@ -13,12 +13,14 @@ import { combinedRings, insetRings, outlineRings, ringsShape, type CombineHow } 
 import { MOST_COPIES, repeatedItems, roundItems } from "./repeat";
 import { brokenApart } from "./breakApart";
 import { hasPlace, namedCopies, type NameEntry } from "./names";
+import { newGroupId } from "./arrange";
 import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups, turnedPieces, ungrouped, withGroups, type AlignAgainst, type AlignTo } from "./arrange";
 import { packPieces } from "../geometry/pack";
 import { baseOf, boxCentre, itemBox, itemOutlines, makeCircle, makeRect, makeShape, movedItem, pictureSize, pieceOf, rotatedItemAbout } from "./shapes";
 import { ROUNDED_SHARE } from "../geometry/photo";
 import { pathOf, placedOnPath } from "./textPath";
 import { trimmed } from "./trim";
+import { testCard } from "./testCard";
 import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline, PictureItem, TextItem } from "./types";
 
@@ -106,6 +108,8 @@ export interface State {
   trimAt(id: string, outline: number, at: [number, number]): void;
   /** The selected photo engraved only inside the other selected shape (its mask; the shape stays). */
   maskPictureWithShape(): void;
+  /** A kerf and fit test card for the design's material, put on the bed (one group, selected). */
+  addTestCard(): void;
   /** A cut shape the photo's shape (rectangle, rounded or oval) round it, behind it. */
   addCutRoundPicture(id: string): void;
   /** Start editing a shape's points (it becomes a free shape of lines and curves, one undo step). */
@@ -415,6 +419,20 @@ export const useStore = create<State>((set, get) => ({
     const clip = outlines.map((o) => ({ ...o, segments: movePaths([{ layer: "outer", segments: o.segments, closed: true }], [1, 0, 0, 1, -pic.cx, -pic.cy])[0].segments }));
     get().commit({ ...doc, items: doc.items.map((it) => (it.id === pic.id ? { ...pic, clip } : it)) });
     get().showToast("Only the part of the photo inside the shape will be engraved. The shape is still there: cut round it, or delete it.", "info");
+  },
+  addTestCard() {
+    const doc = get().history.present;
+    const ids = new Set(doc.items.map((i) => i.id));
+    const fresh = () => {
+      const id = newId(ids);
+      ids.add(id);
+      return id;
+    };
+    const card = testCard(doc.material, 10, 10, fresh, newGroupId(doc.items));
+    get().commit({ ...doc, items: [...doc.items, ...card] });
+    set({ selection: card.map((i) => i.id), tool: "select" });
+    get().requestFit("selection");
+    get().showToast("Test card on the bed: cut it from your material, then read it as its words say. Put the kerf you find in Materials.", "info");
   },
   addCutRoundPicture(id) {
     const doc = get().history.present;

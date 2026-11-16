@@ -1,4 +1,5 @@
 import { removedNode } from "../model/nodes";
+import { startRecent } from "./recentApp";
 import { useEffect } from "react";
 
 import { startLink } from "./juraLinkApp";
@@ -191,6 +192,7 @@ function useKeepInBrowser() {
     } catch {
       // No storage (private browsing): the design just isn't kept.
     }
+    const stopRecent = startRecent();
     let timer: ReturnType<typeof setTimeout> | null = null;
     const unsubscribe = useStore.subscribe((state, prev) => {
       if (state.history.present === prev.history.present) return;
@@ -208,6 +210,7 @@ function useKeepInBrowser() {
     });
     return () => {
       unsubscribe();
+      stopRecent();
       if (timer) clearTimeout(timer);
     };
   }, []);

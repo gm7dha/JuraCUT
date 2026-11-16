@@ -797,6 +797,28 @@ try {
   expect((onceText.match(/<path/g) ?? []).length >= 2, "both squares are in the file");
   await page.keyboard.press("Escape");
 
+  step = "recent designs, and a test card from Materials";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.renameDocument("Remember me");
+    s.addItems([{ id: "rm", name: "Square", op: "cut", kind: "rect", x: 20, y: 20, w: 30, h: 30, radius: 0, angle: 0 }]);
+  });
+  page.once("dialog", (d) => d.accept());
+  await page.click(".topbar button:has-text('New')");
+  await page.waitForFunction(() => window.juracutStore.getState().history.present.items.length === 0);
+  await page.click(".recent-button");
+  await page.waitForSelector(".recent-list li:has-text('Remember me')");
+  await page.click(".recent-open:has-text('Remember me')");
+  await page.waitForFunction(() => window.juracutStore.getState().history.present.name === "Remember me");
+  expect(await store(() => window.juracutStore.getState().history.present.items.length === 1), "the earlier design came back from Recent");
+  await page.click(".settings-button");
+  await page.click(".settings-menu button:has-text('Materials')");
+  await page.waitForSelector(".materials-table");
+  await page.click(".modal button:has-text('Kerf and fit test card')");
+  const card = await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.name === "Fit test comb" || i.name === "Kerf test cut").length);
+  expect(card === 10, `the test card is on the bed (${card})`);
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");
