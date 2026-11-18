@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { canCombine } from "../model/combine";
 import { entriesFrom, hasPlace, numberNames } from "../model/names";
 import { useStore } from "../model/store";
+import { canTidy, DEFAULT_TIDY_GAP, TIDY_GAPS } from "../model/tidy";
 import type { Item } from "../model/types";
 
 const KEY = "juracut.makeMore";
@@ -25,9 +26,11 @@ export interface MakeMoreSettings {
   cols: number;
   rows: number;
   gap: number;
+  /** How far apart line ends may be and still be joined by Tidy up (mm). */
+  tidyGap: number;
 }
 
-const DEFAULTS: MakeMoreSettings = { distance: 3, fill: true, inside: false, round: false, count: 8, radius: 40, turn: true, cols: 3, rows: 2, gap: 5 };
+const DEFAULTS: MakeMoreSettings = { distance: 3, fill: true, inside: false, round: false, count: 8, radius: 40, turn: true, cols: 3, rows: 2, gap: 5, tidyGap: DEFAULT_TIDY_GAP };
 const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 
 export function makeMoreSettings(): MakeMoreSettings {
@@ -44,6 +47,7 @@ export function makeMoreSettings(): MakeMoreSettings {
       cols: Math.round(clamp(v.cols, 1, 50, DEFAULTS.cols)),
       rows: Math.round(clamp(v.rows, 1, 50, DEFAULTS.rows)),
       gap: clamp(v.gap, -1000, 1000, DEFAULTS.gap),
+      tidyGap: (TIDY_GAPS as readonly number[]).includes(v.tidyGap as number) ? (v.tidyGap as number) : DEFAULTS.tidyGap,
     };
   } catch {
     return DEFAULTS;
@@ -255,6 +259,26 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
       )}
       {items.some((it) => it.kind === "text" || (it.kind === "qr" && hasPlace(it.text))) && (
         <NamedCopies cols={s.cols} gap={s.gap} table={items.some((it) => (it.kind === "text" || it.kind === "qr") && /\{[^{}]{1,40}\}/.test(it.text))} />
+      )}
+      {items.some(canTidy) && (
+        <>
+          <div className="field-label">Tidy up lines</div>
+          <div className="tidy-row">
+            <label className="field">
+              <span className="field-label small">Join ends closer than</span>
+              <select value={s.tidyGap} onChange={(e) => set({ tidyGap: Number(e.target.value) })}>
+                {TIDY_GAPS.map((g) => (
+                  <option key={g} value={g}>
+                    {g} mm
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="text-button make-button" onClick={() => st().tidySelected(s.tidyGap)} title="For drawings from other programs: lines drawn twice are kept once, and ends that nearly meet are joined, so outlines close up and cut properly">
+              Tidy up
+            </button>
+          </div>
+        </>
       )}
       {items.some((it) => it.kind === "shape" || it.kind === "text") && (
         <button type="button" className="text-button make-button wide" onClick={() => st().breakApartSelected()} title="Split shapes made of separate pieces (a traced picture, an imported drawing, words) into one shape per piece">

@@ -8,6 +8,7 @@ import { svgOutlines, SvgError } from "../geometry/svgImport";
 import { pathsBox } from "../geometry/segments";
 import { newId, nameFromFileName } from "./document";
 import { makeShape, movedItem } from "./shapes";
+import { DEFAULT_TIDY_GAP, tidyOutlines } from "./tidy";
 import { OP_INFO, type Item, type Op, type Outline } from "./types";
 
 export const PICTURE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"];
@@ -64,8 +65,22 @@ export function importDrawing(text: string, fileName: string, taken: Iterable<st
   const h = box ? box[3] - box[1] : 0;
   const n = groups.length;
   const tooBig = box && (w > place.bed[0] || h > place.bed[1]) ? ` It's bigger than the bed (${Math.round(w)} × ${Math.round(h)} mm).` : "";
-  const summary = `Brought in ${n} ${n === 1 ? "shape" : "shapes"} from ${fileName} (${Math.round(w * 10) / 10} × ${Math.round(h * 10) / 10} mm).${unitNote}${tooBig}${skippedNote(skipped)}`;
+  const summary = `Brought in ${n} ${n === 1 ? "shape" : "shapes"} from ${fileName} (${Math.round(w * 10) / 10} × ${Math.round(h * 10) / 10} mm).${unitNote}${tooBig}${skippedNote(skipped)}${tidyNote(items)}`;
   return { items, summary };
+}
+
+/** A hint when the drawing has ends that nearly meet or lines drawn twice. */
+function tidyNote(items: readonly Item[]): string {
+  let gaps = 0;
+  let doubles = 0;
+  for (const it of items) {
+    if (it.kind !== "shape") continue;
+    const r = tidyOutlines(it.outlines, DEFAULT_TIDY_GAP).report;
+    gaps += r.joins;
+    doubles += r.doubles;
+  }
+  const bits = [gaps ? `${gaps} ${gaps === 1 ? "place where lines nearly meet" : "places where lines nearly meet"}` : "", doubles ? `${doubles} ${doubles === 1 ? "line" : "lines"} drawn twice` : ""].filter(Boolean);
+  return bits.length ? ` It has ${bits.join(" and ")}: Tidy up (under the shape's settings) fixes that.` : "";
 }
 
 function skippedNote(skipped: Record<string, number>): string {

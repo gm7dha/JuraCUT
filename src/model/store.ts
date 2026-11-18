@@ -21,6 +21,7 @@ import { ROUNDED_SHARE } from "../geometry/photo";
 import { pathOf, placedOnPath } from "./textPath";
 import { trimmed } from "./trim";
 import { testCard } from "./testCard";
+import { canTidy, tidyOutlines, tidyText, type TidyReport } from "./tidy";
 import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline, PictureItem, TextItem } from "./types";
 
@@ -75,6 +76,8 @@ export interface State {
   dragEnd(): void;
   undo(): void;
   redo(): void;
+  /** Undo (negative) or redo (positive) this many steps at once. */
+  jumpHistory(offset: number): void;
   newDocument(): void;
   openDocument(doc: JuraCUTDocument, fileName: string | null): void;
   renameDocument(name: string): void;
@@ -120,6 +123,8 @@ export interface State {
   changePoints(change: (outlines: Outline[]) => Outline[] | null): void;
   /** Shapes made of separate pieces split into one shape per piece. */
   breakApartSelected(): void;
+  /** Drawn-twice and no-length pieces taken out, near-meeting ends joined (free shapes only). Says what it did. */
+  tidySelected(gap: number): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
   selectOp(op: Op): void;
   /** Hide (or show) every shape of one colour. */
@@ -221,6 +226,14 @@ export const useStore = create<State>((set, get) => ({
     if (!history.future.length) return;
     const present = history.future[0];
     set({ history: { past: [...history.past, history.present], present, future: history.future.slice(1) }, selection: keepExisting(selection, present) });
+  },
+  jumpHistory(offset) {
+    const { history, selection } = get();
+    const all = [...history.past, history.present, ...history.future];
+    const at = Math.max(0, Math.min(all.length - 1, history.past.length + Math.round(offset)));
+    if (at === history.past.length) return;
+    const present = all[at];
+    set({ history: { past: all.slice(0, at), present, future: all.slice(at + 1) }, selection: keepExisting(selection, present) });
   },
   newDocument() {
     get().commit(newDocument());
@@ -503,6 +516,26 @@ export const useStore = create<State>((set, get) => ({
     }
     get().commit({ ...doc, items: tidyGroups(items) });
     set({ selection: [...picked], focusItem: null });
+  },
+  tidySelected(gap) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const sum: TidyReport = { doubles: 0, tiny: 0, joins: 0, closedBefore: 0, closedAfter: 0, openAfter: 0 };
+    let changed = false;
+    const items = doc.items.map((it) => {
+      if (!selection.includes(it.id) || !canTidy(it)) return it;
+      const { outlines, report } = tidyOutlines(it.outlines, gap);
+      for (const k of Object.keys(sum) as (keyof TidyReport)[]) sum[k] += report[k];
+      if (!report.doubles && !report.tiny && !report.joins) return it;
+      changed = true;
+      return { ...it, outlines };
+    });
+    if (!changed) {
+      get().showToast(`Nothing needed tidying${sum.openAfter ? ` (no open ends within ${gap} mm of each other)` : ""}.`, "info");
+      return;
+    }
+    get().commit({ ...doc, items });
+    get().showToast(tidyText(sum), "success");
   },
   selectOp(op) {
     const ids = get().history.present.items.filter((it) => it.op === op && !it.hidden).map((it) => it.id);

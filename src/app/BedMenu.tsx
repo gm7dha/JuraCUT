@@ -7,6 +7,7 @@ import { OPS, OP_INFO } from "../model/types";
 import { useStore } from "../model/store";
 import { copyFromMenu, pasteFromMenu } from "./clipboardApp";
 import { canCombine } from "../model/combine";
+import { canTidy } from "../model/tidy";
 import { makeMoreSettings } from "./MakeMore";
 
 type Entry = { label: string; hint?: string; act: () => void; off?: boolean } | "line";
@@ -81,6 +82,7 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
         ...(picked.length === 2 && picked.some((it) => it.kind === "picture") && picked.some((it) => it.kind !== "picture" && it.kind !== "line")
           ? [{ label: "Engrave the photo only inside the shape", act: () => s().maskPictureWithShape() }]
           : []),
+        { label: `Tidy up lines (join ends within ${more.tidyGap} mm)`, act: () => s().tidySelected(more.tidyGap), off: !picked.some(canTidy) },
         { label: "Break apart", act: () => s().breakApartSelected(), off: !picked.some((it) => it.kind === "shape" || it.kind === "text") },
         more.round
           ? { label: `Repeat round a circle (${more.count})`, act: () => s().repeatRoundSelected(more.count, more.radius, more.turn) }

@@ -1871,3 +1871,47 @@ kbd {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* History (undo steps). */
+.history-menu {
+  width: min(300px, calc(100vw - 16px));
+}
+.history-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  max-height: min(420px, calc(100vh - 200px));
+  overflow-y: auto;
+}
+.history-step {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.history-step:hover:not(:disabled) {
+  background: var(--line-2);
+}
+.history-list li.current .history-step {
+  background: var(--accent-soft);
+  font-weight: 600;
+  cursor: default;
+}
+.history-list li.undone .history-step {
+  color: var(--ink-3);
+}
+
+.tidy-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.tidy-row .field {
+  flex: 1;
+}
