@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.27 — History you can click back through, and tidying imported drawings
+## v0.28 — Round corners, and hatch fill
+
+- **Round corners** (under a shape's settings, and in the right-click menu), like LightBurn's corner fillet: every sharp
+  corner where two straight lines meet becomes a curve of the radius you choose — on polygons, stars, imported and
+  traced outlines, and shapes you've edited point by point. Where the sides are too short for the whole radius, the
+  corner gets the biggest curve that fits. A rectangle just gets a corner radius, so it stays a rectangle.
+- **Hatch fill**: fills a closed shape with parallel lines, scored — it shades an area much faster than engraving it.
+  Choose how far apart the lines are, their angle, and cross-hatch for a second set across the first. Holes are left
+  empty, the lines go back and forth so the laser hardly travels, and they're grouped with their shape so the two move
+  together.
+
+## v0.27 — History you can click back through, and tidying imported drawings · commit `11b822d`
 
 - **History** (the clock button beside Undo and Redo): every change you've made, newest at the top, each said in a few
   words — "Added "Rectangle 1"", "Moved 3 shapes", "Set "Logo" to be engraved". Click one to go straight back to it,

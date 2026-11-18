@@ -836,6 +836,19 @@ try {
   expect(back.present.items[0].outlines.length === 4 && back.future.length === 1, "the history list went back one step");
   await page.keyboard.press("Control+y");
 
+  step = "rounding corners and hatch fill";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.addItems([{ id: "tri", name: "Triangle", op: "cut", kind: "polygon", cx: 60, cy: 60, r: 30, sides: 3, angle: 90 }]);
+  });
+  await page.click(".make-more button:text-is('Round corners')");
+  const roundTri = await store(() => window.juracutStore.getState().history.present.items[0]);
+  expect(roundTri.kind === "shape" && roundTri.outlines[0].segments.filter((g) => g.kind === "arc").length === 3, "the triangle's three corners were rounded");
+  await page.click(".make-more button:text-is('Fill with lines')");
+  const hatched = await store(() => window.juracutStore.getState().history.present.items);
+  expect(hatched.length === 2 && hatched[1].op === "score" && hatched[1].outlines.length > 20, `the triangle was filled with scored lines (${hatched[1]?.outlines?.length})`);
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

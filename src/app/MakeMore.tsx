@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { canCombine } from "../model/combine";
 import { entriesFrom, hasPlace, numberNames } from "../model/names";
 import { useStore } from "../model/store";
+import { DEFAULT_HATCH, LEAST_SPACING } from "../model/hatch";
 import { canTidy, DEFAULT_TIDY_GAP, TIDY_GAPS } from "../model/tidy";
 import type { Item } from "../model/types";
 
@@ -28,9 +29,13 @@ export interface MakeMoreSettings {
   gap: number;
   /** How far apart line ends may be and still be joined by Tidy up (mm). */
   tidyGap: number;
+  cornerRadius: number;
+  hatchSpacing: number;
+  hatchAngle: number;
+  hatchCross: boolean;
 }
 
-const DEFAULTS: MakeMoreSettings = { distance: 3, fill: true, inside: false, round: false, count: 8, radius: 40, turn: true, cols: 3, rows: 2, gap: 5, tidyGap: DEFAULT_TIDY_GAP };
+const DEFAULTS: MakeMoreSettings = { distance: 3, fill: true, inside: false, round: false, count: 8, radius: 40, turn: true, cols: 3, rows: 2, gap: 5, tidyGap: DEFAULT_TIDY_GAP, cornerRadius: 3, hatchSpacing: DEFAULT_HATCH.spacing, hatchAngle: DEFAULT_HATCH.angle, hatchCross: false };
 const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 
 export function makeMoreSettings(): MakeMoreSettings {
@@ -47,12 +52,19 @@ export function makeMoreSettings(): MakeMoreSettings {
       cols: Math.round(clamp(v.cols, 1, 50, DEFAULTS.cols)),
       rows: Math.round(clamp(v.rows, 1, 50, DEFAULTS.rows)),
       gap: clamp(v.gap, -1000, 1000, DEFAULTS.gap),
+      cornerRadius: clamp(v.cornerRadius, 0.1, 500, DEFAULTS.cornerRadius),
+      hatchSpacing: clamp(v.hatchSpacing, LEAST_SPACING, 50, DEFAULTS.hatchSpacing),
+      hatchAngle: clamp(v.hatchAngle, -360, 360, DEFAULTS.hatchAngle),
+      hatchCross: v.hatchCross === true,
       tidyGap: (TIDY_GAPS as readonly number[]).includes(v.tidyGap as number) ? (v.tidyGap as number) : DEFAULTS.tidyGap,
     };
   } catch {
     return DEFAULTS;
   }
 }
+
+/** Shapes Round corners can change (words, circles, ovals, QR codes and photos have none to round). */
+const roundable = (it: Item) => !["text", "qr", "picture", "circle", "ellipse"].includes(it.kind);
 
 function keep(s: MakeMoreSettings) {
   try {
@@ -186,6 +198,37 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           <input type="checkbox" checked={s.fill} onChange={(e) => set({ fill: e.target.checked })} />
           Fill gaps inside (one solid piece)
         </label>
+      )}
+
+      {items.some(roundable) && (
+        <>
+          <div className="field-label">Round corners</div>
+          <div className="field-row">
+            <Num label="Radius" value={s.cornerRadius} unit="mm" min={0.1} max={500} onChange={(cornerRadius) => set({ cornerRadius })} />
+            <button type="button" className="text-button make-button" onClick={() => st().roundCornersSelected(s.cornerRadius)} title="Every sharp corner where two straight lines meet becomes a curve of this radius (as big as fits)">
+              Round corners
+            </button>
+          </div>
+        </>
+      )}
+
+      {items.some((it) => it.kind !== "picture" && it.kind !== "line") && (
+        <>
+          <div className="field-label">Hatch fill</div>
+          <div className="field-row">
+            <Num label="Lines apart" value={s.hatchSpacing} unit="mm" min={LEAST_SPACING} max={50} onChange={(hatchSpacing) => set({ hatchSpacing })} />
+            <Num label="Angle" value={s.hatchAngle} unit="°" min={-360} max={360} onChange={(hatchAngle) => set({ hatchAngle })} />
+          </div>
+          <div className="field-row">
+            <label className="check-row">
+              <input type="checkbox" checked={s.hatchCross} onChange={(e) => set({ hatchCross: e.target.checked })} />
+              Cross-hatch
+            </label>
+            <button type="button" className="text-button make-button" onClick={() => st().hatchSelected({ spacing: s.hatchSpacing, angle: s.hatchAngle, cross: s.hatchCross })} title="Fill the shapes with parallel lines, scored: shades an area much faster than engraving it. The lines are grouped with their shape.">
+              Fill with lines
+            </button>
+          </div>
+        </>
       )}
 
       {items.length > 1 && (
