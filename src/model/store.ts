@@ -21,6 +21,8 @@ import { ROUNDED_SHARE } from "../geometry/photo";
 import { pathOf, placedOnPath } from "./textPath";
 import { trimmed } from "./trim";
 import { testCard } from "./testCard";
+import { roundedOutlines } from "./corners";
+import { hatchLines, type HatchOptions } from "./hatch";
 import { canTidy, tidyOutlines, tidyText, type TidyReport } from "./tidy";
 import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline, PictureItem, TextItem } from "./types";
@@ -125,6 +127,10 @@ export interface State {
   breakApartSelected(): void;
   /** Drawn-twice and no-length pieces taken out, near-meeting ends joined (free shapes only). Says what it did. */
   tidySelected(gap: number): void;
+  /** Sharp corners between straight lines rounded with this radius (as much as fits). */
+  roundCornersSelected(radius: number): void;
+  /** Each selected closed shape filled with parallel lines (scored), grouped with it. */
+  hatchSelected(opts: HatchOptions): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
   selectOp(op: Op): void;
   /** Hide (or show) every shape of one colour. */
@@ -536,6 +542,77 @@ export const useStore = create<State>((set, get) => ({
     }
     get().commit({ ...doc, items });
     get().showToast(tidyText(sum), "success");
+  },
+  roundCornersSelected(radius) {
+    const { history, selection } = get();
+    const doc = history.present;
+    if (!(radius > 0)) return;
+    let corners = 0;
+    const items = doc.items.map((it): Item => {
+      if (!selection.includes(it.id) || it.locked) return it;
+      if (it.kind === "rect") {
+        const r = Math.min(radius, Math.min(it.w, it.h) / 2);
+        if (r === it.radius) return it;
+        corners += 4;
+        return { ...it, radius: r };
+      }
+      if (it.kind === "text" || it.kind === "qr" || it.kind === "picture" || it.kind === "circle" || it.kind === "ellipse") return it;
+      const r = roundedOutlines(itemOutlines(it), radius);
+      if (!r.corners) return it;
+      corners += r.corners;
+      return { ...baseOf(it), kind: "shape", outlines: r.outlines };
+    });
+    if (!corners) {
+      get().showToast("No sharp corners to round: corners where two straight lines meet are rounded (words, circles and curves aren't changed).", "info");
+      return;
+    }
+    get().commit({ ...doc, items });
+    get().showToast(`Rounded ${corners} ${corners === 1 ? "corner" : "corners"}.`, "success");
+  },
+  hatchSelected(opts) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const ids = new Set(doc.items.map((it) => it.id));
+    const groups = new Set(doc.items.map((it) => it.group).filter(Boolean));
+    const freshGroup = () => {
+      for (let k = 1; ; k++) if (!groups.has(`g${k}`)) {
+        groups.add(`g${k}`);
+        return `g${k}`;
+      }
+    };
+    const made: string[] = [];
+    let lines = 0;
+    let tooMany = false;
+    const items: Item[] = [];
+    for (const it of doc.items) {
+      if (!selection.includes(it.id) || it.kind === "picture") {
+        items.push(it);
+        continue;
+      }
+      const h = hatchLines(itemOutlines(it), opts);
+      if (h === null) {
+        tooMany = true;
+        items.push(it);
+        continue;
+      }
+      if (!h.length) {
+        items.push(it);
+        continue;
+      }
+      const group = it.group ?? freshGroup();
+      const id = newId(ids);
+      ids.add(id);
+      items.push({ ...it, group }, { id, name: `Hatch of ${it.name}`, op: "score", kind: "shape", outlines: h, group });
+      made.push(id);
+      lines += h.length;
+    }
+    if (!made.length) {
+      get().showToast(tooMany ? `That would be too many lines: space them further apart than ${opts.spacing} mm.` : "Nothing to fill: hatching needs closed shapes.", tooMany ? "error" : "info");
+      return;
+    }
+    get().commit({ ...doc, items });
+    set({ selection: made, focusItem: null });
+    get().showToast(`Filled with ${lines} ${lines === 1 ? "line" : "lines"}, scored, grouped with ${made.length === 1 ? "its shape" : "their shapes"}.${tooMany ? " Some shapes needed too many lines and were left." : ""}`, "success");
   },
   selectOp(op) {
     const ids = get().history.present.items.filter((it) => it.op === op && !it.hidden).map((it) => it.id);

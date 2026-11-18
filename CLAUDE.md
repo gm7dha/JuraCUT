@@ -225,6 +225,12 @@
   own ends only when it spans > 3·gap), straight ends met halfway else a bridging line; `TidyReport`, `tidyText`,
   `canTidy` = shape items, `TIDY_GAPS`), store `tidySelected(gap)`, MakeMore "Tidy up lines" (`tidyGap` in
   `juracut.makeMore`), BedMenu; importFile's summary notes gaps/doubles (`tidyNote`).
+- v0.28: `src/model/corners.ts` (pure `roundedOutlines(outlines, r)`: line–line corners turning > 1° become 3-point
+  arcs, d = r·tan(turn/2), each line shared between its two rounded ends — r shrunk to fit), store `roundCornersSelected`
+  (rects get `radius`; words/circles/ovals/QR/photos left; others → shapes). `src/model/hatch.ts` (pure `hatchLines(outlines,
+  {spacing, angle, cross})`: scanlines in turned coordinates on a fixed grid, even–odd, back and forth; null past
+  `MOST_HATCH_LINES`), store `hatchSelected` (a scored "Hatch of …" shape after each, grouped with it). MakeMore sections
+  (`cornerRadius`, `hatchSpacing`/`hatchAngle`/`hatchCross` in `juracut.makeMore`), BedMenu entries.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;
