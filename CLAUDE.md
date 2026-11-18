@@ -217,6 +217,14 @@
   history so undo can't carry the old design in); `src/app/RecentMenu.tsx` (top bar). `src/model/testCard.ts` (kerf
   window of ten squares + a one-outline comb of `SLOT_STEPS` slots, labelled, one group) → store `addTestCard` →
   MaterialsDialog's "Kerf and fit test card".
+- v0.27: `src/model/historyLabel.ts` (pure: `changeLabel(before, after)` — added/deleted/moved/resized/op/hidden/
+  locked/grouped/renamed by diffing items, unchanged items being the same objects; order, name, bed, material;
+  `historySteps(past, present, future)` with `offset`s) → `src/app/HistoryMenu.tsx` (toolbar, icon-only, after Redo) →
+  store `jumpHistory(offset)`. `src/model/tidy.ts` (pure `tidyOutlines(outlines, gap)`: `withoutDoubles`, no-length lines
+  out, `chainEdges` at JOIN_TOLERANCE, then open runs' ends within `gap` paired nearest first (grid, union–find; a run's
+  own ends only when it spans > 3·gap), straight ends met halfway else a bridging line; `TidyReport`, `tidyText`,
+  `canTidy` = shape items, `TIDY_GAPS`), store `tidySelected(gap)`, MakeMore "Tidy up lines" (`tidyGap` in
+  `juracut.makeMore`), BedMenu; importFile's summary notes gaps/doubles (`tidyNote`).
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

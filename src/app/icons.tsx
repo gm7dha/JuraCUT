@@ -47,6 +47,13 @@ export const Icons = {
       <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
     </Svg>
   ),
+  History: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </Svg>
+  ),
   Check: (p: IconProps) => (
     <Svg {...p}>
       <path d="M12 3 4 6v6c0 4.4 3.4 8.2 8 9 4.6-.8 8-4.6 8-9V6z" />

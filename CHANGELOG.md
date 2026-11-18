@@ -6,7 +6,18 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.26 — Recent designs, and a kerf and fit test card
+## v0.27 — History you can click back through, and tidying imported drawings
+
+- **History** (the clock button beside Undo and Redo): every change you've made, newest at the top, each said in a few
+  words — "Added "Rectangle 1"", "Moved 3 shapes", "Set "Logo" to be engraved". Click one to go straight back to it,
+  as LightBurn's Undo list does. Later steps stay (greyed) until you change something, so you can go forward again.
+- **Tidy up lines** (under a drawn or imported shape's settings, and in the right-click menu): drawings from other
+  programs often have lines that nearly meet but don't, or the same line drawn twice. Tidy up joins ends closer than
+  the distance you pick (0.05 to 1 mm), closing outlines up so they cut as an outside or a hole, keeps doubled lines
+  once so the laser doesn't go round twice, and takes out lines of no length. It says what it did.
+- When an imported SVG or DXF has such gaps or doubled lines, the message after Import says so.
+
+## v0.26 — Recent designs, and a kerf and fit test card · commit `3183ff2`
 
 - **Recent** (top bar): the designs you've worked on in this browser, newest first, each with a small picture. Every
   design is kept as you work, so pressing New or opening a file never loses the last one — pick it from Recent to carry

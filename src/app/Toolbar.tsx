@@ -23,6 +23,7 @@ function groupsOf(s: State): string[] {
 }
 import { AlignMenu } from "./AlignMenu";
 import { ArrangeMenu } from "./ArrangeMenu";
+import { HistoryMenu } from "./HistoryMenu";
 import { Icons } from "./icons";
 import { detectPlatform, shortcut } from "./platform";
 
@@ -82,6 +83,7 @@ export function Toolbar() {
           <Icons.Redo size={20} />
           <span>Redo</span>
         </button>
+        <HistoryMenu />
       </div>
       <div className="tool-divider" />
       <div className="tool-group">

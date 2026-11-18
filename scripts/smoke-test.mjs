@@ -819,6 +819,23 @@ try {
   const card = await store(() => window.juracutStore.getState().history.present.items.filter((i) => i.name === "Fit test comb" || i.name === "Kerf test cut").length);
   expect(card === 10, `the test card is on the bed (${card})`);
 
+  step = "tidying a drawing, and the history list";
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    const l = (a, b) => ({ segments: [{ kind: "line", from: a, to: b }], closed: false });
+    s.addItems([{ id: "gap", name: "Gappy square", op: "cut", kind: "shape", outlines: [l([20, 20], [60, 20]), l([60.1, 20.05], [60, 60]), l([60, 60], [20.05, 60]), l([20, 59.9], [20, 20.1])] }]);
+  });
+  await page.click(".make-more button:text-is('Tidy up')");
+  const tidy = await store(() => window.juracutStore.getState().history.present.items[0]);
+  expect(tidy.outlines.length === 1 && tidy.outlines[0].closed, "Tidy up closed the square's gaps");
+  await page.click(".history-button");
+  await page.waitForSelector(".history-list li.current");
+  await page.click(".history-step:has-text('Added \"Gappy square\"')");
+  const back = await store(() => window.juracutStore.getState().history);
+  expect(back.present.items[0].outlines.length === 4 && back.future.length === 1, "the history list went back one step");
+  await page.keyboard.press("Control+y");
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");
