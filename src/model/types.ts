@@ -192,4 +192,6 @@ export interface JuraCUTDocument {
   material: Material;
   /** Back to front: later items are drawn on top. */
   items: Item[];
+  /** Guide lines pulled out of the rulers (never cut); missing = none. */
+  guides?: { xs: number[]; ys: number[] };
 }

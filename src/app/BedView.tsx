@@ -13,7 +13,7 @@ import { svgPathData } from "../laser/files";
 import { keyPiece } from "../model/arrange";
 import { itemAt, itemBox, itemOutlines, itemsInBox, makeCircle, makeEllipse, makeLine, makePolygon, makeQr, makeRect, makeText, movedItem } from "../model/shapes";
 import { newId } from "../model/document";
-import { rulerStep, shapePoints, snapBoxMove, snapLines, snapPoint, snapPointsMove, type SnapLines } from "../model/snap";
+import { nearestLine, rulerStep, shapePoints, snapBoxMove, snapLines, snapPoint, snapPointsMove, type SnapLines } from "../model/snap";
 import { useDocument, useSelection, useStore, type Tool } from "../model/store";
 import { DEFAULT_TAB_WIDTH, OP_INFO, type Item, type PictureItem } from "../model/types";
 import { tabPlaces } from "../laser/tabs";
@@ -24,6 +24,7 @@ import { addedNode, handlesOf, movedHandle, movedNode, nodesOf, pieceAt, type Ha
 import { rotatedItemAbout } from "../model/shapes";
 import { polygonStyle } from "./polygonStyle";
 import { BedMenu } from "./BedMenu";
+import { guideNear, guidesOf, withGuideAt, withoutGuide, type GuideAxis } from "../model/guides";
 import type { Pt } from "../geometry/segments";
 
 interface View {
@@ -40,6 +41,8 @@ const REACH_PX = 6;
 const SNAP_PX = 8;
 /** The rulers' width in pixels. */
 const RULER = 22;
+/** How near (screen px) the pointer must be to a guide line to pick it up. */
+const GUIDE_PX = 4;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 60;
 
@@ -60,7 +63,8 @@ type Gesture =
   | { kind: "move"; start: Pt; moved: boolean; box: [number, number, number, number] | null }
   | { kind: "box"; start: Pt; end: Pt }
   | { kind: "draw"; tool: Exclude<Tool, "select" | "text">; start: Pt; end: Pt }
-  | { kind: "pinch"; ids: [number, number]; dist: number; mid: Pt; view: View };
+  | { kind: "pinch"; ids: [number, number]; dist: number; mid: Pt; view: View }
+  | { kind: "guide"; axis: GuideAxis; index: number };
 
 export function BedView() {
   const doc = useDocument();
@@ -98,6 +102,7 @@ export function BedView() {
   /** What a resize or turn is doing, shown by the pointer ("120 × 40 mm", "30°"). */
   const [readout, setReadout] = useState("");
   const [hoverHandle, setHoverHandle] = useState<Handle | "turn" | null>(null);
+  const [hoverGuide, setHoverGuide] = useState<GuideAxis | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   /** A right-drag that panned the view: no menu when the button comes up. */
   const panned = useRef(false);
@@ -277,6 +282,17 @@ export function BedView() {
     }
     if (e.button !== 0) return;
     const mm = toMm(px, py);
+    // Pulled out of a ruler: a new guide line (from the top ruler a level one, from the left an upright one).
+    if (px < RULER || py < RULER) {
+      if (px < RULER && py < RULER) return;
+      const axis: GuideAxis = py < RULER ? "y" : "x";
+      const g = guidesOf(doc);
+      const index = (axis === "x" ? g.xs : g.ys).length;
+      linesRef.current = snapLines(doc.items, [], doc.bed);
+      s.dragStart();
+      setGestureBoth({ kind: "guide", axis, index });
+      return;
+    }
     const additive = e.shiftKey || e.ctrlKey || e.metaKey;
     if (tool === "select" && editing) {
       // Editing points: a curve handle or a point is dragged; a click on the shape's lines just lets the picked point go.
@@ -284,7 +300,7 @@ export function BedView() {
       if (hit) {
         s.dragStart();
         // Snap to other shapes, and to this shape's other points.
-        const lines = snapLines(doc.items, [editing.id], doc.bed);
+        const lines = snapLines(doc.items, [editing.id], doc.bed, doc.guides);
         const own = nodesOf(editing.outlines)
           .filter((n) => "which" in hit || n.ref.outline !== hit.outline || n.ref.index !== hit.index)
           .map((n) => n.at);
@@ -316,12 +332,20 @@ export function BedView() {
         } else setGestureBoth({ kind: "resize", handle: h, box, ids, stretch: canStretch(doc.items.filter((it) => ids.includes(it.id))) });
         return;
       }
+      // A guide line: picked up to move it (or drop it back on a ruler to remove it).
+      const onGuide = guideNear(guidesOf(doc), mm, GUIDE_PX / viewRef.current.scale);
+      if (onGuide) {
+        linesRef.current = snapLines(doc.items, [], doc.bed);
+        s.dragStart();
+        setGestureBoth({ kind: "guide", ...onGuide });
+        return;
+      }
       const hit = itemAt(pickable, mm, REACH_PX / viewRef.current.scale);
       if (hit) {
         if (additive) s.select([hit.id], true);
         else if (!selection.includes(hit.id)) s.select([hit.id]);
         const ids = useStore.getState().selection;
-        linesRef.current = snapLines(doc.items, ids, doc.bed);
+        linesRef.current = snapLines(doc.items, ids, doc.bed, doc.guides);
         // The moving shapes' own points (a few hundred at most), to snap onto other shapes' points.
         ownPoints.current = doc.items.filter((it) => ids.includes(it.id)).flatMap(shapePoints).slice(0, 300);
         s.dragStart();
@@ -350,7 +374,7 @@ export function BedView() {
       return;
     }
     if (tool === "qr") {
-      linesRef.current = snapLines(doc.items, [], doc.bed);
+      linesRef.current = snapLines(doc.items, [], doc.bed, doc.guides);
       const p = snap(mm, e.shiftKey);
       const id = newId(doc.items.map((it) => it.id));
       s.addItems([makeQr(id, p[0], p[1])], { select: true, focus: true });
@@ -358,7 +382,7 @@ export function BedView() {
       return;
     }
     if (tool === "text") {
-      linesRef.current = snapLines(doc.items, [], doc.bed);
+      linesRef.current = snapLines(doc.items, [], doc.bed, doc.guides);
       const p = snap(mm, e.shiftKey);
       setGuides({ x: null, y: null });
       const id = newId(doc.items.map((it) => it.id));
@@ -366,7 +390,7 @@ export function BedView() {
       s.setTool("select");
       return;
     }
-    linesRef.current = snapLines(doc.items, [], doc.bed);
+    linesRef.current = snapLines(doc.items, [], doc.bed, doc.guides);
     const p = snap(mm, e.shiftKey);
     if (tool === "measure") {
       setMeasured(null);
@@ -384,6 +408,8 @@ export function BedView() {
     const g = gestureRef.current;
     if (!g) {
       if (tool === "select") setHoverHandle(handleAt([px, py]));
+      const onRuler = px < RULER !== py < RULER ? (py < RULER ? "y" : "x") : null;
+      setHoverGuide(onRuler ?? (tool === "select" ? (guideNear(guidesOf(doc), mm, GUIDE_PX / viewRef.current.scale)?.axis ?? null) : null));
       return;
     }
     const s = useStore.getState();
@@ -463,6 +489,17 @@ export function BedView() {
       case "box":
         setGestureBoth({ ...g, end: mm });
         break;
+      case "guide": {
+        const raw = g.axis === "x" ? mm[0] : mm[1];
+        const step = viewRef.current.scale > 8 ? 0.5 : 1;
+        // Onto other shapes' edges and middles (and the bed's) when near; else whole millimetres. Shift: anywhere.
+        const near = e.shiftKey ? null : nearestLine(raw, g.axis === "x" ? linesRef.current.xs : linesRef.current.ys, SNAP_PX / viewRef.current.scale);
+        const at = near ?? (e.shiftKey ? Math.round(raw * 100) / 100 : Math.round(raw / step) * step);
+        s.dragUpdate((base) => withGuideAt(base, g.axis, g.index, at));
+        const off = px < RULER || py < RULER;
+        setReadout(off ? "let go to remove the guide" : `guide at ${g.axis} = ${Math.round(at * 100) / 100} mm`);
+        break;
+      }
       case "draw":
         setGestureBoth({ ...g, end: snap(mm, e.shiftKey) });
         break;
@@ -484,6 +521,17 @@ export function BedView() {
     }
     setGestureBoth(null);
     setGuides({ x: null, y: null });
+    if (g.kind === "guide") {
+      const [px, py] = local(e);
+      // Dropped back on a ruler (or never pulled out of it): no guide.
+      if (px < RULER || py < RULER) {
+        const count = (d: typeof doc) => (g.axis === "x" ? guidesOf(d).xs : guidesOf(d).ys).length;
+        s.dragUpdate((base) => (g.index < count(base) ? withoutGuide(base, g.axis, g.index) : base));
+      }
+      s.dragEnd();
+      setReadout("");
+      return;
+    }
     switch (g.kind) {
       case "measure":
         // It stays on show until the next click.
@@ -513,7 +561,7 @@ export function BedView() {
   const onPointerCancel = (e: ReactPointerEvent<SVGSVGElement>) => {
     pointers.current.delete(e.pointerId);
     const k = gestureRef.current?.kind;
-    if (k === "move" || k === "resize" || k === "turn") useStore.getState().dragEnd();
+    if (k === "move" || k === "resize" || k === "turn" || k === "guide") useStore.getState().dragEnd();
     setReadout("");
     setGestureBoth(null);
     setGuides({ x: null, y: null });
@@ -532,7 +580,11 @@ export function BedView() {
         ? HANDLE_CURSOR[gesture.handle]
         : gesture?.kind === "turn"
           ? "grabbing"
-          : tool === "select"
+          : gesture?.kind === "guide" || (!gesture && hoverGuide)
+            ? (gesture?.kind === "guide" ? gesture.axis : hoverGuide) === "x"
+              ? "ew-resize"
+              : "ns-resize"
+            : tool === "select"
             ? (handleCursor(hoverHandle) ?? "default")
             : tool === "text"
               ? "text"
@@ -683,6 +735,12 @@ export function BedView() {
               })}
             </g>
           )}
+          {guidesOf(doc).xs.map((x, i) => (
+            <line key={`gx${i}`} x1={x} y1={-1e5} x2={x} y2={1e5} className="guide-line" strokeWidth={px} />
+          ))}
+          {guidesOf(doc).ys.map((y, i) => (
+            <line key={`gy${i}`} x1={-1e5} y1={y} x2={1e5} y2={y} className="guide-line" strokeWidth={px} />
+          ))}
           {draft && <path d={itemPathData(draft)} className="draft" fill="none" stroke="var(--accent)" strokeWidth={1.5 * px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {guides.x !== null && <line x1={guides.x} y1={-1e4} x2={guides.x} y2={1e4} className="snap-guide" strokeWidth={px} strokeDasharray={`${4 * px} ${3 * px}`} />}
           {(() => {

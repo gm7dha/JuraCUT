@@ -2,6 +2,7 @@
  * Designs: a new one, reading a saved one (checking every value, so a damaged
  * or hand-edited file can't break the app), and writing one out.
  */
+import { parseGuides } from "./guides";
 import { isFontId } from "../geometry/text";
 import { R1_BED, type Pt, type Segment } from "../geometry/segments";
 import { MOST_QR_TEXT } from "../geometry/qr";
@@ -205,7 +206,8 @@ export function parseDocument(raw: unknown): JuraCUTDocument | null {
   const material: Material = { name: str(m.name, DEFAULT_MATERIAL.name), thickness: Math.max(num(m.thickness, DEFAULT_MATERIAL.thickness), 0), kerf: Math.max(num(m.kerf, DEFAULT_MATERIAL.kerf), 0) };
   const taken = new Set<string>();
   const items = Array.isArray(d.items) ? d.items.map((v) => parseItem(v, taken)).filter((it): it is Item => !!it) : [];
-  return { format: "juracut", version: 1, name: str(d.name, DEFAULT_NAME) || DEFAULT_NAME, bed, material, items };
+  const guides = parseGuides(d.guides);
+  return { format: "juracut", version: 1, name: str(d.name, DEFAULT_NAME) || DEFAULT_NAME, bed, material, items, ...(guides ? { guides } : {}) };
 }
 
 export type ReadResult = { ok: true; doc: JuraCUTDocument } | { ok: false; error: string };

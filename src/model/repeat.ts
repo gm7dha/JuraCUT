@@ -1,11 +1,12 @@
 /**
  * Step and repeat (pure): copies of the selection in a grid, `cols` across and `rows` up, each a gap apart (the
  * selection's own box plus the gap). The originals stay where they are as the first copy, bottom left; copies of a
- * group make groups of their own.
+ * group make groups of their own. Also copies round a circle, and along a path.
  */
 import { copiesOf } from "./clipboard";
 import { boxCentre, itemBox, movedItem, rotatedItemAbout } from "./shapes";
-import type { Item } from "./types";
+import { pathPoints } from "../geometry/segments";
+import type { Item, Outline } from "./types";
 
 /** The most copies made at once. */
 export const MOST_COPIES = 500;
@@ -62,6 +63,54 @@ export function roundItems(existing: readonly Item[], picked: readonly Item[], c
       const to: [number, number] = [centre[0] - radius * Math.sin(a), centre[1] + radius * Math.cos(a)];
       copies = copies.map((it) => movedItem(it, to[0] - mid[0], to[1] - mid[1]));
     }
+    all = [...all, ...copies];
+    made.push(...copies);
+  }
+  return made;
+}
+
+/** Where along a path (mm from its start) copy k of `count` goes: spread over a closed path, end to end on an open one. */
+export function pathSpots(length: number, closed: boolean, count: number): number[] {
+  if (count < 1) return [];
+  if (closed) return Array.from({ length: count }, (_, k) => (length * k) / count);
+  if (count === 1) return [length / 2];
+  return Array.from({ length: count }, (_, k) => (length * k) / (count - 1));
+}
+
+/** The point and direction (degrees) `d` mm along a run of points. */
+function walk(pts: [number, number][], along: number[], d: number): { at: [number, number]; deg: number } {
+  let i = 1;
+  while (i < pts.length - 1 && along[i] < d) i++;
+  const a = pts[i - 1];
+  const b = pts[i];
+  const len = along[i] - along[i - 1] || 1e-9;
+  const t = Math.min(1, Math.max(0, (d - along[i - 1]) / len));
+  return { at: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], deg: (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI };
+}
+
+/**
+ * Copy along a path (LightBurn's Copy Along Path): `count` copies of the selection with their middles on the path's
+ * outline, evenly spaced (round a closed path, end to end along an open one). With `turn`, each copy turns to follow the
+ * path (as drawn, a copy faces along the path where it runs left to right). The originals stay where they are.
+ */
+export function alongPathItems(existing: readonly Item[], picked: readonly Item[], path: Outline, count: number, turn: boolean): Item[] {
+  const box = boxOfItems(picked);
+  count = Math.floor(count);
+  if (!box || count < 1 || count > MOST_COPIES) return [];
+  const raw = pathPoints(path.segments, path.closed, 0.02);
+  const pts: [number, number][] = path.closed && raw.length ? [...raw, raw[0]] : raw;
+  if (pts.length < 2) return [];
+  const along = [0];
+  for (let i = 1; i < pts.length; i++) along.push(along[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const length = along[along.length - 1];
+  if (!(length > 0)) return [];
+  const mid = boxCentre(box);
+  let all: Item[] = [...existing];
+  const made: Item[] = [];
+  for (const d of pathSpots(length, path.closed, count)) {
+    const { at, deg } = walk(pts, along, d);
+    let copies = copiesOf(all, picked, at[0] - mid[0], at[1] - mid[1]);
+    if (turn && Math.abs(deg) > 1e-9) copies = copies.map((it) => rotatedItemAbout(it, deg, at));
     all = [...all, ...copies];
     made.push(...copies);
   }
