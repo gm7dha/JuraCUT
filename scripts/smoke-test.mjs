@@ -856,13 +856,18 @@ try {
     return [r.left, r.top];
   });
   const g100 = await bedPoint([520, 100]);
+  const underRuler = await page.evaluate(([x, y]) => {
+    const el = document.elementFromPoint(x, y);
+    return el ? `${el.tagName}.${el.getAttribute("class") ?? ""}` : "nothing";
+  }, [g100[0], svgBox[1] + 10]);
   await page.mouse.move(g100[0], svgBox[1] + 10);
   await page.mouse.down();
-  await page.mouse.move(g100[0], (svgBox[1] + g100[1]) / 2);
-  await page.mouse.move(g100[0], g100[1]);
+  await page.mouse.move(g100[0], (svgBox[1] + g100[1]) / 2, { steps: 4 });
+  await page.mouse.move(g100[0], g100[1], { steps: 4 });
+  const during = await page.evaluate(() => document.querySelector(".bed-readout")?.textContent ?? "");
   await page.mouse.up();
   const guideY = await store(() => window.juracutStore.getState().history.present.guides?.ys ?? []);
-  expect(guideY.length === 1 && Math.abs(guideY[0] - 100) <= 1, `a level guide pulled out of the top ruler at y = 100 (${guideY})`);
+  expect(guideY.length === 1 && Math.abs(guideY[0] - 100) <= 1, `a level guide pulled out of the top ruler at y = 100 (${guideY}; under the pointer: ${underRuler}; readout: ${during}; at ${g100.map(Math.round)}, bed top ${svgBox.map(Math.round)})`);
   await drag([520, 100], [520, 120]);
   const moved = await store(() => window.juracutStore.getState().history.present.guides?.ys ?? []);
   expect(moved.length === 1 && Math.abs(moved[0] - 120) <= 1, `the guide was moved to y = 120 (${moved})`);
