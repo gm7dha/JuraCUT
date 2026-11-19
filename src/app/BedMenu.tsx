@@ -8,6 +8,7 @@ import { useStore } from "../model/store";
 import { copyFromMenu, pasteFromMenu } from "./clipboardApp";
 import { canCombine } from "../model/combine";
 import { canTidy } from "../model/tidy";
+import { pathFor } from "../model/textPath";
 import { makeMoreSettings } from "./MakeMore";
 
 type Entry = { label: string; hint?: string; act: () => void; off?: boolean } | "line";
@@ -17,6 +18,7 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
   const [at, setAt] = useState<[number, number]>([x, y]);
   const selection = useStore((s) => s.selection);
   const items = useStore((s) => s.history.present.items);
+  const hasGuides = useStore((s) => !!s.history.present.guides);
   const s = useStore.getState;
   const picked = items.filter((it) => selection.includes(it.id));
   const any = picked.length > 0;
@@ -85,6 +87,7 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
         { label: `Round corners (${more.cornerRadius} mm)`, act: () => s().roundCornersSelected(more.cornerRadius), off: !picked.some((it) => !["text", "qr", "picture", "circle", "ellipse"].includes(it.kind)) },
         { label: `Fill with lines ${more.hatchSpacing} mm apart`, act: () => s().hatchSelected({ spacing: more.hatchSpacing, angle: more.hatchAngle, cross: more.hatchCross }), off: !picked.some((it) => it.kind !== "picture" && it.kind !== "line") },
         { label: `Tidy up lines (join ends within ${more.tidyGap} mm)`, act: () => s().tidySelected(more.tidyGap), off: !picked.some(canTidy) },
+        ...(pathFor(picked) ? [{ label: `Copy along the biggest shape (${more.pathCount})`, act: () => s().copyAlongPathSelected(more.pathCount, more.pathTurn) }] : []),
         { label: "Break apart", act: () => s().breakApartSelected(), off: !picked.some((it) => it.kind === "shape" || it.kind === "text") },
         more.round
           ? { label: `Repeat round a circle (${more.count})`, act: () => s().repeatRoundSelected(more.count, more.radius, more.turn) }
@@ -102,6 +105,7 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
         ...OPS.map((op): Entry => ({ label: `Select every ${OP_INFO[op].label.toLowerCase()} shape`, act: () => s().selectOp(op), off: !items.some((it) => it.op === op && it.kind !== "picture" && !it.hidden) })),
         "line",
         { label: "Fit the bed", hint: "F", act: () => s().requestFit("bed") },
+        ...(hasGuides ? [{ label: "Remove all guide lines", act: () => s().clearGuides() }] : []),
       ];
 
   const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";

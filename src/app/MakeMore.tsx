@@ -7,7 +7,9 @@ import { useEffect, useState } from "react";
 
 import { canCombine } from "../model/combine";
 import { entriesFrom, hasPlace, numberNames } from "../model/names";
+import { MOST_COPIES } from "../model/repeat";
 import { useStore } from "../model/store";
+import { pathFor } from "../model/textPath";
 import { DEFAULT_HATCH, LEAST_SPACING } from "../model/hatch";
 import { canTidy, DEFAULT_TIDY_GAP, TIDY_GAPS } from "../model/tidy";
 import type { Item } from "../model/types";
@@ -33,9 +35,12 @@ export interface MakeMoreSettings {
   hatchSpacing: number;
   hatchAngle: number;
   hatchCross: boolean;
+  /** Copy along a path: how many copies, turned with it. */
+  pathCount: number;
+  pathTurn: boolean;
 }
 
-const DEFAULTS: MakeMoreSettings = { distance: 3, fill: true, inside: false, round: false, count: 8, radius: 40, turn: true, cols: 3, rows: 2, gap: 5, tidyGap: DEFAULT_TIDY_GAP, cornerRadius: 3, hatchSpacing: DEFAULT_HATCH.spacing, hatchAngle: DEFAULT_HATCH.angle, hatchCross: false };
+const DEFAULTS: MakeMoreSettings = { distance: 3, fill: true, inside: false, round: false, count: 8, radius: 40, turn: true, cols: 3, rows: 2, gap: 5, tidyGap: DEFAULT_TIDY_GAP, cornerRadius: 3, hatchSpacing: DEFAULT_HATCH.spacing, hatchAngle: DEFAULT_HATCH.angle, hatchCross: false, pathCount: 8, pathTurn: true };
 const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 
 export function makeMoreSettings(): MakeMoreSettings {
@@ -56,6 +61,8 @@ export function makeMoreSettings(): MakeMoreSettings {
       hatchSpacing: clamp(v.hatchSpacing, LEAST_SPACING, 50, DEFAULTS.hatchSpacing),
       hatchAngle: clamp(v.hatchAngle, -360, 360, DEFAULTS.hatchAngle),
       hatchCross: v.hatchCross === true,
+      pathCount: Math.round(clamp(v.pathCount, 1, MOST_COPIES, DEFAULTS.pathCount)),
+      pathTurn: v.pathTurn !== false,
       tidyGap: (TIDY_GAPS as readonly number[]).includes(v.tidyGap as number) ? (v.tidyGap as number) : DEFAULTS.tidyGap,
     };
   } catch {
@@ -175,6 +182,7 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
   };
   const st = useStore.getState;
   const combinable = canCombine(items);
+  const route = pathFor(items);
   const copies = s.cols * s.rows - 1;
   return (
     <div className="make-more">
@@ -281,6 +289,22 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
           </label>
           <button type="button" className="text-button make-button wide" onClick={() => st().repeatRoundSelected(s.count, s.radius, s.turn)} title="The selection stays at the top; copies go round clockwise, evenly spaced, round a circle whose middle is this far below it">
             Make {s.count - 1} {s.count === 2 ? "copy" : "copies"} round a circle
+          </button>
+        </>
+      )}
+      {route && (
+        <>
+          <div className="field-label">Copies along a path</div>
+          <p className="dialog-hint make-hint">The biggest shape picked, "{route.item.name}", is the path; the others are copied along it.</p>
+          <div className="field-row">
+            <Num label="How many" value={s.pathCount} min={1} max={MOST_COPIES} whole onChange={(pathCount) => set({ pathCount })} />
+            <label className="check-row path-turn">
+              <input type="checkbox" checked={s.pathTurn} onChange={(e) => set({ pathTurn: e.target.checked })} />
+              Turn with the path
+            </label>
+          </div>
+          <button type="button" className="text-button make-button wide" onClick={() => st().copyAlongPathSelected(s.pathCount, s.pathTurn)} title="Copies spaced evenly along the path's outline — all the way round a closed shape, end to end along a line">
+            Copy along the path
           </button>
         </>
       )}

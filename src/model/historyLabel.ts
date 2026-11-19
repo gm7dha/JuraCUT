@@ -98,6 +98,12 @@ export function changeLabel(before: JuraCUTDocument, after: JuraCUTDocument): st
   const order = (d: JuraCUTDocument) => d.items.map((it) => it.id).join("\n");
   if (order(before) !== order(after)) return "Changed the order";
   if (before.name !== after.name) return `Named the design "${after.name}"`;
+  if (JSON.stringify(before.guides ?? null) !== JSON.stringify(after.guides ?? null)) {
+    const count = (d: JuraCUTDocument) => (d.guides ? d.guides.xs.length + d.guides.ys.length : 0);
+    const a = count(before);
+    const b = count(after);
+    return b > a ? "Added a guide line" : b < a ? (b === 0 && a > 1 ? "Removed the guide lines" : "Removed a guide line") : "Moved a guide line";
+  }
   if (before.bed[0] !== after.bed[0] || before.bed[1] !== after.bed[1]) return `Bed size ${after.bed[0]} × ${after.bed[1]} mm`;
   if (JSON.stringify(before.material) !== JSON.stringify(after.material)) return `Material: ${after.material.name}`;
   if (!before.items.length && !after.items.length) return "Started a new design";

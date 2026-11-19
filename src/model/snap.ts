@@ -36,10 +36,10 @@ export function shapePoints(item: Item): [number, number][] {
   return out;
 }
 
-/** The x and y lines other shapes (and the bed) offer: their edges and middles. */
-export function snapLines(items: readonly Item[], exclude: readonly string[], bed: [number, number]): SnapLines {
-  const xs = new Set<number>([0, bed[0] / 2, bed[0]]);
-  const ys = new Set<number>([0, bed[1] / 2, bed[1]]);
+/** The x and y lines other shapes (and the bed, and guide lines) offer: their edges and middles. */
+export function snapLines(items: readonly Item[], exclude: readonly string[], bed: [number, number], guides?: { xs: number[]; ys: number[] }): SnapLines {
+  const xs = new Set<number>([0, bed[0] / 2, bed[0], ...(guides?.xs ?? [])]);
+  const ys = new Set<number>([0, bed[1] / 2, bed[1], ...(guides?.ys ?? [])]);
   const points: [number, number][] = [];
   for (const it of items) {
     if (it.hidden || exclude.includes(it.id)) continue;

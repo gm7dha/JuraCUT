@@ -6,7 +6,19 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.28 — Round corners, and hatch fill
+## v0.29 — Guide lines, and copies along a path
+
+- **Guide lines**: drag out of the top ruler for a level guide, or out of the left ruler for an upright one, as in
+  Inkscape and LightBurn. Shapes snap to guides while you draw and move them, so lining things up across the bed is
+  easy. Drag a guide to move it (it snaps to shapes' edges and middles; Shift for anywhere), or drop it back on a ruler
+  to remove it; "Remove all guide lines" is in the right-click menu. Guides are saved with the design, can be undone,
+  and are never cut.
+- **Copies along a path** (in the selection's settings and the right-click menu), like LightBurn's Copy Along Path:
+  pick a shape and the shape to follow (the biggest one picked is the path). Copies are spaced evenly all the way round
+  a closed shape, or end to end along a line, and can turn to follow it — holes round a curved edge, a border of stars
+  round a sign.
+
+## v0.28 — Round corners, and hatch fill · commit `8ffb90e`
 
 - **Round corners** (under a shape's settings, and in the right-click menu), like LightBurn's corner fillet: every sharp
   corner where two straight lines meet becomes a curve of the radius you choose — on polygons, stars, imported and

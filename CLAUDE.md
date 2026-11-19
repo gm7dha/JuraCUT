@@ -231,6 +231,16 @@
   {spacing, angle, cross})`: scanlines in turned coordinates on a fixed grid, even–odd, back and forth; null past
   `MOST_HATCH_LINES`), store `hatchSelected` (a scored "Hatch of …" shape after each, grouped with it). MakeMore sections
   (`cornerRadius`, `hatchSpacing`/`hatchAngle`/`hatchCross` in `juracut.makeMore`), BedMenu entries.
+- v0.29: guide lines — `JuraCUTDocument.guides` ({xs, ys}; missing = none; `parseGuides`), pure `src/model/guides.ts`
+  (`guidesOf`, `withGuideAt`, `withoutGuide`, `withGuides` — none left = field removed, `guideNear`, `MOST_GUIDES`);
+  `snapLines(…, guides)` adds them. BedView gesture "guide" (pointer down on the top ruler = new level guide, left ruler =
+  upright; on a guide within `GUIDE_PX` with Select = move it — before items; snaps to shapes/bed lines, else the mm grid,
+  Shift free; let go over a ruler = removed; one undo step via dragStart/Update/End), drawn as `.guide-line`, cursor
+  ew/ns-resize; store `clearGuides` (BedMenu "Remove all guide lines"); historyLabel names guide changes. Copy along a
+  path — `repeat.ts` `pathSpots` (closed: L·k/n; open: end to end, one = the middle) and `alongPathItems` (copies'
+  box middles on the path's points, turned by the direction there with `turn`); `textPath.ts` `pathFor` (the biggest
+  picked shape with an outline is the path); store `copyAlongPathSelected`; MakeMore (`pathCount`/`pathTurn`) and BedMenu.
+  Bambu's laser software has its own power/speed grid (Material Calibration Array), so JuraCUT doesn't make one.
 - Laser files: `src/laser/sheet.ts` (`laserPaths`: engrave, score, open cuts, then holes before outlines via
   `sortLoops`; `makeSheet` with `mirror`, `wholeBed` and `kerf`) and `src/laser/files.ts` (JuraCAD's `laserFiles.ts`:
   `laserSvg` — mm width/height + viewBox, one `<g>` per layer with Inkscape labels, engraving as one even–odd fill;

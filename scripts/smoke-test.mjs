@@ -849,6 +849,43 @@ try {
   const hatched = await store(() => window.juracutStore.getState().history.present.items);
   expect(hatched.length === 2 && hatched[1].op === "score" && hatched[1].outlines.length > 20, `the triangle was filled with scored lines (${hatched[1]?.outlines?.length})`);
 
+  step = "guide lines from the rulers, and copies along a path";
+  await store(() => window.juracutStore.getState().newDocument());
+  const svgBox = await page.evaluate(() => {
+    const r = document.querySelector(".bed-svg").getBoundingClientRect();
+    return [r.left, r.top];
+  });
+  const g100 = await bedPoint([520, 100]);
+  const underRuler = await page.evaluate(([x, y]) => {
+    const el = document.elementFromPoint(x, y);
+    return el ? `${el.tagName}.${el.getAttribute("class") ?? ""}` : "nothing";
+  }, [g100[0], svgBox[1] + 10]);
+  await page.mouse.move(g100[0], svgBox[1] + 10);
+  await page.mouse.down();
+  await page.mouse.move(g100[0], (svgBox[1] + g100[1]) / 2, { steps: 4 });
+  await page.mouse.move(g100[0], g100[1], { steps: 4 });
+  const during = await page.evaluate(() => document.querySelector(".bed-readout")?.textContent ?? "");
+  await page.mouse.up();
+  const guideY = await store(() => window.juracutStore.getState().history.present.guides?.ys ?? []);
+  expect(guideY.length === 1 && Math.abs(guideY[0] - 100) <= 1, `a level guide pulled out of the top ruler at y = 100 (${guideY}; under the pointer: ${underRuler}; readout: ${during}; at ${g100.map(Math.round)}, bed top ${svgBox.map(Math.round)})`);
+  await drag([520, 100], [520, 120]);
+  const moved = await store(() => window.juracutStore.getState().history.present.guides?.ys ?? []);
+  expect(moved.length === 1 && Math.abs(moved[0] - 120) <= 1, `the guide was moved to y = 120 (${moved})`);
+  const g120 = await bedPoint([520, 120]);
+  await page.mouse.move(g120[0], g120[1]);
+  await page.mouse.down();
+  await page.mouse.move(g120[0], (svgBox[1] + g120[1]) / 2);
+  await page.mouse.move(g120[0], svgBox[1] + 8);
+  await page.mouse.up();
+  expect(!(await store(() => window.juracutStore.getState().history.present.guides)), "the guide dropped on the ruler went");
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.addItems([{ id: "dot", name: "Dot", op: "cut", kind: "circle", cx: 20, cy: 20, r: 3 }, { id: "big", name: "Big circle", op: "score", kind: "circle", cx: 150, cy: 150, r: 80 }]);
+  });
+  await page.click(".make-more button:text-is('Copy along the path')");
+  const along = await store(() => window.juracutStore.getState().history.present.items.length);
+  expect(along === 10, `8 copies made along the big circle (${along} shapes)`);
+
   step = "materials and kerf";
   await page.click(".settings-button");
   await page.click(".settings-menu button:has-text('Materials')");

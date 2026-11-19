@@ -10,7 +10,7 @@ import { arrangeOnBed, movePaths } from "../geometry/segments";
 import { newDocument, newId } from "./document";
 import { copiesOf } from "./clipboard";
 import { combinedRings, insetRings, outlineRings, ringsShape, type CombineHow } from "./combine";
-import { MOST_COPIES, repeatedItems, roundItems } from "./repeat";
+import { alongPathItems, MOST_COPIES, repeatedItems, roundItems } from "./repeat";
 import { brokenApart } from "./breakApart";
 import { hasPlace, namedCopies, type NameEntry } from "./names";
 import { newGroupId } from "./arrange";
@@ -18,10 +18,11 @@ import { aligned, centredOnBed, distributed, grouped, mirroredPieces, tidyGroups
 import { packPieces } from "../geometry/pack";
 import { baseOf, boxCentre, itemBox, itemOutlines, makeCircle, makeRect, makeShape, movedItem, pictureSize, pieceOf, rotatedItemAbout } from "./shapes";
 import { ROUNDED_SHARE } from "../geometry/photo";
-import { pathOf, placedOnPath } from "./textPath";
+import { pathFor, pathOf, placedOnPath } from "./textPath";
 import { trimmed } from "./trim";
 import { testCard } from "./testCard";
 import { roundedOutlines } from "./corners";
+import { NO_GUIDES, withGuides } from "./guides";
 import { hatchLines, type HatchOptions } from "./hatch";
 import { canTidy, tidyOutlines, tidyText, type TidyReport } from "./tidy";
 import { editable, type NodeRef } from "./nodes";
@@ -105,6 +106,8 @@ export interface State {
   repeatSelected(cols: number, rows: number, gapX: number, gapY: number): void;
   /** Copies of the selection round a circle (`count` in all), turned with it or not. */
   repeatRoundSelected(count: number, radius: number, turn: boolean): void;
+  /** Copies of the selection along the biggest selected shape's outline (the path), turned with it or not. */
+  copyAlongPathSelected(count: number, turn: boolean): void;
   /** A copy of the selection for each name (its words become the name), `cols` across, `gap` apart. */
   nameCopiesSelected(names: (string | NameEntry)[], cols: number, gap: number, shrink: boolean): void;
   /** The selected words run along the other selected shape's outline. */
@@ -127,6 +130,8 @@ export interface State {
   breakApartSelected(): void;
   /** Drawn-twice and no-length pieces taken out, near-meeting ends joined (free shapes only). Says what it did. */
   tidySelected(gap: number): void;
+  /** Every guide line taken away (one undo step). */
+  clearGuides(): void;
   /** Sharp corners between straight lines rounded with this radius (as much as fits). */
   roundCornersSelected(radius: number): void;
   /** Each selected closed shape filled with parallel lines (scored), grouped with it. */
@@ -380,6 +385,30 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...doc, items: [...doc.items, ...made] });
     set({ selection: [...selection, ...made.map((it) => it.id)] });
   },
+  copyAlongPathSelected(count, turn) {
+    const { history, selection } = get();
+    const doc = history.present;
+    const picked = doc.items.filter((it) => selection.includes(it.id));
+    const route = pathFor(picked);
+    if (!route) {
+      get().showToast("Pick the shapes to copy and the shape to follow (the biggest one picked is the path).", "info");
+      return;
+    }
+    const pieces = picked.filter((it) => it.id !== route.item.id);
+    if (!pieces.length) {
+      get().showToast("Pick the shapes to copy as well as the path to follow.", "info");
+      return;
+    }
+    if (count > MOST_COPIES) {
+      get().showToast(`That's more than ${MOST_COPIES} copies: try fewer.`, "info");
+      return;
+    }
+    const made = alongPathItems(doc.items, pieces, route.path, count, turn);
+    if (!made.length) return;
+    get().commit({ ...doc, items: [...doc.items, ...made] });
+    set({ selection: made.map((it) => it.id), focusItem: null });
+    get().showToast(`Made ${made.length === count ? count : made.length} ${count === 1 ? "copy" : "copies"} along "${route.item.name}". The originals are where they were.`, "success");
+  },
   nameCopiesSelected(names, cols, gap, shrink) {
     const { history, selection } = get();
     const doc = history.present;
@@ -522,6 +551,10 @@ export const useStore = create<State>((set, get) => ({
     }
     get().commit({ ...doc, items: tidyGroups(items) });
     set({ selection: [...picked], focusItem: null });
+  },
+  clearGuides() {
+    const doc = get().history.present;
+    get().commit(withGuides(doc, NO_GUIDES));
   },
   tidySelected(gap) {
     const { history, selection } = get();

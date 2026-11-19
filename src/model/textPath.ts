@@ -3,7 +3,7 @@
  * on its top (closed shapes) or its middle (open lines), turned so they read left to right there.
  */
 import { pathPoints, type Pt } from "../geometry/segments";
-import { itemOutlines } from "./shapes";
+import { itemBox, itemOutlines } from "./shapes";
 import type { Item, Outline, TextItem } from "./types";
 
 const lengths = (pts: Pt[]) => {
@@ -51,6 +51,23 @@ export function pathOf(item: Item): Outline | null {
     }
   }
   return best;
+}
+
+/**
+ * Of several shapes, the one to follow (Copy along a path): the biggest by its box that has an outline. Null when
+ * fewer than two are picked or none has one.
+ */
+export function pathFor(items: readonly Item[]): { item: Item; path: Outline } | null {
+  if (items.length < 2) return null;
+  let best: { item: Item; path: Outline; area: number } | null = null;
+  for (const it of items) {
+    const path = pathOf(it);
+    const b = itemBox(it);
+    if (!path || !b) continue;
+    const area = (b[2] - b[0]) * (b[3] - b[1]) + Math.max(b[2] - b[0], b[3] - b[1]);
+    if (!best || area > best.area) best = { item: it, path, area };
+  }
+  return best && { item: best.item, path: best.path };
 }
 
 /** Words back on a straight line, where they were before (their anchor kept). */

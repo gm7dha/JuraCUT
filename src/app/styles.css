@@ -1915,3 +1915,18 @@ kbd {
 .tidy-row .field {
   flex: 1;
 }
+
+/* Guide lines pulled out of the rulers. */
+.guide-line {
+  stroke: var(--accent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.make-hint {
+  margin: 0 0 6px;
+}
+.path-turn {
+  align-self: flex-end;
+  margin-bottom: 6px;
+}
