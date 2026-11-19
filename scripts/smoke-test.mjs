@@ -850,7 +850,18 @@ try {
   expect(hatched.length === 2 && hatched[1].op === "score" && hatched[1].outlines.length > 20, `the triangle was filled with scored lines (${hatched[1]?.outlines?.length})`);
 
   step = "guide lines from the rulers, and copies along a path";
-  await store(() => window.juracutStore.getState().newDocument());
+  await store(() => {
+    const s = window.juracutStore.getState();
+    s.newDocument();
+    s.requestFit("bed");
+  });
+  // Let the view settle before working out where the bed is on screen.
+  await page.waitForFunction(() => {
+    const t = document.querySelector(".bed-svg > g")?.getAttribute("transform") ?? "";
+    const was = window.__lastBedTransform;
+    window.__lastBedTransform = t;
+    return t && t === was;
+  }, null, { polling: 150 });
   const svgBox = await page.evaluate(() => {
     const r = document.querySelector(".bed-svg").getBoundingClientRect();
     return [r.left, r.top];
