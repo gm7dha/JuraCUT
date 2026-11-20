@@ -937,7 +937,11 @@ try {
     const win = page.getByRole("radio", { name: "Windows" });
     for (let i = 0; i < 10; i++) await win.click();
     await page.locator(".easter-egg img").waitFor({ timeout: 5_000 });
-    expect(await page.locator(".easter-egg img").evaluate((img) => img.complete && img.naturalWidth > 0), "the surprise's picture loading");
+    // The picture itself arrives (it isn't just an empty frame).
+    await page.waitForFunction(() => {
+      const img = document.querySelector(".easter-egg img");
+      return img && img.complete && img.naturalWidth > 0;
+    }, null, { timeout: 10_000 });
     await page.locator(".easter-egg").click();
     await page.locator(".easter-egg").waitFor({ state: "detached", timeout: 5_000 });
   }
