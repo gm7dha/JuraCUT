@@ -1,10 +1,23 @@
+import { useRef, useState } from "react";
+
 import { useStore } from "../model/store";
 import { Modal } from "./Modal";
-import { detectPlatform, helpRows } from "./platform";
+import { eggClick } from "./easterEgg";
+import { detectPlatform, helpRows, type Platform } from "./platform";
 
 export function HelpDialog() {
   const openDialog = useStore((s) => s.openDialog);
-  const rows = helpRows(detectPlatform());
+  const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
+  const rows = helpRows(platform);
+  // A little surprise (as JuraCAD's): the Windows / Mac buttons clicked 10 times within 5 seconds.
+  const clicks = useRef<number[]>([]);
+  const [egg, setEgg] = useState(false);
+  const choose = (p: Platform) => {
+    setPlatform(p);
+    const r = eggClick(clicks.current, performance.now());
+    clicks.current = r.recent;
+    if (r.found) setEgg(true);
+  };
   return (
     <Modal title="Help and shortcuts" onClose={() => openDialog(null)} width={620}>
       <p>
@@ -23,6 +36,16 @@ export function HelpDialog() {
           <strong>Engrave</strong> (black) — the area is filled in: lettering and pictures.
         </li>
       </ul>
+      <div className="platform-row">
+        <span className="muted small">Shortcuts shown for</span>
+        <div className="segmented two" role="radiogroup" aria-label="Keyboard type">
+          {(["windows", "mac"] as const).map((p) => (
+            <button type="button" key={p} role="radio" aria-checked={platform === p} className={platform === p ? "selected" : ""} onClick={() => choose(p)}>
+              {p === "mac" ? "Mac" : "Windows"}
+            </button>
+          ))}
+        </div>
+      </div>
       <h3 className="help-heading">Mouse and touch</h3>
       <table className="help-table">
         <tbody>
@@ -58,6 +81,11 @@ export function HelpDialog() {
         </a>
         .
       </p>
+      {egg && (
+        <div className="easter-egg" role="dialog" aria-label="Surprise!" onClick={() => setEgg(false)} title="Click to close">
+          <img src={`${import.meta.env.BASE_URL}easter-egg.jpg`} alt="A happy spaniel in a teal harness, standing on a carved log" />
+        </div>
+      )}
     </Modal>
   );
 }

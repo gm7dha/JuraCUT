@@ -261,6 +261,9 @@
   SVG/DXF), `HelpDialog.tsx`, `WhatsNewDialog.tsx` (reads CHANGELOG.md), `App.tsx` (shortcuts via `popupGuard.ts`,
   keeping in the browser, file drop, toasts). Light/dark: `theme.ts` sets `data-theme` (CSS variables in styles.css;
   use variables, never fixed colours).
+- Help's surprise (the same in JuraCAD, JuraCUT and JuraDAW — keep them alike, and don't list it in CHANGELOG.md or
+  the README: it's a secret): the Windows / Mac buttons clicked 10 times within 5 seconds show `public/easter-egg.jpg`
+  (`src/app/easterEgg.ts` pure `eggClick`, tests/easterEgg; `.easter-egg` in styles.css; a smoke-test step).
 - Offline/installable: `public/manifest.webmanifest` + `public/sw.js` (registered in main.tsx, production only);
   bump `CACHE` in sw.js if its caching rules change.
 - Every change: `npm run typecheck && npm test && npm run build && npm run smoke`. CI runs the same and publishes

@@ -932,6 +932,15 @@ try {
   await page.keyboard.press("Escape");
   await page.keyboard.type("?");
   await page.waitForSelector(".modal:has-text('Help and shortcuts')");
+  // The Help screen's surprise (as JuraCAD's): the Windows / Mac buttons clicked 10 times within 5 seconds.
+  {
+    const win = page.getByRole("radio", { name: "Windows" });
+    for (let i = 0; i < 10; i++) await win.click();
+    await page.locator(".easter-egg img").waitFor({ timeout: 5_000 });
+    expect(await page.locator(".easter-egg img").evaluate((img) => img.complete && img.naturalWidth > 0), "the surprise's picture loading");
+    await page.locator(".easter-egg").click();
+    await page.locator(".easter-egg").waitFor({ state: "detached", timeout: 5_000 });
+  }
   await page.keyboard.press("Escape");
 
   if (process.env.SMOKE_SCREENSHOT === "1") await page.screenshot({ path: join(dist, "smoke.png") });
