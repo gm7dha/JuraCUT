@@ -6,7 +6,14 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.30 — Island relief: a real island carved by the laser
+## v0.30.1 — Island reliefs export quickly
+
+- Exporting an island relief (or showing one on the bed) could take minutes and seem to do nothing, especially with
+  several on the bed: keeping the carving inside the coastline checked every dot of the picture against every point
+  of the coast. It now works a row at a time — the same result, in a fraction of a second. Photos masked to any shape
+  are quicker too.
+
+## v0.30 — Island relief: a real island carved by the laser · commit `6905b15`
 
 - **Island relief** (in the Design library, under Maps): pick an island — Arran, Skye, Mull, Wight, Anglesey, the Isle
   of Man and more, or any area of Great Britain by its grid reference — and JuraCUT fetches its real heights and makes

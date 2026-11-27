@@ -52,20 +52,36 @@ export function masked(processed: Uint8Array, width: number, height: number, mas
  * flipped left to right (a mirrored sheet).
  */
 export function clipped(processed: Uint8Array, width: number, height: number, k: number, rings: [number, number][][], mirrored = false): Uint8Array {
+  // Row by row: where the outlines cross the row's middle, sorted; a pixel is inside when an odd number of them lie
+  // to its right (even–odd). Quick even for a coastline of thousands of points on a picture of millions of pixels.
   const out = processed.slice();
+  const edges: [number, number, number, number][] = [];
+  for (const r of rings) for (let i = 0, j = r.length - 1; i < r.length; j = i++) edges.push([r[i][0], r[i][1], r[j][0], r[j][1]]);
+  // Edges sorted by their lowest y, so each row looks only at those that could cross it.
+  const lowY = edges.map((e) => Math.min(e[1], e[3]));
+  const order = edges.map((_, i) => i).sort((a, b) => lowY[a] - lowY[b]);
+  const xs: number[] = [];
   for (let y = 0; y < height; y++) {
     const my = height / (2 * k) - (y + 0.5) / k;
+    xs.length = 0;
+    for (const i of order) {
+      if (lowY[i] > my) break;
+      const [xi, yi, xj, yj] = edges[i];
+      if (yi > my !== yj > my) xs.push(((xj - xi) * (my - yi)) / (yj - yi) + xi);
+    }
+    xs.sort((a, b) => a - b);
     for (let x = 0; x < width; x++) {
       let mx = (x + 0.5) / k - width / (2 * k);
       if (mirrored) mx = -mx;
-      let inside = false;
-      for (const r of rings)
-        for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-          const [xi, yi] = r[i];
-          const [xj, yj] = r[j];
-          if (yi > my !== yj > my && mx < ((xj - xi) * (my - yi)) / (yj - yi) + xi) inside = !inside;
-        }
-      if (!inside) out[y * width + x] = 255;
+      // How many crossings lie at or left of mx (binary search); the rest are to its right.
+      let lo = 0;
+      let hi = xs.length;
+      while (lo < hi) {
+        const m = (lo + hi) >> 1;
+        if (xs[m] <= mx) lo = m + 1;
+        else hi = m;
+      }
+      if ((xs.length - lo) % 2 === 0) out[y * width + x] = 255;
     }
   }
   return out;
