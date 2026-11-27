@@ -1,3 +1,6 @@
+import { pretendHeights } from "./app/IslandReliefDialog";
+import { gridFrom } from "./terrain/elevation";
+import { ISLANDS } from "./terrain/islands";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -23,6 +26,7 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 if (new URLSearchParams(window.location.search).has("smoke")) {
   (window as unknown as { juracutStore: typeof useStore }).juracutStore = useStore;
   (window as unknown as { juracutBox: typeof itemBox }).juracutBox = itemBox;
+  (window as unknown as { juracutRelief: unknown }).juracutRelief = { pretendHeights, gridFrom, islands: ISLANDS };
 }
 
 // Light or dark, before the first paint.

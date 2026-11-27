@@ -6,7 +6,24 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.29 — Guide lines, and copies along a path
+## v0.30 — Island relief: a real island carved by the laser
+
+- **Island relief** (in the Design library, under Maps): pick an island — Arran, Skye, Mull, Wight, Anglesey, the Isle
+  of Man and more, or any area of Great Britain by its grid reference — and JuraCUT fetches its real heights and makes
+  it a carving. Not layers: the R1 burns the land away in greys, deeper the lower it is, so the summits stay at the
+  board's surface and the coast is the deepest — a 3D relief in one board.
+- You set **how thick the board is** and **how deep to carve**; JuraCUT keeps at least 1 mm under the carving and says
+  how much is left. Smooth or **terraced** (flat steps, like a contour model), a slider to lift the low ground or
+  sharpen the peaks, and contour lines scored every so many metres if you like.
+- It's cut out round its coast **in one piece**, or as a **jigsaw**: classic tabs, small tabs, wavy or straight, as many
+  pieces across as you choose, and a pattern number for another arrangement. Cuts stop at the coast, and small pieces
+  along the shore are pointed out.
+- An optional **frame** (the sea) cut from the same board for the island to drop back into, with the island's name
+  engraved along the bottom.
+- A **depth test strip** — six squares from no burn to full depth, labelled — to find the power and passes on scrap
+  first, and step-by-step notes for Bambu Studio's Grayscale mode.
+
+## v0.29 — Guide lines, and copies along a path · commit `c901ce5`
 
 - **Guide lines**: drag out of the top ruler for a level guide, or out of the left ruler for an upright one, as in
   Inkscape and LightBurn. Shapes snap to guides while you draw and move them, so lining things up across the bed is

@@ -234,6 +234,38 @@ try {
   list = await items();
   expect(list.length === 8, "the bird box undone");
 
+  step = "island relief from the library (pretend heights, no network)";
+  await page.evaluate(() => {
+    const R = window.juracutRelief;
+    const a = R.islands.find((i) => i.id === "arran");
+    const [cx, cy] = [a.sw.e + a.width / 2, a.sw.n + a.height / 2];
+    R.pretendHeights.set("arran", R.gridFrom(a.sw, a.width, a.height, 80, (e, n) => Math.max(-5, 700 * (1 - Math.hypot((e - cx) / 9000, (n - cy) / 14000)))));
+  });
+  await page.click(".tool-button:has-text('Library')");
+  await page.fill(".library-search", "island");
+  await page.click(".library-card:has-text('Island relief')");
+  await page.waitForSelector(".relief-preview image");
+  await page.selectOption("select[aria-label='Pattern']", "classic");
+  await page.fill("input[aria-label='Frame']", "12");
+  await page.press("input[aria-label='Frame']", "Enter");
+  await page.waitForSelector("input[aria-label='Name on the frame']");
+  await page.waitForFunction(() => !document.querySelector(".modal .primary-button")?.disabled);
+  await page.click("button:has-text('Put on the bed')");
+  list = await items();
+  const island = list.filter((i) => i.name.startsWith("Isle of Arran"));
+  const depthPic = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "picture" && i.name.startsWith("Isle of Arran")));
+  expect(island.length === 5 && depthPic?.mode === "greys" && depthPic?.clip?.length === 1 && island.some((i) => i.name.endsWith("jigsaw cuts")), `an island relief: picture clipped to the coast, coast, jigsaw, frame, name (got ${island.map((i) => i.name)})`);
+  await page.evaluate(() => window.juracutStore.getState().undo());
+  await page.click(".tool-button:has-text('Library')");
+  await page.fill(".library-search", "island");
+  await page.click(".library-card:has-text('Island relief')");
+  await page.click("button:has-text('Depth test strip')");
+  list = await items();
+  expect(list.filter((i) => i.name.startsWith("Depth test")).length === 8, "a depth test strip: squares, six labels and a cut line");
+  await page.evaluate(() => window.juracutStore.getState().undo());
+  list = await items();
+  expect(list.length === 8, "the island and the strip undone");
+
   step = "group, line up and space out";
   await page.evaluate(() => {
     const s = window.juracutStore.getState();

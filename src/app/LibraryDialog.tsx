@@ -101,6 +101,23 @@ function InputRow({ input, value, onChange }: { input: DesignInput; value: Value
   );
 }
 
+const ISLAND_ICON = '<path d="M9 31c3-9 8-15 14-17 4-1 6 3 10 2 5-1 8 4 6 9-2 6-8 11-16 12-8 1-15-1-14-6z"/><path d="M17 27c3-4 6-7 9-7 3 0 4 3 7 3" stroke-dasharray="2 2"/><path d="M22 22l3-4 3 4" />';
+const ISLAND_WORDS = ["island", "map", "relief", "terrain", "carve", "carved", "contour", "contours", "jigsaw", "puzzle", "hill", "mountain", "3d", "topographic", "topo"];
+
+/** The Island relief window's card (it opens a window of its own rather than a design's sizes). */
+function IslandCard() {
+  const openDialog = useStore((s) => s.openDialog);
+  return (
+    <button type="button" className="library-card" onClick={() => openDialog("island")} aria-label="Island relief: a real island carved into a board, the hills standing up from the sea, cut out in one piece or as a jigsaw.">
+      <svg width={44} height={44} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: ISLAND_ICON }} />
+      <span className="library-card-text">
+        <b>Island relief</b>
+        <span className="muted small">A real island carved into a board — the hills stand up from the sea — cut out in one piece or as a jigsaw, with a frame if you like.</span>
+      </span>
+    </button>
+  );
+}
+
 export function LibraryDialog() {
   const doc = useDocument();
   const openDialog = useStore((s) => s.openDialog);
@@ -108,6 +125,9 @@ export function LibraryDialog() {
   const [design, setDesign] = useState<LibraryDesign | null>(null);
   const [values, setValues] = useState<Values>({});
   const found = useMemo(() => searchDesigns(search), [search]);
+  const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+  const islandFound = words.length > 0 && words.every((w) => ISLAND_WORDS.some((k) => k.startsWith(w)));
+  const foundCount = found.length + (islandFound ? 1 : 0);
   const groups = useMemo(() => groupDesigns(LIBRARY), []);
 
   const problems = design ? designProblems(design, doc.material, values) : [];
@@ -138,10 +158,15 @@ export function LibraryDialog() {
         <input className="library-search" type="search" placeholder="Search the library (box, gear, stencil…)" aria-label="Search the library" value={search} spellCheck={false} onChange={(e) => setSearch(e.target.value)} />
         {search.trim() ? (
           <section aria-live="polite">
-            <h3 className="library-heading">{found.length === 0 ? "Nothing found" : `Found ${found.length} design${found.length > 1 ? "s" : ""}`}</h3>
-            {found.length === 0 ? (
+            <h3 className="library-heading">{foundCount === 0 ? "Nothing found" : `Found ${foundCount} design${foundCount > 1 ? "s" : ""}`}</h3>
+            {islandFound && (
+              <div className="library-grid">
+                <IslandCard />
+              </div>
+            )}
+            {foundCount === 0 ? (
               <p className="muted small">Try another word, or clear the search to see every design.</p>
-            ) : (
+            ) : found.length === 0 ? null : (
               <div className="library-grid">
                 {found.map((d) => (
                   <DesignCard key={d.id} design={d} onPick={pick} />
@@ -150,7 +175,12 @@ export function LibraryDialog() {
             )}
           </section>
         ) : (
-          groups.map((g) => (
+          <>
+          <h4 className="library-group">Maps</h4>
+          <div className="library-grid">
+            <IslandCard />
+          </div>
+          {groups.map((g) => (
             <div key={g.group}>
               <h4 className="library-group">{g.group}</h4>
               <div className="library-grid">
@@ -159,7 +189,8 @@ export function LibraryDialog() {
                 ))}
               </div>
             </div>
-          ))
+          ))}
+          </>
         )}
       </Modal>
     );
