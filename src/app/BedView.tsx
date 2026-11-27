@@ -120,6 +120,8 @@ export function BedView() {
     return [e.clientX - (r?.left ?? 0), e.clientY - (r?.top ?? 0)];
   };
 
+  /** The whole bed is in view as Fit left it (not zoomed or panned since): it's fitted again when the window changes size. */
+  const wholeBed = useRef(false);
   /** Zoom so the whole bed is in view with a margin. */
   const fit = useCallback(() => {
     const el = host.current;
@@ -138,8 +140,11 @@ export function BedView() {
     const bh = Math.max(y1 - y0, 1);
     const scale = Math.max(MIN_SCALE, Math.min(sel ? 20 : MAX_SCALE, (aw - 2 * margin) / bw, (ah - 2 * margin) / bh));
     setView({ scale, x: RULER + (aw - bw * scale) / 2 - x0 * scale, y: RULER + (ah + bh * scale) / 2 + y0 * scale });
+    wholeBed.current = !sel;
   }, [doc.bed]);
 
+  const fitRef = useRef(fit);
+  fitRef.current = fit;
   // Fit when the view first appears and when asked (F, the Fit button, an import).
   const fitted = useRef(false);
   useEffect(() => {
@@ -158,6 +163,11 @@ export function BedView() {
     const ro = new ResizeObserver(() => {
       if (!fitted.current) return;
       const now = [el.clientWidth, el.clientHeight];
+      if (wholeBed.current) {
+        last = now;
+        fitRef.current();
+        return;
+      }
       // Keep the bed where it was relative to the middle of the view.
       setView((v) => ({ ...v, x: v.x + (now[0] - last[0]) / 2, y: v.y + (now[1] - last[1]) / 2 }));
       last = now;
@@ -201,6 +211,7 @@ export function BedView() {
   const zoomAt = (v: View, at: Pt, factor: number) => {
     const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
     const k = scale / v.scale;
+    wholeBed.current = false;
     setView({ scale, x: at[0] - (at[0] - v.x) * k, y: at[1] - (at[1] - v.y) * k });
   };
 
@@ -418,6 +429,7 @@ export function BedView() {
         if (!g.moved && Math.hypot(px - g.start[0], py - g.start[1]) < 4) break;
         g.moved = true;
         panned.current = true;
+        wholeBed.current = false;
         setView({ ...g.view, x: g.view.x + px - g.start[0], y: g.view.y + py - g.start[1] });
         break;
       case "node":
@@ -462,6 +474,7 @@ export function BedView() {
         const mid: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
         const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, (g.view.scale * dist) / Math.max(1, g.dist)));
         const k = scale / g.view.scale;
+        wholeBed.current = false;
         setView({ scale, x: mid[0] - (g.mid[0] - g.view.x) * k, y: mid[1] - (g.mid[1] - g.view.y) * k });
         break;
       }

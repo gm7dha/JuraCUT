@@ -52,6 +52,12 @@ export function SidePanel() {
   const updateItem = useStore((s) => s.updateItem);
   const reorder = useStore((s) => s.reorder);
   const selected = useMemo(() => doc.items.filter((it) => selection.includes(it.id)), [doc.items, selection]);
+  // Picking a shape on the bed scrolls the list to it, so it's never out of sight.
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const row = listRef.current?.querySelector<HTMLElement>(".shape-row.selected");
+    row?.scrollIntoView?.({ block: "nearest" });
+  }, [selection]);
 
   return (
     <aside className="side-panel">
@@ -64,7 +70,7 @@ export function SidePanel() {
         ) : (
           <>
           <OpChips items={doc.items} />
-          <ul className="shape-list" role="listbox" aria-label="Shapes">
+          <ul className="shape-list" role="listbox" aria-label="Shapes" ref={listRef}>
             {[...doc.items].reverse().map((it, k) => {
               const index = doc.items.length - 1 - k;
               const isSelected = selection.includes(it.id);

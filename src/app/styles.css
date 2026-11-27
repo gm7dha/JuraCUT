@@ -431,9 +431,10 @@ button:disabled {
   min-height: 0;
 }
 
+/* The shapes list keeps its room (up to 40% of the panel) when a shape's settings are long: it scrolls instead. */
 .panel-section.shapes {
-  flex: 0 1 auto;
-  max-height: 45%;
+  flex: 0 0 auto;
+  max-height: 40%;
 }
 
 .panel-section.properties {
@@ -1973,5 +1974,20 @@ kbd {
   from {
     opacity: 0;
     transform: scale(0.9);
+  }
+}
+
+/* On narrow windows (a tablet standing upright) the toolbar wraps onto a second row, so every button can be reached. */
+@media (max-width: 1100px) {
+  .toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 58px;
+    padding: 3px 6px;
+    row-gap: 2px;
+    overflow-x: visible;
+  }
+  .toolbar .tool-group {
+    flex-wrap: wrap;
   }
 }
