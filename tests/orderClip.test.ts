@@ -40,3 +40,41 @@ describe("photo masks of any shape", () => {
     expect(f.kind === "circle" && f.center[0]).toBe(-5);
   });
 });
+
+describe("clipping a big picture to a long outline", () => {
+  // The old way, pixel by pixel against every edge: slow, but plainly right.
+  const slow = (width: number, height: number, k: number, rings: [number, number][][], mirrored: boolean) => {
+    const out = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      const my = height / (2 * k) - (y + 0.5) / k;
+      for (let x = 0; x < width; x++) {
+        let mx = (x + 0.5) / k - width / (2 * k);
+        if (mirrored) mx = -mx;
+        let inside = false;
+        for (const r of rings)
+          for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+            const [xi, yi] = r[i];
+            const [xj, yj] = r[j];
+            if (yi > my !== yj > my && mx < ((xj - xi) * (my - yi)) / (yj - yi) + xi) inside = !inside;
+          }
+        if (!inside) out[y * width + x] = 255;
+      }
+    }
+    return out;
+  };
+  const wiggly = (n: number, r: number, cx = 0, cy = 0): [number, number][] =>
+    Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * 2 * Math.PI;
+      const rr = r * (1 + 0.25 * Math.sin(7 * a) + 0.1 * Math.sin(31 * a));
+      return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)];
+    });
+  it("gives exactly what checking every pixel against every edge gives, holes and mirroring too", () => {
+    const rings = [wiggly(300, 4), wiggly(50, 1, 0.5, 0.3), wiggly(40, 1.5, 6, -4)];
+    for (const mirrored of [false, true]) expect(Array.from(clipped(new Uint8Array(120 * 90), 120, 90, 8, rings, mirrored))).toEqual(Array.from(slow(120, 90, 8, rings, mirrored)));
+  });
+  it("is quick on an island-sized picture (2500 × 2500 pixels, a 6000-point coast)", () => {
+    const t = Date.now();
+    clipped(new Uint8Array(2500 * 2500), 2500, 2500, 10, [wiggly(6000, 100)]);
+    expect(Date.now() - t).toBeLessThan(10000);
+  });
+});
