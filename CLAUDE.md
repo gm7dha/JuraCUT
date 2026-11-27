@@ -114,6 +114,18 @@
   `store.packAll(gap, turns)` builds pieces like Arrange (`bedPieces`: groups and shapes inside others together),
   turns them with `rotatedItemAbout`, and puts what doesn't fit beside the bed. UI: `src/app/ArrangeMenu.tsx` (the
   toolbar's Arrange opens Pack tightly / In rows, gap and "may be turned", kept in localStorage `juracut.arrange`).
+- Island relief (v0.30, the owner's wish: carved, not layered): `src/terrain/` — osGrid.ts, elevation.ts (JuraCAD's,
+  unchanged), islands.ts (JuraCAD's ISLANDS), islandLand.ts (JuraCAD's keepLand/onlyCells/fillEnclosed/stretches/
+  distanceTransform, taken out of its islandPuzzle.ts) and relief.ts (pure: `ReliefSpec` size/thickness/depth/style
+  smooth|terraced/steps/curve/sea/land/contours/puzzle/pieces/seed/frame/name; `makeRelief(grid, area, spec)` — land on
+  a `GRID_CELLS` grid, kept, enclosed patches filled, scale from the land's box, coast traced (trace.ts), `greys` (255 =
+  surface, 0 = `depth` deep, `depthShare`) ≤ `MOST_PIXELS`, contours, jigsaw `patternLines` (classic/small over
+  puzzle.ts's makePuzzle, wavy/straight its own; each row's/column's edges one line, carried 3 mm past the board) clipped
+  to the coast (`RingIndex`, `clipToRings`), pieces counted, frame; `testStripGreys`). `src/model/reliefItems.ts`
+  (pure: `reliefItems` → one group — a greys PictureItem clipped to the coast, coast cut, cuts, contours scored, frame
+  rect + name; `testStripItems`). UI `src/app/IslandReliefDialog.tsx` (dialog "island"; Library card under "Maps" and
+  in search via `ISLAND_WORDS`; heights by `readHeights(loadTerrainTile, …, zoomFor)` — `src/app/terrainTiles.ts` —
+  kept per area for the session; `pretendHeights` + `window.juracutRelief` for the smoke test). Tests: tests/relief.
 - Mountain puzzle: there is none here. A layered laser version lived here in v0.8–v0.11.1 and was taken out at the
   owner's request (v0.12); the mountain puzzle is JuraCAD's, 3D printed only. Don't bring it back unless asked.
 - Handles, clipboard, menu (v0.13): `src/model/resize.ts` (pure: `scaledItem` — rects stay rects when square to the bed

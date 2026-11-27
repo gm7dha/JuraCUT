@@ -29,7 +29,7 @@ import { editable, type NodeRef } from "./nodes";
 import type { Item, JuraCUTDocument, Material, Op, Outline, PictureItem, TextItem } from "./types";
 
 export type Tool = "select" | "trim" | "rect" | "circle" | "ellipse" | "polygon" | "line" | "text" | "qr" | "measure";
-export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | null;
+export type DialogName = "export" | "help" | "whatsNew" | "material" | "library" | "trace" | "island" | null;
 
 export interface Toast {
   id: number;

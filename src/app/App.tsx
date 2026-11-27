@@ -13,6 +13,7 @@ import { HelpDialog } from "./HelpDialog";
 import { MaterialsDialog } from "./MaterialsDialog";
 import { LibraryDialog } from "./LibraryDialog";
 import { TraceDialog } from "./TraceDialog";
+import { IslandReliefDialog } from "./IslandReliefDialog";
 import { Icons } from "./icons";
 import { openFile, saveToFile, openFromFile } from "./fileActions";
 import { inPopup, inTextBox } from "./popupGuard";
@@ -45,6 +46,7 @@ export function App() {
       {dialog === "material" && <MaterialsDialog />}
       {dialog === "library" && <LibraryDialog />}
       {dialog === "trace" && <TraceDialog />}
+      {dialog === "island" && <IslandReliefDialog />}
       {dialog === "whatsNew" && <WhatsNewDialog />}
     </div>
   );
