@@ -43,6 +43,11 @@ export interface ReliefSpec {
   /** How deep the lowest ground (the coast) is carved (mm); the highest stays at the surface. */
   depth: number;
   style: ReliefStyle;
+  /**
+   * How it's carved: "greys" — one engraving whose greys set the laser's power (Bambu Studio's Grayscale mode); "passes"
+   * — terraced, one black-and-white engraving per step at the same power, each taking off an equal layer. Missing = greys.
+   */
+  carve?: "greys" | "passes";
   /** Terraced: how many steps from the coast to the top. */
   steps: number;
   /** Height curve: 1 = even; below 1 lifts the low ground (more of the island shows), above 1 sharpens the peaks. */
@@ -61,6 +66,8 @@ export interface ReliefSpec {
   frame: number;
   /** Words engraved on the frame's bottom edge (with a frame). */
   name: string;
+  /** A scale bar on the frame's top edge (with a frame wide enough). Missing = yes. */
+  scaleBar?: boolean;
 }
 
 export const RELIEF_DEFAULTS: ReliefSpec = {
@@ -109,7 +116,16 @@ export interface Relief {
   cuts: Segment[][];
   contours: Segment[][];
   /** The frame's outside (mm; same origin) and where its name goes; null without a frame. */
-  frame: { x: number; y: number; w: number; h: number; nameAt: Pt | null; nameSize: number } | null;
+  frame: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    nameAt: Pt | null;
+    nameSize: number;
+    /** A scale bar along the frame's top edge (right-hand end at `at`, the bar's middle height), or null. */
+    scale: { at: Pt; length: number; label: string; size: number } | null;
+  } | null;
   /** The highest ground (m) and how much the heights are stretched compared with the map (×). */
   highest: number;
   exaggeration: number;
@@ -122,12 +138,30 @@ export interface Relief {
 }
 
 /** Problems with the numbers given, before anything is worked out. */
+/**
+ * The engravings for carving in passes (terraced): one black-and-white picture per pass (0 = engraved, 255 = left),
+ * from the first — everything below the top step — to the last — only the lowest step. `steps` − 1 passes, each taking
+ * the ground down one step (depth / (steps − 1)). Same size and place as `relief.greys`.
+ */
+export function passMasks(relief: Pick<Relief, "greys">, steps: number): Uint8Array[] {
+  const passes = Math.max(1, Math.round(steps) - 1);
+  const out: Uint8Array[] = [];
+  for (let k = 1; k <= passes; k++) {
+    const below = (255 * (passes - k + 0.5)) / passes;
+    const m = new Uint8Array(relief.greys.length);
+    for (let i = 0; i < m.length; i++) m[i] = relief.greys[i] < below ? 0 : 255;
+    out.push(m);
+  }
+  return out;
+}
+
 export function reliefProblems(s: ReliefSpec): string[] {
   const out: string[] = [];
   if (!(s.thickness > 0)) out.push("Give the board's thickness.");
   if (!(s.depth > 0)) out.push("The carving needs some depth.");
   else if (s.depth > s.thickness - LEAST_BASE) out.push(`Carving ${s.depth} mm into a ${s.thickness} mm board leaves less than ${LEAST_BASE} mm under the coast: carve less deep, or use a thicker board.`);
   if (!(s.size >= 30)) out.push("Make the island at least 30 mm across.");
+  if (s.carve === "passes" && s.style !== "terraced") out.push("Carving in passes makes terraced steps: choose Terraced steps.");
   return out;
 }
 
@@ -425,7 +459,14 @@ export function makeRelief(grid: HeightGrid, area: ReliefArea, s: ReliefSpec): R
   if (s.frame > 0) {
     const m = s.frame;
     const nameSize = Math.min(m * 0.5, 10);
-    frame = { x: -m, y: -m, w: width + 2 * m, h: height + 2 * m, nameAt: s.name.trim() && nameSize >= 3 ? [width / 2, -m / 2 - nameSize / 2] : null, nameSize };
+    frame = { x: -m, y: -m, w: width + 2 * m, h: height + 2 * m, nameAt: s.name.trim() && nameSize >= 3 ? [width / 2, -m / 2 - nameSize / 2] : null, nameSize, scale: null };
+    // The scale bar: a round distance no longer than a quarter of the island's width, at the top right.
+    const size = Math.min(m * 0.3, 5);
+    if (s.scaleBar !== false && size >= 2.5) {
+      const most = width / 4;
+      const km = [100, 50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1].find((d) => d * 1000 * k <= most);
+      if (km) frame.scale = { at: [width, height + m * 0.4], length: km * 1000 * k, label: km < 1 ? `${Math.round(km * 1000)} m` : `${km} km`, size };
+    }
     if (s.name.trim() && nameSize < 3) warnings.push("The frame is too narrow for the name: make it at least 6 mm wide.");
   }
   const vertical = s.depth / Math.max(highest, 1);

@@ -6,7 +6,22 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.30.1 — Island reliefs export quickly
+## v0.31 — Island reliefs in passes, a scale bar, and a tidier screen
+
+- **Carve an island in passes**: as well as one engraving in greys, an island relief can now be carved in passes —
+  terraced steps, one black-and-white engraving per step, all at the same power, each taking off an equal layer. The
+  depths come out even and predictable without tuning Bambu Studio's Grayscale mode. The window says how many passes and
+  how deep each is, and the depth test becomes a single square to engrave once.
+- **A scale bar on the frame**: a scored bar of a round distance (1 km, 5 km…) with its distance engraved, in the
+  frame's top corner. Turn it off if you'd rather not.
+- **The shapes list keeps its room** when a shape is picked: it used to shrink to one row, hiding what you'd picked.
+  It now scrolls to the picked shape too.
+- **Narrow windows** (a tablet standing upright): the toolbar wraps onto a second row, so every button can be reached —
+  Engrave, Delete, Align, Arrange and Fit used to run off the side.
+- The bed **fits the window again when the window changes size**, unless you've zoomed in or moved the view yourself.
+- "Not saved to a file" is now just "Not saved", so it isn't cut off on a laptop screen.
+
+## v0.30.1 — Island reliefs export quickly · commit `bb65036`
 
 - Exporting an island relief (or showing one on the bed) could take minutes and seem to do nothing, especially with
   several on the bed: keeping the carving inside the coastline checked every dot of the picture against every point

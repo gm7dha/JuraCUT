@@ -8,30 +8,48 @@ import type { Relief, ReliefSpec } from "../terrain/relief";
 import { makePicture, makeRect, makeText, makeShape, movedItem } from "./shapes";
 import type { Item, Outline, PictureItem } from "./types";
 
+const line = (from: [number, number], to: [number, number]): Segment => ({ kind: "line", from, to });
 const outlines = (loops: Segment[][], closed: boolean): Outline[] => loops.map((segments) => ({ segments, closed }));
 
-/** Ids are taken from `freshId` in turn; `src` is the depth picture (a data: URL of `relief.greys`). */
-export function reliefItems(relief: Relief, spec: ReliefSpec, src: string, name: string, freshId: () => string, corner: [number, number] = [10, 10]): Item[] {
+/**
+ * Ids are taken from `freshId` in turn; `src` is the depth picture (a data: URL of `relief.greys`) — or, carving in
+ * passes, one picture per pass (passMasks), each engraved black and white.
+ */
+export function reliefItems(relief: Relief, spec: ReliefSpec, src: string | string[], name: string, freshId: () => string, corner: [number, number] = [10, 10]): Item[] {
   const group = freshId();
   const label = name.trim() || "Island";
   const items: Item[] = [];
   const W = relief.width;
   const H = relief.height;
   const coast = outlines(relief.coast, true);
-  const picture: PictureItem = {
-    ...makePicture(freshId(), `${label} — depth`, src, W / 2, H / 2, W, H),
-    mode: "greys",
-    dpm: 10,
-    // Only the land is carved: the picture is clipped to the coast (measured from the picture's middle).
-    clip: coast.map((o) => moveOutline(o, -W / 2, -H / 2)),
-  };
-  items.push(picture);
+  // Only the land is carved: the pictures are clipped to the coast (measured from the picture's middle).
+  const clip = coast.map((o) => moveOutline(o, -W / 2, -H / 2));
+  if (Array.isArray(src)) {
+    const layer = Math.round((spec.depth / Math.max(1, src.length)) * 100) / 100;
+    src.forEach((s, k) => {
+      const picture: PictureItem = { ...makePicture(freshId(), `${label} — pass ${k + 1} of ${src.length} (${layer} mm)`, s, W / 2, H / 2, W, H), mode: "black", dpm: 10, clip };
+      items.push(picture);
+    });
+  } else {
+    const picture: PictureItem = { ...makePicture(freshId(), `${label} — depth`, src, W / 2, H / 2, W, H), mode: "greys", dpm: 10, clip };
+    items.push(picture);
+  }
   if (relief.contours.length) items.push({ ...makeShape(freshId(), `${label} — contours`, outlines(relief.contours, true)), op: "score" });
   items.push(makeShape(freshId(), `${label} — coast`, coast));
   if (relief.cuts.length) items.push(makeShape(freshId(), `${label} — jigsaw cuts`, outlines(relief.cuts, false)));
   if (relief.frame) {
     const f = relief.frame;
     items.push({ ...makeRect(freshId(), f.x, f.y, f.w, f.h), name: `${label} — frame`, radius: Math.min(4, f.w / 20) });
+    if (f.scale) {
+      // A bar with ticks at its ends (scored), and its distance engraved to its left.
+      const { at, length, label: words, size } = f.scale;
+      const [x1, y] = at;
+      const x0 = x1 - length;
+      const t = size * 0.5;
+      const bar: Outline = { closed: false, segments: [line([x0, y + t], [x0, y]), line([x0, y], [x1, y]), line([x1, y], [x1, y + t])] };
+      items.push({ ...makeShape(freshId(), `${label} — scale bar`, [bar]), op: "score" });
+      items.push({ ...makeText(freshId(), x0 - 2, y, words, size), name: `${label} — scale`, align: "right" });
+    }
     if (f.nameAt && spec.name.trim()) items.push({ ...makeText(freshId(), f.nameAt[0], f.nameAt[1], spec.name.trim(), f.nameSize), name: `${label} — name`, align: "centre", font: "inter-bold" });
   }
   // Placed with the whole thing's lower-left corner at `corner`.

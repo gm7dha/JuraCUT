@@ -254,7 +254,7 @@ try {
   list = await items();
   const island = list.filter((i) => i.name.startsWith("Isle of Arran"));
   const depthPic = await store(() => window.juracutStore.getState().history.present.items.find((i) => i.kind === "picture" && i.name.startsWith("Isle of Arran")));
-  expect(island.length === 5 && depthPic?.mode === "greys" && depthPic?.clip?.length === 1 && island.some((i) => i.name.endsWith("jigsaw cuts")), `an island relief: picture clipped to the coast, coast, jigsaw, frame, name (got ${island.map((i) => i.name)})`);
+  expect(island.length === 7 && island.some((i) => i.name.endsWith("scale bar") && i.op === "score") && depthPic?.mode === "greys" && depthPic?.clip?.length === 1 && island.some((i) => i.name.endsWith("jigsaw cuts")), `an island relief: picture clipped to the coast, coast, jigsaw, frame, name (got ${island.map((i) => i.name)})`);
   await page.evaluate(() => window.juracutStore.getState().undo());
   await page.click(".tool-button:has-text('Library')");
   await page.fill(".library-search", "island");

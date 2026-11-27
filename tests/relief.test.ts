@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gridFrom } from "../src/terrain/elevation";
-import { depthShare, makeRelief, patternLines, reliefProblems, RELIEF_DEFAULTS, testStripGreys, type ReliefArea } from "../src/terrain/relief";
+import { depthShare, makeRelief, passMasks, patternLines, reliefProblems, RELIEF_DEFAULTS, testStripGreys, type ReliefArea } from "../src/terrain/relief";
 import { pathPoints, pointInPolygon, type Pt } from "../src/geometry/segments";
 import { loopArea } from "../src/geometry/trace";
 import { reliefItems, testStripItems } from "../src/model/reliefItems";
@@ -113,6 +113,12 @@ describe("island relief", () => {
     expect(items.find((it) => it.name.endsWith("contours"))?.op).toBe("score");
     expect(items.some((it) => it.name.endsWith("jigsaw cuts") && it.op === "cut")).toBe(true);
     expect(items.some((it) => it.kind === "text" && it.text === "Round Island")).toBe(true);
+    // A scale bar of a round distance, at most a quarter of the island's width, above it on the frame.
+    expect(r.frame!.scale!.label).toMatch(/^\d+(\.\d+)? k?m$/);
+    expect(r.frame!.scale!.length).toBeLessThanOrEqual(r.width / 4);
+    expect(r.frame!.scale!.at[1]).toBeGreaterThan(r.height);
+    expect(items.find((it) => it.name.endsWith("scale bar"))?.op).toBe("score");
+    expect(makeRelief(grid, area, { ...spec, scaleBar: false }).frame!.scale).toBe(null);
     // The frame's lower-left corner is 10 mm in, and the picture sits inside it.
     const frame = items.find((it) => it.name.endsWith("frame"))!;
     const fb = itemBox(frame)!;
@@ -128,5 +134,28 @@ describe("island relief", () => {
     const items = testStripItems(s.levels, 3, "data:", () => `s${k++}`);
     expect(items.filter((it) => it.kind === "text").map((it) => (it.kind === "text" ? it.text : ""))).toEqual(["0", "0.6", "1.2", "1.8", "2.4", "3"]);
     expect(items.filter((it) => it.kind === "rect" && it.op === "cut").length).toBe(1);
+  });
+});
+
+describe("carving in passes", () => {
+  it("gives one black-and-white picture per step but the top, each smaller than the last, adding up to the terraces", () => {
+    const spec = { ...RELIEF_DEFAULTS, size: 150, land: "biggest" as const, style: "terraced" as const, steps: 5, carve: "passes" as const };
+    const r = makeRelief(grid, area, spec);
+    const masks = passMasks(r, spec.steps);
+    expect(masks.length).toBe(4);
+    const burnt = masks.map((m) => m.reduce((n, v) => n + (v === 0 ? 1 : 0), 0));
+    for (let k = 1; k < burnt.length; k++) expect(burnt[k]).toBeLessThanOrEqual(burnt[k - 1]);
+    // Each pixel is burnt as many times as its terrace is deep (in layers).
+    for (let i = 0; i < r.greys.length; i += 97) {
+      const layers = masks.filter((m) => m[i] === 0).length;
+      expect(layers).toBe(Math.round(((255 - r.greys[i]) / 255) * 4));
+    }
+    let k = 0;
+    const items = reliefItems(r, spec, masks.map(() => "data:"), "I", () => `i${k++}`);
+    const pics = items.filter((it) => it.kind === "picture");
+    expect(pics.length).toBe(4);
+    expect(pics.every((p) => p.kind === "picture" && p.mode === "black" && p.clip)).toBe(true);
+    expect(pics[0].name).toMatch(/pass 1 of 4 \(0\.75 mm\)/);
+    expect(reliefProblems({ ...spec, style: "smooth" })[0]).toMatch(/Terraced/);
   });
 });

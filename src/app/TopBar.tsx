@@ -63,7 +63,7 @@ export function TopBar() {
         className={`save-state${unsaved ? " unsaved" : ""}`}
         title={unsaved ? "Your work is kept in this browser, but has changes not yet saved to a file. Click Save to keep a copy on your computer." : fileName ? `Saved to ${fileName}` : ""}
       >
-        {unsaved ? (fileName ? "Unsaved changes" : "Not saved to a file") : fileName ? `Saved · ${fileName}` : ""}
+        {unsaved ? (fileName ? "Unsaved changes" : "Not saved") : fileName ? `Saved · ${fileName}` : ""}
       </span>
       <button
         type="button"

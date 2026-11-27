@@ -15,7 +15,7 @@ import type { Item } from "../model/types";
 import { areaProblem, readHeights, zoomFor, type HeightGrid } from "../terrain/elevation";
 import { ISLANDS } from "../terrain/islands";
 import { parseGridRef } from "../terrain/osGrid";
-import { LEAST_BASE, makeRelief, PUZZLE_PATTERNS, RELIEF_DEFAULTS, reliefProblems, testStripGreys, type Relief, type ReliefArea, type ReliefSpec } from "../terrain/relief";
+import { LEAST_BASE, makeRelief, passMasks, PUZZLE_PATTERNS, RELIEF_DEFAULTS, reliefProblems, testStripGreys, type Relief, type ReliefArea, type ReliefSpec } from "../terrain/relief";
 import { itemPathData } from "./BedView";
 import { Icons } from "./icons";
 import { Modal } from "./Modal";
@@ -160,7 +160,8 @@ export function IslandReliefDialog() {
       taken.add(id);
       return id;
     };
-    const items = reliefItems(relief, spec, greysPicture(relief.greys, relief.gw, relief.gh, "image/jpeg"), spec.name || placeName || "Island", freshId);
+    const src = spec.carve === "passes" ? passMasks(relief, spec.steps).map((m) => greysPicture(m, relief.gw, relief.gh, "image/png")) : greysPicture(relief.greys, relief.gw, relief.gh, "image/jpeg");
+    const items = reliefItems(relief, spec, src, spec.name || placeName || "Island", freshId);
     s.addItems(items);
     close();
     s.requestFit();
@@ -175,8 +176,11 @@ export function IslandReliefDialog() {
       taken.add(id);
       return id;
     };
-    const strip = testStripGreys(6, 100);
-    const items = testStripItems(strip.levels, spec.depth, greysPicture(strip.greys, strip.w, strip.h, "image/png"), freshId);
+    // In passes: one square to engrave once, which should come out one layer deep; else six greys from none to full depth.
+    const passes = spec.carve === "passes";
+    const strip = testStripGreys(passes ? 1 : 6, 100);
+    const layer = spec.depth / Math.max(1, spec.steps - 1);
+    const items = testStripItems(strip.levels, passes ? layer : spec.depth, greysPicture(strip.greys, strip.w, strip.h, "image/png"), freshId).map((it) => (passes && it.kind === "picture" ? { ...it, mode: "black" as const } : it));
     s.addItems(items);
     close();
     s.requestFit();
@@ -270,14 +274,34 @@ export function IslandReliefDialog() {
           </div>
 
           <div className="field-label">The carving</div>
+          <div className="segmented" role="radiogroup" aria-label="How it's carved">
+            {(["greys", "passes"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={(spec.carve ?? "greys") === k}
+                className={(spec.carve ?? "greys") === k ? "selected" : ""}
+                onClick={() => setSpec((s) => ({ ...s, carve: k, ...(k === "passes" ? { style: "terraced" as const } : {}) }))}
+                title={k === "greys" ? "One engraving: its greys set the laser's power (Bambu Studio's Grayscale mode). Smooth slopes; needs testing to find the power." : "Terraced steps, one black-and-white engraving per step, all at the same power: each takes off an equal layer. Even, predictable depths."}
+              >
+                {k === "greys" ? "In greys" : "In passes"}
+              </button>
+            ))}
+          </div>
           <div className="segmented" role="radiogroup" aria-label="Carving style">
             {(["smooth", "terraced"] as const).map((k) => (
-              <button key={k} type="button" role="radio" aria-checked={spec.style === k} className={spec.style === k ? "selected" : ""} onClick={() => set("style", k)} title={k === "smooth" ? "The ground carved smoothly, as it is." : "The ground carved in flat steps, like a contour model."}>
+              <button key={k} type="button" role="radio" aria-checked={spec.style === k} className={spec.style === k ? "selected" : ""} disabled={k === "smooth" && spec.carve === "passes"} onClick={() => set("style", k)} title={k === "smooth" ? "The ground carved smoothly, as it is." : "The ground carved in flat steps, like a contour model."}>
                 {k === "smooth" ? "Smooth" : "Terraced steps"}
               </button>
             ))}
           </div>
           {spec.style === "terraced" && <Num label="Steps" value={spec.steps} onChange={(v) => set("steps", Math.round(v))} min={2} max={20} />}
+          {spec.carve === "passes" && (
+            <p className="dialog-hint" style={{ marginTop: 0 }}>
+              {spec.steps - 1} {spec.steps - 1 === 1 ? "pass" : "passes"}, each taking off {Math.round((spec.depth / Math.max(1, spec.steps - 1)) * 100) / 100} mm.
+            </p>
+          )}
           <label className="field" title="Left lifts the lower ground so more of the island shows; right makes the peaks stand out.">
             <span>Hills {spec.curve < 0.95 ? "(low ground lifted)" : spec.curve > 1.05 ? "(peaks sharpened)" : "(as they are)"}</span>
             <input type="range" className="trace-slider" min={0.4} max={2} step={0.05} value={spec.curve} aria-label="Hills" onChange={(e) => set("curve", Number(e.target.value))} />
@@ -318,6 +342,12 @@ export function IslandReliefDialog() {
               </label>
             )}
           </div>
+          {spec.frame > 0 && (
+            <label className="check-row">
+              <input type="checkbox" checked={spec.scaleBar !== false} onChange={(e) => set("scaleBar", e.target.checked)} />
+              A scale bar on the frame (scored, with its distance engraved)
+            </label>
+          )}
 
           {relief && (
             <p className="dialog-hint" aria-live="polite">
@@ -335,16 +365,25 @@ export function IslandReliefDialog() {
       <details className="relief-how">
         <summary>How to carve it on the Bambu Lab R1</summary>
         <ol className="small">
-          <li>Engrave the depth test strip on a scrap of the same board first. In Bambu Studio set the depth picture to <b>Grayscale</b>, with the lowest power at 0 (white isn't burnt) and the highest power — or more passes — until the black square is {spec.depth} mm deep.</li>
-          <li>Engrave the island's depth picture with those settings. It only covers the land, so the sea and frame are left untouched.</li>
+          {spec.carve === "passes" ? (
+            <>
+              <li>Engrave the depth test square on a scrap of the same board first, once, and change the power or speed until it comes out {Math.round((spec.depth / Math.max(1, spec.steps - 1)) * 100) / 100} mm deep.</li>
+              <li>Engrave each pass picture of the island in turn with those settings (they lie on top of each other). Each only covers the land, so the sea and frame are left untouched.</li>
+            </>
+          ) : (
+            <>
+              <li>Engrave the depth test strip on a scrap of the same board first. In Bambu Studio set the depth picture to <b>Grayscale</b>, with the lowest power at 0 (white isn't burnt) and the highest power — or more passes — until the black square is {spec.depth} mm deep.</li>
+              <li>Engrave the island's depth picture with those settings. It only covers the land, so the sea and frame are left untouched.</li>
+            </>
+          )}
           <li>Then cut: the coast, the jigsaw lines and the frame are red cut lines; contours are green score lines.</li>
           <li>With a frame, export without the kerf allowance, so the island and the frame each keep the cut between them and the pieces drop back in.</li>
         </ol>
         <p className="muted small">Heights from the open Terrain Tiles on AWS (Mapzen: SRTM, EU-DEM, OS Terrain and other open data).</p>
       </details>
       <div className="modal-actions">
-        <button type="button" className="text-button" onClick={insertStrip} style={{ marginRight: "auto" }} title="Six squares from no burn to full depth, to try your settings on scrap.">
-          Depth test strip
+        <button type="button" className="text-button" onClick={insertStrip} style={{ marginRight: "auto" }} title={spec.carve === "passes" ? "A square to engrave once on scrap, to find the power for one pass." : "Six squares from no burn to full depth, to try your settings on scrap."}>
+          {spec.carve === "passes" ? "Depth test square" : "Depth test strip"}
         </button>
         <button type="button" className="text-button" onClick={close}>
           Cancel

@@ -126,6 +126,11 @@
   rect + name; `testStripItems`). UI `src/app/IslandReliefDialog.tsx` (dialog "island"; Library card under "Maps" and
   in search via `ISLAND_WORDS`; heights by `readHeights(loadTerrainTile, …, zoomFor)` — `src/app/terrainTiles.ts` —
   kept per area for the session; `pretendHeights` + `window.juracutRelief` for the smoke test). Tests: tests/relief.
+  v0.31: `ReliefSpec.carve` "greys" | "passes" (missing = greys; passes needs terraced): `passMasks(relief, steps)` —
+  steps − 1 black-and-white pictures, pass k burns ground ≥ k layers deep — → `reliefItems(…, src: string[])` (one
+  "black" PictureItem per pass, all clipped to the coast); `scaleBar` (missing = on): `frame.scale` (a round distance
+  ≤ a quarter of the width, top right of the frame) → a scored bar with end ticks + its label. photo.ts `clipped` works
+  row by row (crossings sorted, binary search) — v0.30.1; the old per-pixel loop froze exports of reliefs.
 - Mountain puzzle: there is none here. A layered laser version lived here in v0.8–v0.11.1 and was taken out at the
   owner's request (v0.12); the mountain puzzle is JuraCAD's, 3D printed only. Don't bring it back unless asked.
 - Handles, clipboard, menu (v0.13): `src/model/resize.ts` (pure: `scaledItem` — rects stay rects when square to the bed
