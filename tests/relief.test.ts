@@ -4,7 +4,8 @@ import { depthShare, makeRelief, passMasks, patternLines, reliefProblems, RELIEF
 import { pathPoints, pointInPolygon, type Pt } from "../src/geometry/segments";
 import { loopArea } from "../src/geometry/trace";
 import { reliefItems, testStripItems } from "../src/model/reliefItems";
-import { itemBox } from "../src/model/shapes";
+import { processPhoto } from "../src/geometry/photo";
+import { itemBox, itemOutlines } from "../src/model/shapes";
 
 const toSegment = (p: Pt, a: Pt, b: Pt) => {
   const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
@@ -151,11 +152,40 @@ describe("carving in passes", () => {
       expect(layers).toBe(Math.round(((255 - r.greys[i]) / 255) * 4));
     }
     let k = 0;
-    const items = reliefItems(r, spec, masks.map(() => "data:"), "I", () => `i${k++}`);
+    const items = reliefItems(r, spec, "data:", "I", () => `i${k++}`);
+    // Each pass is the one depth picture engraved black and white at its own level: exactly the pass's mask.
+    items.filter((it) => it.kind === "picture").forEach((p, n) => {
+      if (p.kind !== "picture") return;
+      const done = processPhoto(r.greys, r.gw, r.gh, { mode: p.mode, brightness: p.brightness, contrast: p.contrast, invert: p.invert });
+      expect(Array.from(done).every((v, i) => v === masks[n][i])).toBe(true);
+    });
     const pics = items.filter((it) => it.kind === "picture");
     expect(pics.length).toBe(4);
     expect(pics.every((p) => p.kind === "picture" && p.mode === "black" && p.clip)).toBe(true);
     expect(pics[0].name).toMatch(/pass 1 of 4 \(0\.75 mm\)/);
     expect(reliefProblems({ ...spec, style: "smooth" })[0]).toMatch(/Terraced/);
+  });
+});
+
+describe("a round frame", () => {
+  it("rings the whole coast, the name curved inside its bottom edge", () => {
+    const spec = { ...RELIEF_DEFAULTS, size: 150, land: "biggest" as const, frame: 14, name: "Round Island", frameShape: "round" as const };
+    const r = makeRelief(grid, area, spec);
+    const round = r.frame!.round!;
+    const ring = pathPoints(r.coast[0], true, 0.05);
+    for (const [x, y] of ring) expect(Math.hypot(x - round.cx, y - round.cy)).toBeLessThanOrEqual(round.r - 13.99);
+    expect(r.frame!.scale).toBe(null);
+    let k = 0;
+    const items = reliefItems(r, spec, "data:", "Round Island", () => `i${k++}`);
+    const frame = items.find((it) => it.name.endsWith("frame"))!;
+    expect(frame.kind).toBe("circle");
+    // Every point of the name lies in the frame's band: inside the circle, outside the island's ring.
+    const name = items.find((it) => it.kind === "text")!;
+    const c = frame.kind === "circle" ? frame : null;
+    for (const o of itemOutlines(name)) for (const [x, y] of pathPoints(o.segments, true, 0.05)) {
+      const d = Math.hypot(x - c!.cx, y - c!.cy);
+      expect(d).toBeLessThan(c!.r);
+      expect(d).toBeGreaterThan(c!.r - 14);
+    }
   });
 });

@@ -8,6 +8,7 @@ import { FONTS, FONT_IDS, JOINED_FONTS } from "../geometry/text";
 import { boxOf, piecesOf } from "../model/arrange";
 import { describeItem, itemBox, pictureSize, placedAt } from "../model/shapes";
 import { PHOTO_MODES, RESOLUTIONS } from "./PhotoTab";
+import { DOT_PATTERNS } from "../geometry/photo";
 import { useDocument, useSelection, useStore } from "../model/store";
 import { DEFAULT_TAB_WIDTH, MOST_TABS, OPS, OP_INFO, type Item, type Op, type PictureItem } from "../model/types";
 import { AlignControls } from "./AlignControls";
@@ -535,6 +536,18 @@ function PictureFields({ item }: { item: PictureItem }) {
           </button>
         ))}
       </div>
+      {item.mode === "dots" && (
+        <>
+          <div className="field-label">Dot pattern</div>
+          <div className="segmented three" role="radiogroup" aria-label="Dot pattern">
+            {DOT_PATTERNS.map(([k, label, hint]) => (
+              <button key={k} type="button" role="radio" aria-checked={(item.dither ?? "floyd") === k} className={(item.dither ?? "floyd") === k ? "selected" : ""} title={hint} onClick={() => change(k === "floyd" ? { dither: undefined } : { dither: k })}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       <div className="field-row">
         <NumberBox label="Lighter (+) / darker (−)" value={item.brightness} unit="" onCommit={(v) => change({ brightness: Math.max(-100, Math.min(100, v)) })} />
         <NumberBox label="Contrast" value={item.contrast} unit="" onCommit={(v) => change({ contrast: Math.max(-100, Math.min(100, v)) })} />

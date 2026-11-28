@@ -29,8 +29,11 @@ function cornerArc(p: Pt, u: Pt, v: Pt, r: number): { from: Pt; mid: Pt; to: Pt;
   return { from: [p[0] - u[0] * d, p[1] - u[1] * d], mid: [p[0] + bis[0] * out, p[1] + bis[1] * out], to: [p[0] + v[0] * d, p[1] + v[1] * d], d };
 }
 
-/** One outline with its straight corners rounded. Returns how many corners were rounded too. */
-export function roundOutline(o: Outline, r: number): { outline: Outline; corners: number } {
+/**
+ * One outline with its straight corners rounded — or, `chamfer`, cut off straight, `r` back along each line (a 45°
+ * chamfer on a square corner). Returns how many corners were changed too.
+ */
+export function roundOutline(o: Outline, r: number, chamfer = false): { outline: Outline; corners: number } {
   const segs = o.segments;
   const n = segs.length;
   if (r <= 0 || n < 2) return { outline: o, corners: 0 };
@@ -64,14 +67,18 @@ export function roundOutline(o: Outline, r: number): { outline: Outline; corners
     const nextRounded = next !== null;
     const roomA = lengths[a] * (prevRounded ? 0.5 : 1);
     const roomB = lengths[b] * (nextRounded ? 0.5 : 1);
-    radius[k] = Math.min(r, Math.min(roomA, roomB) / Math.tan(t / 2));
+    // A chamfer `r` back along each line; a round as big as fits (its lines `radius·tan(t/2)` back).
+    radius[k] = chamfer ? Math.min(r, roomA, roomB) : Math.min(r, Math.min(roomA, roomB) / Math.tan(t / 2));
   }
   // Build: each line shortened at each rounded end, an arc at each rounded corner.
   const arcs = radius.map((rk, k) => {
     if (rk <= 1e-9) return null;
     const a = segs[k] as Line;
     const b = segs[(k + 1) % n] as Line;
-    return cornerArc(a.to, unit(sub(a.to, a.from)), unit(sub(b.to, b.from)), rk);
+    const u = unit(sub(a.to, a.from));
+    const v = unit(sub(b.to, b.from));
+    if (chamfer) return { from: [a.to[0] - u[0] * rk, a.to[1] - u[1] * rk] as Pt, mid: a.to, to: [a.to[0] + v[0] * rk, a.to[1] + v[1] * rk] as Pt, d: rk };
+    return cornerArc(a.to, u, v, rk);
   });
   const out: Segment[] = [];
   let corners = 0;
@@ -85,18 +92,18 @@ export function roundOutline(o: Outline, r: number): { outline: Outline; corners
       if (len(sub(to, from)) > 1e-6) out.push({ kind: "line", from, to });
     } else out.push(s);
     if (after) {
-      out.push({ kind: "arc", from: after.from, mid: after.mid, to: after.to });
+      out.push(chamfer ? { kind: "line", from: after.from, to: after.to } : { kind: "arc", from: after.from, mid: after.mid, to: after.to });
       corners++;
     }
   }
   return { outline: { segments: out, closed: o.closed }, corners };
 }
 
-/** Every outline's straight corners rounded. */
-export function roundedOutlines(outlines: readonly Outline[], r: number): { outlines: Outline[]; corners: number } {
+/** Every outline's straight corners rounded (or chamfered). */
+export function roundedOutlines(outlines: readonly Outline[], r: number, chamfer = false): { outlines: Outline[]; corners: number } {
   let corners = 0;
   const result = outlines.map((o) => {
-    const x = roundOutline(o, r);
+    const x = roundOutline(o, r, chamfer);
     corners += x.corners;
     return x.outline;
   });

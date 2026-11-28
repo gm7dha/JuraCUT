@@ -131,6 +131,14 @@
   "black" PictureItem per pass, all clipped to the coast); `scaleBar` (missing = on): `frame.scale` (a round distance
   ≤ a quarter of the width, top right of the frame) → a scored bar with end ticks + its label. photo.ts `clipped` works
   row by row (crossings sorted, binary search) — v0.30.1; the old per-pixel loop froze exports of reliefs.
+  v0.32: passes share ONE depth picture (PNG), each pass a "black" picture with `passBrightness(k, passes)` putting the
+  split mid-step (tests check it equals passMasks); `frameShape` "round" → `frame.round` {cx, cy, r, nameCurve} (circle
+  `frame` past the furthest coast point, name a curved TextItem, no scale bar). keep.ts `keptText`/`fromKeptText`: the
+  browser's copy (and recent designs') is compact JSON with picture `src`s and `clip`s written once
+  ("juracut-kept-1"; plain old copies still read); saved files unchanged. photo.ts `DotPattern`/`DOT_PATTERNS`/
+  `ditherWith` (floyd/atkinson/jarvis; `PictureItem.dither`, missing = floyd). corners.ts `roundOutline(…, chamfer)` →
+  store `roundCornersSelected(r, chamfer)` (rects become shapes when chamfered). Point editing: BedView's `editing` and a
+  store subscription drop `pointsOf` when the shape isn't all lines/Béziers; `nearestOn` gives Infinity for other pieces.
 - Mountain puzzle: there is none here. A layered laser version lived here in v0.8–v0.11.1 and was taken out at the
   owner's request (v0.12); the mountain puzzle is JuraCAD's, 3D printed only. Don't bring it back unless asked.
 - Handles, clipboard, menu (v0.13): `src/model/resize.ts` (pure: `scaledItem` — rects stay rects when square to the bed

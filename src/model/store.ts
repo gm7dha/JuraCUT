@@ -133,7 +133,7 @@ export interface State {
   /** Every guide line taken away (one undo step). */
   clearGuides(): void;
   /** Sharp corners between straight lines rounded with this radius (as much as fits). */
-  roundCornersSelected(radius: number): void;
+  roundCornersSelected(radius: number, chamfer?: boolean): void;
   /** Each selected closed shape filled with parallel lines (scored), grouped with it. */
   hatchSelected(opts: HatchOptions): void;
   /** Select every shape the laser cuts (or scores, or engraves). */
@@ -576,31 +576,31 @@ export const useStore = create<State>((set, get) => ({
     get().commit({ ...doc, items });
     get().showToast(tidyText(sum), "success");
   },
-  roundCornersSelected(radius) {
+  roundCornersSelected(radius, chamfer = false) {
     const { history, selection } = get();
     const doc = history.present;
     if (!(radius > 0)) return;
     let corners = 0;
     const items = doc.items.map((it): Item => {
       if (!selection.includes(it.id) || it.locked) return it;
-      if (it.kind === "rect") {
+      if (it.kind === "rect" && !chamfer) {
         const r = Math.min(radius, Math.min(it.w, it.h) / 2);
         if (r === it.radius) return it;
         corners += 4;
         return { ...it, radius: r };
       }
       if (it.kind === "text" || it.kind === "qr" || it.kind === "picture" || it.kind === "circle" || it.kind === "ellipse") return it;
-      const r = roundedOutlines(itemOutlines(it), radius);
+      const r = roundedOutlines(itemOutlines(it), radius, chamfer);
       if (!r.corners) return it;
       corners += r.corners;
       return { ...baseOf(it), kind: "shape", outlines: r.outlines };
     });
     if (!corners) {
-      get().showToast("No sharp corners to round: corners where two straight lines meet are rounded (words, circles and curves aren't changed).", "info");
+      get().showToast(`No sharp corners to ${chamfer ? "cut off" : "round"}: only corners where two straight lines meet are changed (words, circles and curves aren't).`, "info");
       return;
     }
     get().commit({ ...doc, items });
-    get().showToast(`Rounded ${corners} ${corners === 1 ? "corner" : "corners"}.`, "success");
+    get().showToast(`${chamfer ? "Cut off" : "Rounded"} ${corners} ${corners === 1 ? "corner" : "corners"}.`, "success");
   },
   hatchSelected(opts) {
     const { history, selection } = get();
@@ -877,3 +877,12 @@ export const useSelection = () => useStore((s) => s.selection);
 export const canUndo = (s: State) => s.history.past.length > 0;
 export const canRedo = (s: State) => s.history.future.length > 0;
 export const selectedItems = (s: State): Item[] => s.history.present.items.filter((it) => s.selection.includes(it.id));
+
+// Editing points ends as soon as the shape is gone or no longer made of lines and curves the point tools know (after
+// Undo, Round corners and the like), so no point tool ever works on a shape it can't handle.
+useStore.subscribe((s) => {
+  if (!s.pointsOf) return;
+  const it = s.history.present.items.find((i) => i.id === s.pointsOf);
+  const ok = !!it && it.kind === "shape" && it.outlines.every((o) => o.segments.every((g) => g.kind === "line" || g.kind === "bezier"));
+  if (!ok) useStore.setState({ pointsOf: null, pickedNode: null });
+});

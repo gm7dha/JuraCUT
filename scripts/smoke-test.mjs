@@ -874,7 +874,7 @@ try {
     s.newDocument();
     s.addItems([{ id: "tri", name: "Triangle", op: "cut", kind: "polygon", cx: 60, cy: 60, r: 30, sides: 3, angle: 90 }]);
   });
-  await page.click(".make-more button:text-is('Round corners')");
+  await page.click(".make-more button:text-is('Round')");
   const roundTri = await store(() => window.juracutStore.getState().history.present.items[0]);
   expect(roundTri.kind === "shape" && roundTri.outlines[0].segments.filter((g) => g.kind === "arc").length === 3, "the triangle's three corners were rounded");
   await page.click(".make-more button:text-is('Fill with lines')");

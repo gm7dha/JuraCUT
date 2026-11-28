@@ -210,13 +210,16 @@ export function MakeMore({ items }: { items: readonly Item[] }) {
 
       {items.some(roundable) && (
         <>
-          <div className="field-label">Round corners</div>
+          <div className="field-label">Corners</div>
           <div className="field-row">
-            <Num label="Radius" value={s.cornerRadius} unit="mm" min={0.1} max={500} onChange={(cornerRadius) => set({ cornerRadius })} />
+            <Num label="Size" value={s.cornerRadius} unit="mm" min={0.1} max={500} onChange={(cornerRadius) => set({ cornerRadius })} />
             <button type="button" className="text-button make-button" onClick={() => st().roundCornersSelected(s.cornerRadius)} title="Every sharp corner where two straight lines meet becomes a curve of this radius (as big as fits)">
-              Round corners
+              Round
             </button>
           </div>
+          <button type="button" className="text-button make-button" onClick={() => st().roundCornersSelected(s.cornerRadius, true)} title="Every sharp corner where two straight lines meet is cut off straight, this far back along each side (a 45° bevel on a square corner)">
+            Cut corners off (chamfer)
+          </button>
         </>
       )}
 

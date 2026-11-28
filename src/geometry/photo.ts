@@ -19,6 +19,49 @@ export interface PhotoSettings {
   contrast: number;
   /** Light parts engraved instead of dark (for dark materials, or slate). */
   invert: boolean;
+  /** Dots: how the dots are spread (missing = Floyd–Steinberg). */
+  dither?: DotPattern;
+}
+
+/**
+ * Dot patterns (error diffusion): Floyd–Steinberg, the usual; Atkinson — crisper and brighter, passing on only ¾ of
+ * the rounding (as early Macs did), good for faces and logos on wood; Jarvis–Judice–Ninke — smoother shading, the rounding
+ * spread further.
+ */
+export type DotPattern = "floyd" | "atkinson" | "jarvis";
+
+export const DOT_PATTERNS: [DotPattern, string, string][] = [
+  ["floyd", "Even", "Floyd–Steinberg: the usual dots, an even spread."],
+  ["atkinson", "Crisp", "Atkinson: crisper and a little brighter, with clean lights and darks — good for faces and logos."],
+  ["jarvis", "Smooth", "Jarvis: the smoothest shading, dots spread further — good for soft photos and skies."],
+];
+
+/** Each pattern's spread: [dx, dy, share] of the rounding passed on, and what the shares are out of. */
+const SPREADS: Record<DotPattern, { to: [number, number, number][]; out: number }> = {
+  floyd: { to: [[1, 0, 7], [-1, 1, 3], [0, 1, 5], [1, 1, 1]], out: 16 },
+  atkinson: { to: [[1, 0, 1], [2, 0, 1], [-1, 1, 1], [0, 1, 1], [1, 1, 1], [0, 2, 1]], out: 8 },
+  jarvis: { to: [[1, 0, 7], [2, 0, 5], [-2, 1, 3], [-1, 1, 5], [0, 1, 7], [1, 1, 5], [2, 1, 3], [-2, 2, 1], [-1, 2, 3], [0, 2, 5], [1, 2, 3], [2, 2, 1]], out: 48 },
+};
+
+/** Error diffusion with a pattern: each pixel black (0) or white (255), the rounding passed on to its neighbours. */
+export function ditherWith(grey: Uint8Array, width: number, height: number, pattern: DotPattern): Uint8Array {
+  if (pattern === "floyd") return ditherFloydSteinberg(grey, width, height);
+  const { to, out: total } = SPREADS[pattern];
+  const err = new Float32Array(grey.length);
+  for (let i = 0; i < grey.length; i++) err[i] = grey[i];
+  const out = new Uint8Array(grey.length);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const v = err[i] < 128 ? 0 : 255;
+      out[i] = v;
+      const e = err[i] - v;
+      for (const [dx, dy, share] of to) {
+        const [nx, ny] = [x + dx, y + dy];
+        if (nx >= 0 && nx < width && ny < height) err[ny * width + nx] += (e * share) / total;
+      }
+    }
+  return out;
 }
 
 /** A photo's shape: an oval filling its frame, or its frame with rounded corners (missing = the whole rectangle). */
@@ -133,7 +176,7 @@ export function processPhoto(grey: Uint8Array, width: number, height: number, s:
   const adjusted = adjustGreys(grey, s);
   if (s.mode === "greys") return adjusted;
   if (s.mode === "black") return adjusted.map((v) => (v < 128 ? 0 : 255));
-  return ditherFloydSteinberg(adjusted, width, height);
+  return ditherWith(adjusted, width, height, s.dither ?? "floyd");
 }
 
 /** How much of the picture the laser engraves (0 … 1: the share of "black"). */

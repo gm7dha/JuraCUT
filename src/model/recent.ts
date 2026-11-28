@@ -5,7 +5,8 @@
  */
 import { pathsBox } from "../geometry/segments";
 import { svgPathData } from "../laser/files";
-import { parseDocument, serializeDocument } from "./document";
+import { parseDocument } from "./document";
+import { fromKeptText, keptText } from "./keep";
 import { itemOutlines } from "./shapes";
 import type { JuraCUTDocument } from "./types";
 
@@ -53,7 +54,7 @@ export function thumbnail(doc: JuraCUTDocument, most = 40_000): string {
 /** Keep a design under its id (newest first; the oldest past `MOST_RECENT` go). Empty designs aren't kept. */
 export async function keepRecent(store: RecentStore, id: string, doc: JuraCUTDocument, now = Date.now()): Promise<void> {
   if (!doc.items.length) return;
-  await store.put({ id, name: doc.name, at: now, shapes: doc.items.length, thumb: thumbnail(doc) }, serializeDocument(doc));
+  await store.put({ id, name: doc.name, at: now, shapes: doc.items.length, thumb: thumbnail(doc) }, keptText(doc));
   const all = (await store.list()).sort((a, b) => b.at - a.at);
   for (const old of all.slice(MOST_RECENT)) await store.remove(old.id);
 }
@@ -68,7 +69,7 @@ export async function openRecent(store: RecentStore, id: string): Promise<JuraCU
   const text = await store.get(id);
   if (!text) return null;
   try {
-    return parseDocument(JSON.parse(text));
+    return parseDocument(fromKeptText(text));
   } catch {
     return null;
   }

@@ -15,7 +15,7 @@ import type { Item } from "../model/types";
 import { areaProblem, readHeights, zoomFor, type HeightGrid } from "../terrain/elevation";
 import { ISLANDS } from "../terrain/islands";
 import { parseGridRef } from "../terrain/osGrid";
-import { LEAST_BASE, makeRelief, passMasks, PUZZLE_PATTERNS, RELIEF_DEFAULTS, reliefProblems, testStripGreys, type Relief, type ReliefArea, type ReliefSpec } from "../terrain/relief";
+import { LEAST_BASE, makeRelief, PUZZLE_PATTERNS, RELIEF_DEFAULTS, reliefProblems, testStripGreys, type Relief, type ReliefArea, type ReliefSpec } from "../terrain/relief";
 import { itemPathData } from "./BedView";
 import { Icons } from "./icons";
 import { Modal } from "./Modal";
@@ -160,7 +160,8 @@ export function IslandReliefDialog() {
       taken.add(id);
       return id;
     };
-    const src = spec.carve === "passes" ? passMasks(relief, spec.steps).map((m) => greysPicture(m, relief.gw, relief.gh, "image/png")) : greysPicture(relief.greys, relief.gw, relief.gh, "image/jpeg");
+    // In passes the levels must come out exactly, so the picture is kept without JPEG's blurring (PNG).
+    const src = greysPicture(relief.greys, relief.gw, relief.gh, spec.carve === "passes" ? "image/png" : "image/jpeg");
     const items = reliefItems(relief, spec, src, spec.name || placeName || "Island", freshId);
     s.addItems(items);
     close();
@@ -211,7 +212,11 @@ export function IslandReliefDialog() {
                   <path d={coastPath} clipRule="evenodd" />
                 </clipPath>
               </defs>
-              {relief.frame && <rect x={relief.frame.x} y={-(relief.frame.y + relief.frame.h)} width={relief.frame.w} height={relief.frame.h} fill="#fff" />}
+              {relief.frame?.round ? (
+                <circle cx={relief.frame.round.cx} cy={-relief.frame.round.cy} r={relief.frame.round.r} fill="#fff" />
+              ) : (
+                relief.frame && <rect x={relief.frame.x} y={-(relief.frame.y + relief.frame.h)} width={relief.frame.w} height={relief.frame.h} fill="#fff" />
+              )}
               <image href={previewSrc} x={0} y={-relief.height} width={relief.width} height={relief.height} preserveAspectRatio="none" clipPath="url(#relief-coast)" />
               <g transform="scale(1 -1)">
                 {lines.map((it) =>
@@ -274,7 +279,7 @@ export function IslandReliefDialog() {
           </div>
 
           <div className="field-label">The carving</div>
-          <div className="segmented" role="radiogroup" aria-label="How it's carved">
+          <div className="segmented two" role="radiogroup" aria-label="How it's carved">
             {(["greys", "passes"] as const).map((k) => (
               <button
                 key={k}
@@ -289,7 +294,7 @@ export function IslandReliefDialog() {
               </button>
             ))}
           </div>
-          <div className="segmented" role="radiogroup" aria-label="Carving style">
+          <div className="segmented two" role="radiogroup" aria-label="Carving style">
             {(["smooth", "terraced"] as const).map((k) => (
               <button key={k} type="button" role="radio" aria-checked={spec.style === k} className={spec.style === k ? "selected" : ""} disabled={k === "smooth" && spec.carve === "passes"} onClick={() => set("style", k)} title={k === "smooth" ? "The ground carved smoothly, as it is." : "The ground carved in flat steps, like a contour model."}>
                 {k === "smooth" ? "Smooth" : "Terraced steps"}
@@ -343,6 +348,15 @@ export function IslandReliefDialog() {
             )}
           </div>
           {spec.frame > 0 && (
+            <div className="segmented two" role="radiogroup" aria-label="Frame shape">
+              {(["rect", "round"] as const).map((k) => (
+                <button key={k} type="button" role="radio" aria-checked={(spec.frameShape ?? "rect") === k} className={(spec.frameShape ?? "rect") === k ? "selected" : ""} onClick={() => set("frameShape", k)} title={k === "rect" ? "A rectangle round the island." : "A round plaque or coaster, the name curved along its bottom."}>
+                  {k === "rect" ? "Rectangle" : "Round"}
+                </button>
+              ))}
+            </div>
+          )}
+          {spec.frame > 0 && spec.frameShape !== "round" && (
             <label className="check-row">
               <input type="checkbox" checked={spec.scaleBar !== false} onChange={(e) => set("scaleBar", e.target.checked)} />
               A scale bar on the frame (scored, with its distance engraved)

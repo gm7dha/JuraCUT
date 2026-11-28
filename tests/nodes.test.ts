@@ -55,3 +55,20 @@ describe("editing points", () => {
     expect(straightened(c, 0, 0)[0].segments[0].kind).toBe("line");
   });
 });
+
+describe("editing points after the shape changes", () => {
+  it("stops when Undo or Round corners leaves the shape with pieces the point tools don't handle", async () => {
+    const { useStore } = await import("../src/model/store");
+    const s = useStore.getState();
+    s.newDocument();
+    s.addItems([{ id: "r", name: "R", op: "cut", kind: "rect", x: 0, y: 0, w: 40, h: 20, radius: 0, angle: 0 }]);
+    s.editPoints("r");
+    expect(useStore.getState().pointsOf).toBe("r");
+    useStore.getState().roundCornersSelected(3);
+    expect(useStore.getState().pointsOf).toBe(null);
+  });
+  it("never finds a point on a piece it can't edit", async () => {
+    const { nearestOn } = await import("../src/model/nodes");
+    expect(nearestOn({ kind: "arc", from: [0, 0], mid: [5, 5], to: [10, 0] }, [5, 5]).distance).toBe(Infinity);
+  });
+});

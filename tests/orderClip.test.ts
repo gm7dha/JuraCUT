@@ -78,3 +78,28 @@ describe("clipping a big picture to a long outline", () => {
     expect(Date.now() - t).toBeLessThan(10000);
   });
 });
+
+describe("dot patterns", () => {
+  const ramp = (w: number, h: number) => Uint8Array.from({ length: w * h }, (_, i) => Math.round(((i % w) / (w - 1)) * 255));
+  it("each gives black and white dots whose share follows the greys", async () => {
+    const { ditherWith } = await import("../src/geometry/photo");
+    for (const p of ["floyd", "atkinson", "jarvis"] as const) {
+      const out = ditherWith(ramp(200, 60), 200, 60, p);
+      expect(out.every((v) => v === 0 || v === 255)).toBe(true);
+      // Left (dark) mostly black, right (light) mostly white, the middle about half.
+      const share = (x0: number, x1: number) => {
+        let b = 0, n = 0;
+        for (let y = 0; y < 60; y++) for (let x = x0; x < x1; x++) (n++, out[y * 200 + x] === 0 && b++);
+        return b / n;
+      };
+      expect(share(0, 20)).toBeGreaterThan(0.85);
+      expect(share(180, 200)).toBeLessThan(0.15);
+      expect(Math.abs(share(90, 110) - 0.5)).toBeLessThan(p === "atkinson" ? 0.2 : 0.1);
+    }
+  });
+  it("is kept with the picture in files", async () => {
+    const { parseDocument } = await import("../src/model/document");
+    const doc = parseDocument({ format: "juracut", version: 1, name: "x", bed: [600, 300], items: [{ id: "p", name: "P", op: "engrave", kind: "picture", src: "data:image/png;base64,AAAA", cx: 1, cy: 1, w: 5, h: 5, mode: "dots", dither: "atkinson" }] });
+    expect(doc?.items[0].kind === "picture" && doc.items[0].dither).toBe("atkinson");
+  });
+});

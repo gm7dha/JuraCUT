@@ -159,6 +159,8 @@ export interface PictureItem extends ItemBase {
   turns: number;
   flip: boolean;
   mode: "dots" | "black" | "greys";
+  /** Dots: how they're spread (missing = Floyd–Steinberg). */
+  dither?: "floyd" | "atkinson" | "jarvis";
   brightness: number;
   contrast: number;
   invert: boolean;
