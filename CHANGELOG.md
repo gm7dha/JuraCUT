@@ -6,7 +6,22 @@ newer tools won't open in an older version until those tools are back).
 
 The point in the history for each version is the commit shown (see https://github.com/gm7dha/JuraCUT/commits/main).
 
-## v0.31 — Island reliefs in passes, a scale bar, and a tidier screen
+## v0.32 — Round island plaques, photo dot patterns, chamfered corners, and fixes
+
+- **Round frames for island reliefs**: a round plaque or coaster, the circle ringing the whole coast and the island's
+  name curved along its bottom edge. Choose Rectangle or Round under the frame.
+- **Dot patterns for photos**: engraving a photo as dots now offers three patterns — Even (as before), Crisp (Atkinson:
+  cleaner lights and darks, good for faces and logos on wood) and Smooth (Jarvis: the softest shading). In the Picture
+  window and in a photo's settings.
+- **Cut corners off (chamfer)**: next to Round, corners can be cut off straight, the size you choose back along each
+  side — a 45° bevel on a square corner. Also in the right-click menu.
+- **Big designs are kept in the browser again**: an island carved in passes now uses one depth picture for all its
+  passes, and the copy kept in the browser writes each picture and coastline only once and without spacing — about a
+  seventh of the room. Two or three island reliefs on the bed used to be too big to keep ("Not kept in this browser").
+- **Fixed**: a click or drag could crash the page while a shape's points were being edited, if Undo or Round corners had
+  just changed that shape. Editing points now ends when the shape can't be edited any more.
+
+## v0.31 — Island reliefs in passes, a scale bar, and a tidier screen · commit `543cf29`
 
 - **Carve an island in passes**: as well as one engraving in greys, an island relief can now be carved in passes —
   terraced steps, one black-and-white engraving per step, all at the same power, each taking off an equal layer. The

@@ -79,7 +79,8 @@ export function BedView() {
   const editing = (() => {
     if (!pointsOf || !selection.includes(pointsOf)) return null;
     const it = doc.items.find((i) => i.id === pointsOf);
-    return it && it.kind === "shape" ? it : null;
+    // Only while it's made of straight lines and curves the point tools know (Undo or Round corners may change that).
+    return it && it.kind === "shape" && it.outlines.every((o) => o.segments.every((s) => s.kind === "line" || s.kind === "bezier")) ? it : null;
   })();
   const fitRequest = useStore((s) => s.fitRequest);
   const theme = useStore((s) => s.theme);

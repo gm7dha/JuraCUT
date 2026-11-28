@@ -86,7 +86,7 @@ export async function renderPicture(item: PictureItem, dpm: number, mirrored = f
 }
 
 const previews = new Map<string, string>();
-const keyOf = (p: PictureItem, dpm: number) => `${p.src.length}:${p.src.slice(-48)}|${p.w}|${p.h}|${p.turns}|${p.flip}|${p.mode}|${p.brightness}|${p.contrast}|${p.invert}|${p.crop?.join(",") ?? ""}|${p.mask ?? ""}|${p.clip ? hashOf(JSON.stringify(p.clip)) : ""}|${dpm}`;
+const keyOf = (p: PictureItem, dpm: number) => `${p.src.length}:${p.src.slice(-48)}|${p.w}|${p.h}|${p.turns}|${p.flip}|${p.mode}${p.dither ? `:${p.dither}` : ""}|${p.brightness}|${p.contrast}|${p.invert}|${p.crop?.join(",") ?? ""}|${p.mask ?? ""}|${p.clip ? hashOf(JSON.stringify(p.clip)) : ""}|${dpm}`;
 
 /** A short fingerprint of some text (so a changed mask shape draws again). */
 function hashOf(s: string): string {

@@ -174,6 +174,7 @@ function parseItem(v: unknown, taken: Set<string>): Item | null {
         turns: ((Math.round(num(it.turns)) % 4) + 4) % 4,
         flip: it.flip === true,
         mode: it.mode === "black" || it.mode === "greys" ? it.mode : "dots",
+        ...(it.dither === "atkinson" || it.dither === "jarvis" ? { dither: it.dither } : {}),
         brightness: Math.max(-100, Math.min(100, num(it.brightness))),
         contrast: Math.max(-100, Math.min(100, num(it.contrast))),
         invert: it.invert === true,

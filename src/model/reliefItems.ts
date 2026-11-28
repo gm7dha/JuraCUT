@@ -4,18 +4,18 @@
  * group, placed `corner` mm in from the bed's front-left corner.
  */
 import type { Segment } from "../geometry/segments";
-import type { Relief, ReliefSpec } from "../terrain/relief";
-import { makePicture, makeRect, makeText, makeShape, movedItem } from "./shapes";
+import { passBrightness, type Relief, type ReliefSpec } from "../terrain/relief";
+import { makeCircle, makePicture, makeRect, makeText, makeShape, movedItem } from "./shapes";
 import type { Item, Outline, PictureItem } from "./types";
 
 const line = (from: [number, number], to: [number, number]): Segment => ({ kind: "line", from, to });
 const outlines = (loops: Segment[][], closed: boolean): Outline[] => loops.map((segments) => ({ segments, closed }));
 
 /**
- * Ids are taken from `freshId` in turn; `src` is the depth picture (a data: URL of `relief.greys`) — or, carving in
- * passes, one picture per pass (passMasks), each engraved black and white.
+ * Ids are taken from `freshId` in turn; `src` is the depth picture (a data: URL of `relief.greys`). Carving in passes,
+ * the same picture is put down once per pass, each engraved black and white at its own level (passBrightness).
  */
-export function reliefItems(relief: Relief, spec: ReliefSpec, src: string | string[], name: string, freshId: () => string, corner: [number, number] = [10, 10]): Item[] {
+export function reliefItems(relief: Relief, spec: ReliefSpec, src: string, name: string, freshId: () => string, corner: [number, number] = [10, 10]): Item[] {
   const group = freshId();
   const label = name.trim() || "Island";
   const items: Item[] = [];
@@ -24,12 +24,13 @@ export function reliefItems(relief: Relief, spec: ReliefSpec, src: string | stri
   const coast = outlines(relief.coast, true);
   // Only the land is carved: the pictures are clipped to the coast (measured from the picture's middle).
   const clip = coast.map((o) => moveOutline(o, -W / 2, -H / 2));
-  if (Array.isArray(src)) {
-    const layer = Math.round((spec.depth / Math.max(1, src.length)) * 100) / 100;
-    src.forEach((s, k) => {
-      const picture: PictureItem = { ...makePicture(freshId(), `${label} — pass ${k + 1} of ${src.length} (${layer} mm)`, s, W / 2, H / 2, W, H), mode: "black", dpm: 10, clip };
+  if (spec.carve === "passes") {
+    const passes = Math.max(1, Math.round(spec.steps) - 1);
+    const layer = Math.round((spec.depth / passes) * 100) / 100;
+    for (let k = 1; k <= passes; k++) {
+      const picture: PictureItem = { ...makePicture(freshId(), `${label} — pass ${k} of ${passes} (${layer} mm)`, src, W / 2, H / 2, W, H), mode: "black", brightness: passBrightness(k, passes), dpm: 10, clip };
       items.push(picture);
-    });
+    }
   } else {
     const picture: PictureItem = { ...makePicture(freshId(), `${label} — depth`, src, W / 2, H / 2, W, H), mode: "greys", dpm: 10, clip };
     items.push(picture);
@@ -39,7 +40,8 @@ export function reliefItems(relief: Relief, spec: ReliefSpec, src: string | stri
   if (relief.cuts.length) items.push(makeShape(freshId(), `${label} — jigsaw cuts`, outlines(relief.cuts, false)));
   if (relief.frame) {
     const f = relief.frame;
-    items.push({ ...makeRect(freshId(), f.x, f.y, f.w, f.h), name: `${label} — frame`, radius: Math.min(4, f.w / 20) });
+    if (f.round) items.push({ ...makeCircle(freshId(), f.round.cx, f.round.cy, f.round.r), name: `${label} — frame` });
+    else items.push({ ...makeRect(freshId(), f.x, f.y, f.w, f.h), name: `${label} — frame`, radius: Math.min(4, f.w / 20) });
     if (f.scale) {
       // A bar with ticks at its ends (scored), and its distance engraved to its left.
       const { at, length, label: words, size } = f.scale;
@@ -50,7 +52,7 @@ export function reliefItems(relief: Relief, spec: ReliefSpec, src: string | stri
       items.push({ ...makeShape(freshId(), `${label} — scale bar`, [bar]), op: "score" });
       items.push({ ...makeText(freshId(), x0 - 2, y, words, size), name: `${label} — scale`, align: "right" });
     }
-    if (f.nameAt && spec.name.trim()) items.push({ ...makeText(freshId(), f.nameAt[0], f.nameAt[1], spec.name.trim(), f.nameSize), name: `${label} — name`, align: "centre", font: "inter-bold" });
+    if (f.nameAt && spec.name.trim()) items.push({ ...makeText(freshId(), f.nameAt[0], f.nameAt[1], spec.name.trim(), f.nameSize), name: `${label} — name`, align: "centre", font: "inter-bold", ...(f.round ? { curve: f.round.nameCurve } : {}) });
   }
   // Placed with the whole thing's lower-left corner at `corner`.
   const [x0, y0] = relief.frame ? [relief.frame.x, relief.frame.y] : [0, 0];

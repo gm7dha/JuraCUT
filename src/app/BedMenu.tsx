@@ -85,6 +85,7 @@ export function BedMenu({ x, y, onClose }: { x: number; y: number; onClose: () =
           ? [{ label: "Engrave the photo only inside the shape", act: () => s().maskPictureWithShape() }]
           : []),
         { label: `Round corners (${more.cornerRadius} mm)`, act: () => s().roundCornersSelected(more.cornerRadius), off: !picked.some((it) => !["text", "qr", "picture", "circle", "ellipse"].includes(it.kind)) },
+        { label: `Cut corners off (${more.cornerRadius} mm)`, act: () => s().roundCornersSelected(more.cornerRadius, true), off: !picked.some((it) => !["text", "qr", "picture", "circle", "ellipse"].includes(it.kind)) },
         { label: `Fill with lines ${more.hatchSpacing} mm apart`, act: () => s().hatchSelected({ spacing: more.hatchSpacing, angle: more.hatchAngle, cross: more.hatchCross }), off: !picked.some((it) => it.kind !== "picture" && it.kind !== "line") },
         { label: `Tidy up lines (join ends within ${more.tidyGap} mm)`, act: () => s().tidySelected(more.tidyGap), off: !picked.some(canTidy) },
         ...(pathFor(picked) ? [{ label: `Copy along the biggest shape (${more.pathCount})`, act: () => s().copyAlongPathSelected(more.pathCount, more.pathTurn) }] : []),

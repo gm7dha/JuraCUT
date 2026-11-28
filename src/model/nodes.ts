@@ -107,6 +107,8 @@ export function nearestOn(s: Segment, p: Pt): { t: number; at: Pt; distance: num
     const at = lerp(e.from, e.to, t);
     return { t, at, distance: Math.hypot(at[0] - p[0], at[1] - p[1]) };
   }
+  // Only lines and Bézier curves have points to edit: anything else is never "near".
+  if (e.kind !== "bezier") return { t: 0, at: p, distance: Infinity };
   // A curve: sampled, then the best sample refined.
   let best = { t: 0, at: e.from, distance: Infinity };
   const point = (t: number) => bezierAt(e as Extract<Segment, { kind: "bezier" }>, t);

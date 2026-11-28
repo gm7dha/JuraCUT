@@ -105,3 +105,21 @@ describe("hatch fill", () => {
     expect(itemOutlines(items[1]).every((o) => !o.closed)).toBe(true);
   });
 });
+
+describe("cutting corners off", () => {
+  it("cuts each square corner of a square off straight, the same distance back along both sides", async () => {
+    const { roundedOutlines } = await import("../src/model/corners");
+    const sq = { closed: true, segments: [[0, 0], [40, 0], [40, 20], [0, 20]].map((p, i, a) => ({ kind: "line" as const, from: p as [number, number], to: a[(i + 1) % 4] as [number, number] })) };
+    const r = roundedOutlines([sq], 5, true);
+    expect(r.corners).toBe(4);
+    const segs = r.outlines[0].segments;
+    expect(segs.length).toBe(8);
+    expect(segs.every((s) => s.kind === "line")).toBe(true);
+    const bevels = segs.filter((s) => s.kind === "line" && Math.abs(s.to[0] - s.from[0]) > 1e-9 && Math.abs(s.to[1] - s.from[1]) > 1e-9);
+    expect(bevels.length).toBe(4);
+    for (const b of bevels) if (b.kind === "line") expect(Math.hypot(b.to[0] - b.from[0], b.to[1] - b.from[1])).toBeCloseTo(5 * Math.SQRT2);
+    // Too big for a side: shared between the corners at its ends (the short side is 20, so 10 each).
+    const big = roundedOutlines([sq], 50, true).outlines[0].segments;
+    expect(big.filter((s) => s.kind === "line" && Math.abs(s.to[0] - s.from[0]) < 1e-9 && Math.abs(s.to[1] - s.from[1]) > 1e-6).length).toBe(0);
+  });
+});

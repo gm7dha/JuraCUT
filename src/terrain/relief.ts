@@ -68,6 +68,8 @@ export interface ReliefSpec {
   name: string;
   /** A scale bar on the frame's top edge (with a frame wide enough). Missing = yes. */
   scaleBar?: boolean;
+  /** The frame's shape: a rectangle (missing) or round — a plaque or coaster, the name curved along its bottom. */
+  frameShape?: "rect" | "round";
 }
 
 export const RELIEF_DEFAULTS: ReliefSpec = {
@@ -123,6 +125,8 @@ export interface Relief {
     h: number;
     nameAt: Pt | null;
     nameSize: number;
+    /** Round frames: the circle (its box is x, y, w, h), and the name bent along its bottom (TextItem.curve). */
+    round?: { cx: number; cy: number; r: number; nameCurve: number };
     /** A scale bar along the frame's top edge (right-hand end at `at`, the bar's middle height), or null. */
     scale: { at: Pt; length: number; label: string; size: number } | null;
   } | null;
@@ -153,6 +157,17 @@ export function passMasks(relief: Pick<Relief, "greys">, steps: number): Uint8Ar
     out.push(m);
   }
   return out;
+}
+
+/**
+ * Carving in passes from one depth picture: pass `k` (1…`passes`) engraves it black and white with this brightness,
+ * which moves the split between black and white to the middle of the step between that pass's levels — so every pass
+ * engraves exactly what passMasks gives, while sharing the one picture (kept once).
+ */
+export function passBrightness(k: number, passes: number): number {
+  const split = (255 * (passes - k + 0.5)) / passes;
+  // processPhoto's black and white: brightness b% adds b × 1.28 before splitting at 128.
+  return Math.round(((128 - split) / 1.28) * 1000) / 1000;
 }
 
 export function reliefProblems(s: ReliefSpec): string[] {
@@ -468,6 +483,16 @@ export function makeRelief(grid: HeightGrid, area: ReliefArea, s: ReliefSpec): R
       if (km) frame.scale = { at: [width, height + m * 0.4], length: km * 1000 * k, label: km < 1 ? `${Math.round(km * 1000)} m` : `${km} km`, size };
     }
     if (s.name.trim() && nameSize < 3) warnings.push("The frame is too narrow for the name: make it at least 6 mm wide.");
+    if (s.frameShape === "round") {
+      // A circle round the whole coast, `m` clear of its furthest point; the name follows its bottom edge, letters' tops
+      // towards the middle, their baseline a fifth of the frame in from the edge. No scale bar: the edge is curved.
+      const [cx, cy] = [width / 2, height / 2];
+      let far = 0;
+      for (const ring of rings) for (const [x, y] of ring) far = Math.max(far, Math.hypot(x - cx, y - cy));
+      const r = far + m;
+      const baseline = r - m * 0.2;
+      frame = { x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, nameAt: frame.nameAt ? [cx, cy - baseline] : null, nameSize, scale: null, round: { cx, cy, r, nameCurve: -baseline } };
+    }
   }
   const vertical = s.depth / Math.max(highest, 1);
   return {

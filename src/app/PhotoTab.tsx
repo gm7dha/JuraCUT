@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 
 import { newId, nameFromFileName } from "../model/document";
 import { makePicture } from "../model/shapes";
+import { DOT_PATTERNS, type DotPattern } from "../geometry/photo";
 import { useDocument, useStore } from "../model/store";
 import type { PictureItem } from "../model/types";
 import { Icons } from "./icons";
@@ -29,6 +30,7 @@ export const RESOLUTIONS: [number, string][] = [
 export function PhotoTab({ picture, pixels, onDone }: { picture: { name: string; url: string }; pixels: Pixels | null; onDone: () => void }) {
   const doc = useDocument();
   const [mode, setMode] = useState<PictureItem["mode"]>("dots");
+  const [dither, setDither] = useState<DotPattern>("floyd");
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
   const [invert, setInvert] = useState(false);
@@ -40,8 +42,8 @@ export function PhotoTab({ picture, pixels, onDone }: { picture: { name: string;
   const w = width ?? Math.round(Math.min(100, (doc.bed[0] - 20) * 0.9, ((doc.bed[1] - 20) * 0.9) / aspect));
   const h = w * aspect;
   const item = useMemo(
-    () => (pixels ? { ...makePicture("preview", "", picture.url, 0, 0, w, h), mode, brightness, contrast, invert, dpm } : null),
-    [pixels, picture.url, w, h, mode, brightness, contrast, invert, dpm],
+    () => (pixels ? { ...makePicture("preview", "", picture.url, 0, 0, w, h), mode, ...(dither !== "floyd" ? { dither } : {}), brightness, contrast, invert, dpm } : null),
+    [pixels, picture.url, w, h, mode, dither, brightness, contrast, invert, dpm],
   );
   const preview = usePicturePreview(item);
 
@@ -80,6 +82,18 @@ export function PhotoTab({ picture, pixels, onDone }: { picture: { name: string;
             ))}
           </div>
           <p className="dialog-hint field-hint">{PHOTO_MODES.find((m) => m[0] === mode)![2]}</p>
+          {mode === "dots" && (
+            <>
+              <div className="field-label">Dot pattern</div>
+              <div className="segmented three" role="radiogroup" aria-label="Dot pattern">
+                {DOT_PATTERNS.map(([k, label, hint]) => (
+                  <button key={k} type="button" role="radio" aria-checked={dither === k} className={dither === k ? "selected" : ""} onClick={() => setDither(k)} title={hint}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <label className="field-label" htmlFor="photo-brightness">
             Lighter or darker ({brightness > 0 ? "+" : ""}
             {brightness})
